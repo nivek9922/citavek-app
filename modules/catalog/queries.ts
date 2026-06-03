@@ -8,7 +8,7 @@ export const listActiveServices = cache(async (organizationId: string) => {
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     select: {
       id: true, name: true, description: true,
-      durationMin: true, priceCop: true, category: true, imageUrl: true,
+      durationMin: true, priceCop: true, category: true, imageUrl: true, active: true,
     },
   })
 })

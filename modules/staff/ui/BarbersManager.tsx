@@ -1,0 +1,213 @@
+'use client'
+import { useState, useTransition } from 'react'
+import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star } from 'lucide-react'
+import { Button }   from '@/shared/ui/button'
+import { Input }    from '@/shared/ui/input'
+import { Label }    from '@/shared/ui/label'
+import { Badge }    from '@/shared/ui/badge'
+import { cn }       from '@/shared/ui/utils'
+import { upsertBarberAction, toggleBarberAction } from '../actions'
+import type { BarberWithHours } from '../queries'
+
+const DAYS = [
+  { value: 1, label: 'Lun' }, { value: 2, label: 'Mar' }, { value: 3, label: 'Mié' },
+  { value: 4, label: 'Jue' }, { value: 5, label: 'Vie' }, { value: 6, label: 'Sáb' },
+  { value: 0, label: 'Dom' },
+]
+
+function minToTime(min: number) {
+  const h = Math.floor(min / 60).toString().padStart(2, '0')
+  const m = (min % 60).toString().padStart(2, '0')
+  return `${h}:${m}`
+}
+
+function timeToMin(time: string) {
+  const [h, m] = time.split(':').map(Number)
+  return (h ?? 0) * 60 + (m ?? 0)
+}
+
+interface Props { barbers: BarberWithHours[]; tenantSlug: string }
+
+export function BarbersManager({ barbers, tenantSlug }: Props) {
+  const [showForm, setShowForm] = useState(false)
+  const [editing,  setEditing]  = useState<BarberWithHours | null>(null)
+
+  const openCreate = () => { setEditing(null); setShowForm(true) }
+  const openEdit   = (b: BarberWithHours) => { setEditing(b); setShowForm(true) }
+  const close      = () => { setShowForm(false); setEditing(null) }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Equipo</h2>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="h-4 w-4" /> Añadir barbero
+        </Button>
+      </div>
+
+      {showForm && (
+        <BarberForm tenantSlug={tenantSlug} barber={editing} onDone={close} />
+      )}
+
+      <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
+        {barbers.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">Sin barberos. Añade el primero.</p>
+        )}
+        {barbers.map((b) => (
+          <BarberRow key={b.id} barber={b} tenantSlug={tenantSlug} onEdit={() => openEdit(b)} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BarberRow({
+  barber, tenantSlug, onEdit,
+}: { barber: BarberWithHours; tenantSlug: string; onEdit: () => void }) {
+  const [isPending, startTransition] = useTransition()
+
+  const toggle = () =>
+    startTransition(() => toggleBarberAction(tenantSlug, barber.id, !barber.active))
+
+  const workDays = barber.workingHours
+    .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+    .map((wh) => DAYS.find((d) => d.value === wh.dayOfWeek)?.label)
+    .join(', ')
+
+  return (
+    <div className={cn('flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth', !barber.active && 'opacity-50')}>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+        {barber.displayName.charAt(0)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="font-medium">
+            {barber.displayName.split(' ').slice(0, 2).join(' ')}
+            {barber.nickname && <span className="text-muted-foreground"> "{barber.nickname}"</span>}
+          </p>
+          {!barber.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Star className="h-3 w-3 fill-primary text-primary" />
+            {barber.rating.toFixed(1)}
+          </span>
+          {barber.specialties.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {barber.specialties.slice(0, 3).join(' · ')}
+            </span>
+          )}
+          {workDays && (
+            <span className="text-xs text-muted-foreground">{workDays}</span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <button onClick={onEdit} title="Editar"
+          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button onClick={toggle} disabled={isPending}
+          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+          {isPending
+            ? <Loader2 className="h-4 w-4 animate-spin" />
+            : barber.active
+              ? <ToggleRight className="h-5 w-5 text-primary" />
+              : <ToggleLeft  className="h-5 w-5" />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function BarberForm({
+  tenantSlug, barber, onDone,
+}: { tenantSlug: string; barber: BarberWithHours | null; onDone: () => void }) {
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState('')
+
+  // Días activos del barbero (para pre-seleccionar checkboxes)
+  const activeDays = new Set(barber?.workingHours.map((wh) => wh.dayOfWeek) ?? [1,2,3,4,5,6])
+
+  // Horario del primer WorkingHour como referencia
+  const firstWh    = barber?.workingHours[0]
+  const defaultStart = firstWh ? minToTime(firstWh.startMin) : '09:00'
+  const defaultEnd   = firstWh ? minToTime(firstWh.endMin)   : '20:00'
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError('')
+    const fd       = new FormData(e.currentTarget)
+    const checked  = DAYS.filter((d) => fd.get(`day_${d.value}`) === 'on').map((d) => d.value)
+    fd.set('workDays',  checked.join(','))
+    fd.set('startMin',  String(timeToMin(fd.get('startTime') as string)))
+    fd.set('endMin',    String(timeToMin(fd.get('endTime')   as string)))
+
+    startTransition(async () => {
+      try {
+        await upsertBarberAction(tenantSlug, barber?.id ?? null, fd)
+        onDone()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error al guardar')
+      }
+    })
+  }
+
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+      <h3 className="mb-4 font-semibold">{barber ? 'Editar barbero' : 'Nuevo barbero'}</h3>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="displayName">Nombre completo</Label>
+            <Input id="displayName" name="displayName" required defaultValue={barber?.displayName} placeholder="Carlos Andrés Pérez" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="nickname">Apodo (opcional)</Label>
+            <Input id="nickname" name="nickname" defaultValue={barber?.nickname ?? ''} placeholder="El Negro" />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="specialties">Especialidades (separadas por coma)</Label>
+            <Input id="specialties" name="specialties"
+              defaultValue={barber?.specialties.join(', ')} placeholder="Fades, Diseños, Barba" />
+          </div>
+        </div>
+
+        {/* Días de trabajo */}
+        <div className="space-y-2">
+          <Label>Días de trabajo</Label>
+          <div className="flex flex-wrap gap-2">
+            {DAYS.map((d) => (
+              <label key={d.value} className="flex cursor-pointer items-center gap-1.5">
+                <input type="checkbox" name={`day_${d.value}`}
+                  defaultChecked={activeDays.has(d.value)}
+                  className="h-4 w-4 rounded accent-primary" />
+                <span className="text-sm">{d.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Horario */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="startTime">Hora de inicio</Label>
+            <Input id="startTime" name="startTime" type="time" defaultValue={defaultStart} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="endTime">Hora de cierre</Label>
+            <Input id="endTime" name="endTime" type="time" defaultValue={defaultEnd} required />
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="flex gap-2">
+          <Button type="submit" disabled={isPending} size="sm">
+            {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : 'Guardar'}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onDone}>Cancelar</Button>
+        </div>
+      </form>
+    </div>
+  )
+}

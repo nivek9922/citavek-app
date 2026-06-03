@@ -4,6 +4,8 @@ import { organization } from 'better-auth/plugins'
 import { db } from '@/server/db'
 
 export const auth = betterAuth({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+
   database: prismaAdapter(db, { provider: 'postgresql' }),
 
   emailAndPassword: { enabled: true },
@@ -23,8 +25,8 @@ export const auth = betterAuth({
   ],
 
   session: {
-    expiresIn:  60 * 60 * 24 * 7,
-    updateAge:  60 * 60 * 24,
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
   },
 })
 
