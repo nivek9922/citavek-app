@@ -1,26 +1,123 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * BookingFlow — Sistema de diseño dark-first para barberías.
+ * El color primario (--primary, --primary-glow) se sobreescribe
+ * por tenant vía style inline en el layout [tenant]/layout.tsx → sin flash.
+ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Radios */
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* Colores del sistema → mapeados desde CSS vars */
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-primary-glow:         var(--primary-glow);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-success:              var(--success);
+  --color-warning:              var(--warning);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+  --color-sidebar:              var(--sidebar);
+  --color-sidebar-foreground:   var(--sidebar-foreground);
+  --color-sidebar-primary:      var(--sidebar-primary);
+  --color-sidebar-border:       var(--sidebar-border);
+
+  /* Tipografía */
+  --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
+  --font-sans:    "Inter", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Tema base dark-first (barbershop aesthetic) ── */
+:root {
+  --radius: 0.875rem;
+
+  /* Superficies — near-black cálido */
+  --background:       oklch(0.16 0.012 60);
+  --foreground:       oklch(0.97 0.01 80);
+  --card:             oklch(0.20 0.013 60);
+  --card-foreground:  oklch(0.97 0.01 80);
+  --popover:          oklch(0.22 0.014 60);
+  --popover-foreground: oklch(0.97 0.01 80);
+  --surface:          oklch(0.20 0.013 60);
+  --surface-elevated: oklch(0.235 0.014 60);
+
+  /* Brand — amber/dorado por defecto; se sobreescribe por tenant */
+  --primary:          oklch(0.78 0.16 75);
+  --primary-foreground: oklch(0.15 0.02 60);
+  --primary-glow:     oklch(0.86 0.14 80);
+
+  --secondary:        oklch(0.27 0.014 60);
+  --secondary-foreground: oklch(0.97 0.01 80);
+  --muted:            oklch(0.245 0.014 60);
+  --muted-foreground: oklch(0.68 0.018 70);
+  --accent:           oklch(0.30 0.018 60);
+  --accent-foreground: oklch(0.97 0.01 80);
+
+  --destructive:      oklch(0.62 0.22 25);
+  --success:          oklch(0.72 0.17 155);
+  --warning:          oklch(0.80 0.16 75);
+
+  --border:           oklch(1 0 0 / 8%);
+  --input:            oklch(1 0 0 / 12%);
+  --ring:             oklch(0.78 0.16 75 / 60%);
+
+  /* Sidebar */
+  --sidebar:          oklch(0.18 0.013 60);
+  --sidebar-foreground: oklch(0.97 0.01 80);
+  --sidebar-primary:  oklch(0.78 0.16 75);
+  --sidebar-border:   oklch(1 0 0 / 8%);
+
+  /* Tokens compuestos */
+  --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-glow));
+  --gradient-hero:    radial-gradient(ellipse at top, color-mix(in oklab, var(--primary) 25%, transparent), transparent 60%);
+  --shadow-elegant:   0 12px 40px -12px color-mix(in oklab, var(--primary) 40%, transparent);
+  --shadow-card:      0 4px 24px -8px oklch(0 0 0 / 50%);
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .bg-gradient-primary { background: var(--gradient-primary); }
+  .bg-gradient-hero    { background: var(--gradient-hero); }
+  .shadow-elegant      { box-shadow: var(--shadow-elegant); }
+  .shadow-card         { box-shadow: var(--shadow-card); }
+  .transition-smooth   { transition: var(--transition-smooth); }
 }

@@ -1,0 +1,323 @@
+// BookingFlow — SaaS multi-tenant para barberías.
+// Migración 1 (dominio): Organization raíz + Branding, Service, Barber, WorkingHour,
+// Customer, Appointment. Las tablas de better-auth (user/session/account/verification/
+// member/invitation) y la exclusion constraint anti-solape llegan en migraciones 2 y 3.
+// Ver docs/02-modelo-de-datos-y-prisma.md.
+//
+// Convención: TODAS las marcas de tiempo son `timestamptz` (@db.Timestamptz(6)).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // La URL la inyecta prisma.config.ts desde .env (DATABASE_URL).
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum OrganizationStatus {
+  active
+  suspended
+}
+
+enum ServiceCategory {
+  corte
+  barba
+  combo
+  tratamiento
+  infantil
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+enum AppointmentSource {
+  online
+  manual
+}
+
+// ──────────────────── Tenant raíz (Barbería) ────────────────────
+// Columnas base compatibles con el plugin `organization` de better-auth
+// (id, name, slug, logo, metadata, createdAt) + additionalFields de dominio.
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  metadata  String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  // additionalFields de dominio
+  city     String?
+  address  String?
+  phone    String?
+  timezone String             @default("America/Bogota")
+  currency String             @default("COP")
+  status   OrganizationStatus @default(active)
+
+  branding     Branding?
+  services     Service[]
+  barbers      Barber[]
+  customers    Customer[]
+  appointments Appointment[]
+
+  members     Member[]
+  invitations Invitation[]
+
+  @@index([status])
+  @@map("organization")
+}
+
+// ──────────────────── Marca blanca (1:1) ────────────────────
+
+model Branding {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  primaryColor String  @default("#E0A300") // hex; se deriva a OKLCH en runtime
+  logoUrl      String?
+  tagline      String?
+  coverUrl     String?
+
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("branding")
+}
+
+// ──────────────────── Catálogo ────────────────────
+
+model Service {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  durationMin Int // minutos
+  priceCop    Int // pesos enteros COP (ej. 25000)
+  category    ServiceCategory
+  imageUrl    String?
+  active      Boolean         @default(true)
+  sortOrder   Int             @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  appointments Appointment[]
+
+  @@index([organizationId, active, sortOrder])
+  @@map("service")
+}
+
+// ──────────────────── Equipo ────────────────────
+
+model Barber {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  displayName  String
+  nickname     String?
+  avatarUrl    String?
+  specialties  String[] // array nativo Postgres
+  rating       Float    @default(0) // métrica de presentación (no dinero)
+  reviewsCount Int      @default(0)
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  workingHours WorkingHour[]
+  appointments Appointment[]
+
+  @@index([organizationId, active, sortOrder])
+  @@index([userId])
+  @@map("barber")
+}
+
+model WorkingHour {
+  id       String @id @default(cuid())
+  barberId String
+  barber   Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  dayOfWeek Int // 0 = domingo … 6 = sábado
+  startMin  Int // minutos desde medianoche (09:00 → 540)
+  endMin    Int // (20:00 → 1200)
+
+  @@index([barberId, dayOfWeek])
+  @@map("working_hour")
+}
+
+// ──────────────────── CRM mínimo ────────────────────
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name  String
+  phone String // E.164 normalizado, ej. +573104567890
+  email String?
+  notes String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  appointments Appointment[]
+
+  // un cliente por teléfono dentro de la barbería
+  @@unique([organizationId, phone])
+  @@index([organizationId, name])
+  @@map("customer")
+}
+
+// ──────────────────── Núcleo: Citas ────────────────────
+
+model Appointment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  serviceId  String
+  service    Service   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  barberId   String
+  barber     Barber    @relation(fields: [barberId], references: [id], onDelete: Restrict)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Snapshot del cliente (resiliente aunque se borre el Customer)
+  customerName  String
+  customerPhone String
+
+  startAt     DateTime @db.Timestamptz(6) // UTC
+  endAt       DateTime @db.Timestamptz(6) // UTC (= startAt + durationMin)
+  durationMin Int // snapshot
+  priceCop    Int // snapshot (pesos enteros COP)
+
+  status AppointmentStatus @default(confirmed)
+  source AppointmentSource @default(online)
+  notes  String?
+
+  createdByUserId String? // quién la creó (alta manual en panel)
+
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+  cancelledAt DateTime? @db.Timestamptz(6)
+
+  @@index([organizationId, startAt])
+  @@index([organizationId, barberId, startAt])
+  @@index([organizationId, status, startAt])
+  @@map("appointment")
+}
+
+model User {
+  id            String       @id
+  name          String
+  email         String
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
+  barbers       Barber[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+}
