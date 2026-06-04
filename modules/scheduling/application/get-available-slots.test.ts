@@ -79,7 +79,7 @@ describe('getAvailableSlots', () => {
     expect(res.slots).toHaveLength(22)
     // cada slot separado exactamente 30 minutos del siguiente
     for (let i = 1; i < res.slots.length; i++) {
-      expect(res.slots[i].getTime() - res.slots[i - 1].getTime()).toBe(30 * 60_000)
+      expect(res.slots[i]!.getTime() - res.slots[i - 1]!.getTime()).toBe(30 * 60_000)
     }
   })
 
@@ -123,7 +123,7 @@ describe('getAvailableSlots', () => {
     // obtenemos primero los slots limpios para sacar la fecha exacta del slot 5
     const clean = await getAvailableSlots(repo, baseInput)
     if (!clean.ok) throw new Error('setup failed')
-    const target = clean.slots[5]
+    const target = clean.slots[5]!
 
     const busySlots: BusySlot[] = [
       { startAt: target, endAt: new Date(target.getTime() + 30 * 60_000) },

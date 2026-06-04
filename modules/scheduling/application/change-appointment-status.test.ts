@@ -40,8 +40,8 @@ describe('changeAppointmentStatus', () => {
     await changeAppointmentStatus(repo, { ...base, newStatus: 'completed' })
 
     expect(updates).toHaveLength(1)
-    expect(updates[0].status).toBe('completed')
-    expect(updates[0].cancelledAt).toBeNull()
+    expect(updates[0]!.status).toBe('completed')
+    expect(updates[0]!.cancelledAt).toBeNull()
   })
 
   it('al cancelar registra cancelledAt', async () => {
@@ -49,7 +49,7 @@ describe('changeAppointmentStatus', () => {
 
     await changeAppointmentStatus(repo, { ...base, newStatus: 'cancelled' })
 
-    expect(updates[0].cancelledAt).toBeInstanceOf(Date)
+    expect(updates[0]!.cancelledAt).toBeInstanceOf(Date)
   })
 
   it('permite pending → confirmed', async () => {

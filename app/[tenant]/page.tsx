@@ -13,15 +13,39 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default async function TenantPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ tenant: string }>
+  params:       Promise<{ tenant: string }>
+  searchParams: Promise<{ embed?: string }>
 }) {
   const { tenant: slug } = await params
+  const { embed }        = await searchParams
   const ctx = await getTenantContext(slug)
   const [services, barbers] = await Promise.all([
     listActiveServices(ctx.id),
     listActiveBarbers(ctx.id),
   ])
+
+  if (embed === '1') {
+    return (
+      <div className="min-h-screen bg-background flex items-start justify-center p-4 pt-6">
+        <div className="w-full max-w-lg rounded-3xl border border-border bg-card/80 p-5 shadow-card backdrop-blur-sm sm:p-7">
+          <div className="mb-5">
+            <p className="font-display text-xl tracking-wide">{ctx.name}</p>
+            <p className="text-xs text-muted-foreground">Reserva tu cita</p>
+          </div>
+          <BookingFlow
+            tenantSlug={slug}
+            services={services}
+            barbers={barbers}
+            shopName={ctx.name}
+            shopPhone={ctx.phone}
+            shopAddress={ctx.address}
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">

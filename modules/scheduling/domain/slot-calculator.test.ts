@@ -30,7 +30,7 @@ describe('computeAvailableSlots', () => {
     expect(slots).toHaveLength(22)
     // ordenados y separados exactamente 30 minutos
     for (let i = 1; i < slots.length; i++) {
-      expect(slots[i].getTime() - slots[i - 1].getTime()).toBe(30 * 60_000)
+      expect(slots[i]!.getTime() - slots[i - 1]!.getTime()).toBe(30 * 60_000)
     }
   })
 
@@ -48,7 +48,7 @@ describe('computeAvailableSlots', () => {
       date: futureDate, timezone: TZ, workingHours: fullWeek, existingSlots: [],
       durationMin: 30, stepMin: 30,
     })
-    const target = free[5]
+    const target = free[5]!
     const busy: BusySlot[] = [{ startAt: target, endAt: new Date(target.getTime() + 30 * 60_000) }]
 
     const withBusy = computeAvailableSlots({

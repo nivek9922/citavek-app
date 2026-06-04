@@ -67,7 +67,7 @@ describe('rescheduleAppointment', () => {
 
     expect(res.ok).toBe(true)
     expect(updates).toHaveLength(1)
-    expect(updates[0].startAt).toBe(newStartAt)
+    expect(updates[0]!.startAt).toBe(newStartAt)
   })
 
   it('reprograma con éxito una cita pending', async () => {
@@ -85,7 +85,7 @@ describe('rescheduleAppointment', () => {
     await rescheduleAppointment(repo, { ...baseInput, newStartAt })
 
     const expectedEnd = new Date(newStartAt.getTime() + 45 * 60_000)
-    expect(updates[0].endAt.getTime()).toBe(expectedEnd.getTime())
+    expect(updates[0]!.endAt.getTime()).toBe(expectedEnd.getTime())
   })
 
   it('excluye la propia cita del chequeo de conflictos', async () => {

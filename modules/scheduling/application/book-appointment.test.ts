@@ -70,7 +70,7 @@ describe('bookAppointment', () => {
 
     await bookAppointment(repo, { ...baseInput, startAt })
 
-    const apt = created[0]
+    const apt = created[0]!
     expect(apt.priceCop).toBe(45000)
     expect(apt.durationMin).toBe(60)
     expect(apt.endAt.getTime()).toBe(startAt.getTime() + 60 * 60_000)

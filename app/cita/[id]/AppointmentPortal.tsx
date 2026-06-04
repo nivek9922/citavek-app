@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react'
 import { AlertCircle, Calendar, CheckCircle2, Clock, Phone, Scissors } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import {
   cancelByCustomerAction,
@@ -144,7 +143,7 @@ export function AppointmentPortal({ appointmentId }: { appointmentId: string }) 
   if (!apt) return null
 
   const tz         = apt.organization.timezone
-  const statusInfo = STATUS_LABEL[apt.status] ?? STATUS_LABEL['pending']
+  const statusInfo = STATUS_LABEL[apt.status] ?? { text: 'Pendiente', variant: 'secondary' as const }
   const canCancel  = apt.status === 'pending' || apt.status === 'confirmed'
 
   return (

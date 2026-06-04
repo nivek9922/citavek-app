@@ -41,7 +41,7 @@ describe('unblockBarberDate', () => {
 
     expect(res.ok).toBe(true)
     expect(unblocked).toHaveLength(1)
-    expect(unblocked[0]).toMatchObject({ orgId: 'org-1', barberId: 'brb-1', dateStr: '2025-12-25' })
+    expect(unblocked[0]!).toMatchObject({ orgId: 'org-1', barberId: 'brb-1', dateStr: '2025-12-25' })
   })
 
   it('desbloquea un día de la organización (barberId = null)', async () => {
@@ -50,7 +50,7 @@ describe('unblockBarberDate', () => {
     const res = await unblockBarberDate(repo, { ...base, barberId: null })
 
     expect(res.ok).toBe(true)
-    expect(unblocked[0].barberId).toBeNull()
+    expect(unblocked[0]!.barberId).toBeNull()
   })
 
   it('no falla si el día no estaba bloqueado (idempotente)', async () => {

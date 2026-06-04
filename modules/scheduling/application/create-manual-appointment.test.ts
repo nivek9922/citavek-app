@@ -57,7 +57,7 @@ describe('createManualAppointment', () => {
     const res = await createManualAppointment(repo, baseInput)
 
     expect(res).toEqual({ ok: true, appointmentId: 'apt-1' })
-    const apt = created[0]
+    const apt = created[0]!
     expect(apt.source).toBe('manual')
     expect(apt.createdByUserId).toBe('user-1')
     expect(apt.notes).toBe('Cliente frecuente')
@@ -68,7 +68,7 @@ describe('createManualAppointment', () => {
 
     await createManualAppointment(repo, baseInput)
 
-    const apt = created[0]
+    const apt = created[0]!
     expect(apt.priceCop).toBe(65000)
     expect(apt.durationMin).toBe(75)
     expect(apt.endAt.getTime()).toBe(baseInput.startAt.getTime() + 75 * 60_000)

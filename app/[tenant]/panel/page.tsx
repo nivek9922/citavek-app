@@ -1,16 +1,24 @@
 import { DollarSign, CalendarDays, Scissors, TrendingUp } from 'lucide-react'
-import { format, addDays, parseISO, differenceInCalendarDays, isValid } from 'date-fns'
+import { format, addDays, parseISO, differenceInCalendarDays, isValid, startOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
+import Link from 'next/link'
 import { getTenantContext } from '@/server/tenant'
 import { requireMembership } from '@/server/auth-guards'
-import { getDashboardKPIs, getAppointmentsForDate, tenantToday } from '@/modules/analytics/queries'
+import {
+  getDashboardKPIs,
+  getAppointmentsForDate,
+  getAppointmentsForWeek,
+  tenantToday,
+} from '@/modules/analytics/queries'
 import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers }  from '@/modules/staff/queries'
 import { formatCop } from '@/shared/format'
+import { cn } from '@/shared/ui/utils'
 import { PageHeader } from '@/shared/ui/page-header'
 import { StatCard }   from '@/modules/analytics/ui/StatCard'
-import { AgendaBoard }   from '@/modules/scheduling/ui/AgendaBoard'
-import { AgendaDateNav } from '@/modules/scheduling/ui/AgendaDateNav'
+import { AgendaBoard }    from '@/modules/scheduling/ui/AgendaBoard'
+import { AgendaDateNav }  from '@/modules/scheduling/ui/AgendaDateNav'
+import { AgendaWeekView } from '@/modules/scheduling/ui/AgendaWeekView'
 import { NewAppointmentDialog } from '@/modules/scheduling/ui/NewAppointmentDialog'
 
 function capitalize(s: string) {
@@ -33,22 +41,37 @@ export default async function PanelPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ tenant: string }>
-  searchParams: Promise<{ date?: string }>
+  params:       Promise<{ tenant: string }>
+  searchParams: Promise<{ date?: string; view?: string; week?: string }>
 }) {
-  const { tenant: slug } = await params
-  const { date }         = await searchParams
+  const { tenant: slug }      = await params
+  const { date, view, week }  = await searchParams
   const ctx = await getTenantContext(slug)
   await requireMembership(ctx.id)
 
-  const today        = tenantToday(ctx.timezone)
+  const today      = tenantToday(ctx.timezone)
+  const isWeekView = view === 'week'
+  const base       = `/${slug}/panel`
+
+  // ── Vista diaria ────────────────────────────────────────────────────────────
   const selectedDate = isValidDateStr(date) ? date : today
   const prevDate     = format(addDays(parseISO(selectedDate), -1), 'yyyy-MM-dd')
   const nextDate     = format(addDays(parseISO(selectedDate),  1), 'yyyy-MM-dd')
 
-  const [kpis, appointments, services, barbers] = await Promise.all([
+  // ── Vista semanal ───────────────────────────────────────────────────────────
+  const todayMonday   = format(startOfWeek(parseISO(today), { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  const weekStartStr  = isValidDateStr(week) ? format(startOfWeek(parseISO(week), { weekStartsOn: 1 }), 'yyyy-MM-dd') : todayMonday
+  const prevWeekStr   = format(addDays(parseISO(weekStartStr), -7), 'yyyy-MM-dd')
+  const nextWeekStr   = format(addDays(parseISO(weekStartStr),  7), 'yyyy-MM-dd')
+  const weekEndStr    = format(addDays(parseISO(weekStartStr),  6), 'yyyy-MM-dd')
+  const weekLabel     = format(parseISO(weekStartStr), "d MMM", { locale: es })
+    + ' – '
+    + format(parseISO(weekEndStr), "d MMM yyyy", { locale: es })
+
+  const [kpis, appointments, weekDays, services, barbers] = await Promise.all([
     getDashboardKPIs(ctx.id, ctx.timezone),
-    getAppointmentsForDate(ctx.id, ctx.timezone, selectedDate),
+    isWeekView ? Promise.resolve([]) : getAppointmentsForDate(ctx.id, ctx.timezone, selectedDate),
+    isWeekView ? getAppointmentsForWeek(ctx.id, ctx.timezone, weekStartStr) : Promise.resolve([]),
     listActiveServices(ctx.id),
     listActiveBarbers(ctx.id),
   ])
@@ -92,17 +115,58 @@ export default async function PanelPage({
         </div>
       </section>
 
-      {/* Agenda navegable por día */}
+      {/* Agenda con toggle día / semana */}
       <section>
-        <AgendaDateNav
-          slug={slug}
-          label={dayLabel(selectedDate, today)}
-          prevDate={prevDate}
-          nextDate={nextDate}
-          isToday={selectedDate === today}
-          count={appointments.length}
-        />
-        <AgendaBoard appointments={appointments} tenantSlug={slug} />
+        {/* Toggle */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex rounded-lg border border-border p-0.5 text-sm">
+            <Link
+              href={`${base}?date=${selectedDate}`}
+              className={cn(
+                'rounded-md px-3 py-1 font-medium transition-smooth',
+                !isWeekView
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Día
+            </Link>
+            <Link
+              href={`${base}?view=week&week=${weekStartStr}`}
+              className={cn(
+                'rounded-md px-3 py-1 font-medium transition-smooth',
+                isWeekView
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Semana
+            </Link>
+          </div>
+        </div>
+
+        {isWeekView ? (
+          <AgendaWeekView
+            slug={slug}
+            weekDays={weekDays}
+            todayStr={today}
+            prevWeekStr={prevWeekStr}
+            nextWeekStr={nextWeekStr}
+            weekLabel={weekLabel}
+          />
+        ) : (
+          <>
+            <AgendaDateNav
+              slug={slug}
+              label={dayLabel(selectedDate, today)}
+              prevDate={prevDate}
+              nextDate={nextDate}
+              isToday={selectedDate === today}
+              count={appointments.length}
+            />
+            <AgendaBoard appointments={appointments} tenantSlug={slug} />
+          </>
+        )}
       </section>
     </div>
   )

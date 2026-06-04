@@ -41,7 +41,7 @@ describe('blockBarberDate', () => {
 
     expect(res.ok).toBe(true)
     expect(blocked).toHaveLength(1)
-    expect(blocked[0]).toMatchObject({ dateStr: '2025-12-25', barberId: 'brb-1' })
+    expect(blocked[0]!).toMatchObject({ dateStr: '2025-12-25', barberId: 'brb-1' })
   })
 
   it('bloquea un día para toda la organización (barberId = null)', async () => {
@@ -50,7 +50,7 @@ describe('blockBarberDate', () => {
     const res = await blockBarberDate(repo, { ...base, barberId: null })
 
     expect(res.ok).toBe(true)
-    expect(blocked[0].barberId).toBeNull()
+    expect(blocked[0]!.barberId).toBeNull()
     // no debe verificar si hay barbero activo cuando es bloqueo de org
     expect(repo.isActiveBarber).not.toHaveBeenCalled()
   })
@@ -60,7 +60,7 @@ describe('blockBarberDate', () => {
 
     await blockBarberDate(repo, { ...base, reason: 'Festivo nacional' })
 
-    expect(blocked[0].reason).toBe('Festivo nacional')
+    expect(blocked[0]!.reason).toBe('Festivo nacional')
   })
 
   it('rechaza si el barbero no pertenece a la org', async () => {
