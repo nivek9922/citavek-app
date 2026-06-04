@@ -77,7 +77,7 @@ export function AgendaWeekView({
               <div
                 key={dateStr}
                 className={cn(
-                  'flex flex-col min-h-[160px] border-border',
+                  'flex flex-col min-h-40 border-border',
                   colIdx < 6 && 'border-r',
                 )}
               >

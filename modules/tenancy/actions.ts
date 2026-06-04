@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
+import { requireSuperAdmin }  from '@/server/super-admin'
 import { db } from '@/server/db'
 
 const brandingSchema = z.object({
@@ -54,4 +55,20 @@ export async function updateOrgInfoAction(slug: string, formData: FormData) {
   await db.organization.update({ where: { id: ctx.id }, data: input })
   revalidatePath(`/${slug}`)
   revalidatePath(`/${slug}/panel/marca`)
+}
+
+// ── Super-admin: activar / suspender barbería ────────────────────────────────
+
+export async function setOrgStatusAction(
+  orgId: string,
+  status: 'active' | 'suspended',
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await requireSuperAdmin()
+    await db.organization.update({ where: { id: orgId }, data: { status } })
+    revalidatePath('/admin')
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'No se pudo cambiar el estado.' }
+  }
 }
