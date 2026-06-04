@@ -25,7 +25,7 @@ interface Props {
 export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone, shopAddress }: Props) {
   const flow = useBookingFlow()
   const [isPending, startTransition] = useTransition()
-  const [confirmed, setConfirmed] = useState<{ startAt: Date; priceCop: number } | null>(null)
+  const [confirmed, setConfirmed] = useState<{ startAt: Date; priceCop: number; appointmentId: string } | null>(null)
   const [error, setError] = useState('')
 
   if (confirmed && flow.draft.service && flow.draft.barber) {
@@ -35,6 +35,7 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
         barber={flow.draft.barber}
         startAt={confirmed.startAt}
         priceCop={confirmed.priceCop}
+        appointmentId={confirmed.appointmentId}
         shopName={shopName}
         shopPhone={shopPhone}
         shopAddress={shopAddress}
@@ -58,7 +59,7 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
         customerPhone: customerPhone,
       })
       if (res.ok) {
-        setConfirmed({ startAt, priceCop: service.priceCop })
+        setConfirmed({ startAt, priceCop: service.priceCop, appointmentId: res.appointmentId })
       } else {
         setError(res.error)
       }

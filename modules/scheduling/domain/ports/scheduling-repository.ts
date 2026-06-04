@@ -17,6 +17,19 @@ export interface ReschedulableAppointment {
   barberId:  string
 }
 
+/** Vista de cita para el portal del cliente (sin datos sensibles del negocio). */
+export interface CustomerAppointment {
+  id:             string
+  organizationId: string  // necesario para mutaciones internas del dominio
+  status:         AppointmentStatusValue
+  startAt:        Date
+  endAt:          Date
+  customerName:   string
+  service:        { name: string; durationMin: number; priceCop: number }
+  barber:         { displayName: string; nickname: string | null }
+  organization:   { name: string; slug: string; timezone: string; phone: string | null }
+}
+
 export interface NewAppointment {
   organizationId:  string
   serviceId:       string
@@ -115,4 +128,14 @@ export interface SchedulingRepository {
     barberId: string | null,
     dateStr: string,
   ): Promise<void>
+
+  /**
+   * Busca una cita por ID verificando que el teléfono del cliente coincida.
+   * Devuelve null tanto si no existe como si el teléfono no coincide —
+   * no revela si el ID es válido (privacidad por diseño).
+   */
+  getAppointmentForCustomer(
+    appointmentId: string,
+    customerPhone: string,
+  ): Promise<CustomerAppointment | null>
 }

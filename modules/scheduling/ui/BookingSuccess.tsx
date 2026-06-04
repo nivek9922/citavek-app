@@ -1,7 +1,8 @@
 'use client'
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { CheckCircle2, MessageCircle, CalendarPlus } from 'lucide-react'
+import { CalendarPlus, CheckCircle2, Copy, Link, MessageCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { formatCop } from '@/shared/format'
 import { buildWhatsAppLink, buildIcsDataUri } from '@/shared/booking-links'
@@ -9,19 +10,29 @@ import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
 
 interface Props {
-  service:     ServiceDTO
-  barber:      BarberDTO
-  startAt:     Date
-  priceCop:    number
-  shopName:    string
-  shopPhone:   string | null
-  shopAddress: string | null
-  onNew:       () => void
+  service:       ServiceDTO
+  barber:        BarberDTO
+  startAt:       Date
+  priceCop:      number
+  appointmentId: string
+  shopName:      string
+  shopPhone:     string | null
+  shopAddress:   string | null
+  onNew:         () => void
 }
 
 export function BookingSuccess({
-  service, barber, startAt, priceCop, shopName, shopPhone, shopAddress, onNew,
+  service, barber, startAt, priceCop, appointmentId, shopName, shopPhone, shopAddress, onNew,
 }: Props) {
+  const [copied, setCopied] = useState(false)
+  const citaUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/cita/${appointmentId}`
+
+  function handleCopy() {
+    navigator.clipboard.writeText(citaUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
   const endAt     = new Date(startAt.getTime() + service.durationMin * 60_000)
   const whenLabel = format(startAt, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
 
@@ -80,6 +91,29 @@ export function BookingSuccess({
           <CalendarPlus className="h-4 w-4" />
           Agregar al calendario
         </a>
+      </div>
+
+      {/* Link de la cita — para ver / cancelar sin cuenta */}
+      <div className="w-full rounded-xl border border-border bg-muted/40 p-3 text-left">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <Link className="h-3.5 w-3.5" />
+          Guarda este link para ver o cancelar tu cita
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="flex-1 truncate rounded-md bg-background px-2 py-1.5 font-mono text-xs text-foreground">
+            {citaUrl}
+          </span>
+          <button
+            onClick={handleCopy}
+            className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            aria-label="Copiar link"
+          >
+            {copied
+              ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+              : <Copy className="h-4 w-4" />
+            }
+          </button>
+        </div>
       </div>
 
       <Button variant="ghost" onClick={onNew} className="w-full text-muted-foreground">

@@ -135,6 +135,37 @@ export const prismaSchedulingRepository: SchedulingRepository = {
     })
   },
 
+  async getAppointmentForCustomer(appointmentId, customerPhone) {
+    const apt = await db.appointment.findFirst({
+      where:  { id: appointmentId, customerPhone },
+      select: {
+        id:             true,
+        organizationId: true,
+        status:         true,
+        startAt:        true,
+        endAt:          true,
+        customerName:   true,
+        service:  { select: { name: true, durationMin: true, priceCop: true } },
+        barber:   { select: { displayName: true, nickname: true } },
+        organization: {
+          select: { name: true, slug: true, timezone: true, phone: true },
+        },
+      },
+    })
+    if (!apt) return null
+    return {
+      id:             apt.id,
+      organizationId: apt.organizationId,
+      status:         apt.status as import('../domain/appointment').AppointmentStatusValue,
+      startAt:        apt.startAt,
+      endAt:          apt.endAt,
+      customerName:   apt.customerName,
+      service:        apt.service,
+      barber:         apt.barber,
+      organization:   { ...apt.organization, phone: apt.organization.phone ?? null },
+    }
+  },
+
   async isDateBlocked(organizationId, barberId, dateStr) {
     const exception = await db.scheduleException.findFirst({
       where: {
