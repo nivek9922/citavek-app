@@ -54,7 +54,7 @@ function InfoForm({ tenantSlug, org }: { tenantSlug: string; org: Props['org'] }
   const [isPending, startTransition] = useTransition()
   const [saved,     setSaved]        = useState(false)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaved(false)
     startTransition(async () => {
@@ -82,7 +82,7 @@ function BrandForm({ tenantSlug, branding }: { tenantSlug: string; branding: Pro
   const [isPending, startTransition] = useTransition()
   const [saved,     setSaved]   = useState(false)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaved(false)
     const fd = new FormData(e.currentTarget)

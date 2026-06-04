@@ -14,7 +14,7 @@ export function LoginForm() {
   const [showPass, setShowPass] = useState(false)
   const [error,    setError]    = useState('')
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     const fd    = new FormData(e.currentTarget)

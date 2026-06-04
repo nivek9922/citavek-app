@@ -25,6 +25,8 @@ const selfRegisterSchema = z.object({
   city:         z.string().min(2).max(60),
   phone:        z.string().min(7).max(20),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#E0A300'),
+  // userId enviado por el cliente como fallback si la cookie aún no propagó al SA.
+  _userId:      z.string().optional(),
 })
 
 export type SelfRegisterInput = z.infer<typeof selfRegisterSchema>
@@ -33,17 +35,33 @@ export async function createBarberiaForSelfAction(
   input: SelfRegisterInput,
 ): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
   try {
-    const session = await getSession()
-    if (!session) return { ok: false, error: 'Sesión no encontrada. Intenta de nuevo.' }
-
     const data = selfRegisterSchema.parse(input)
 
-    // Restricción MVP: un owner solo puede tener una barbería (delivery-level).
-    const existing = await getPrimaryMembership(session.user.id)
+    // Resolver userId: primero desde la sesión del servidor, luego desde el cliente.
+    let userId: string | null = null
+
+    const session = await getSession()
+    if (session) {
+      userId = session.user.id
+    } else if (data._userId) {
+      // Fallback: verificar que el usuario exista y haya sido creado hace menos de 3 min.
+      const user = await db.user.findUnique({
+        where:  { id: data._userId },
+        select: { id: true, createdAt: true },
+      })
+      if (user && Date.now() - user.createdAt.getTime() < 3 * 60_000) {
+        userId = user.id
+      }
+    }
+
+    if (!userId) return { ok: false, error: 'Sesión no encontrada. Intenta iniciar sesión.' }
+
+    // Restricción MVP: un owner solo puede tener una barbería.
+    const existing = await getPrimaryMembership(userId)
     if (existing) return { ok: false, error: 'Ya tienes una barbería registrada.' }
 
     return createOrganization(repo, {
-      userId:       session.user.id,
+      userId,
       name:         data.name,
       slug:         data.slug,
       city:         data.city,

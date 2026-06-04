@@ -16,10 +16,13 @@ export async function getOrgSettings(organizationId: string) {
   return { org, branding }
 }
 
-/** Super-admin: todas las barberías con última cita (para churn). NO tenant-scoped. */
+/**
+ * Super-admin: todas las barberías (activas y suspendidas). NO tenant-scoped.
+ * Las suspendidas se muestran con su badge para poder reactivarlas, no se ocultan.
+ */
 export async function listOrganizationsForAdmin() {
   return db.organization.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], // activas primero
     select: {
       id: true, name: true, slug: true, city: true, status: true, createdAt: true,
       branding: { select: { primaryColor: true } },

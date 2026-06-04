@@ -22,7 +22,7 @@ export function CreateBarberiaForm() {
       .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60)
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -124,7 +124,7 @@ function Field({
   label: string; name: string; placeholder?: string; type?: string
   hint?: string
   onChange?: (value: string, el: HTMLInputElement) => void
-  onInput?: (e: React.FormEvent<HTMLInputElement>) => void
+  onInput?: (e: React.SyntheticEvent<HTMLInputElement>) => void
 }) {
   return (
     <div className="space-y-1.5">

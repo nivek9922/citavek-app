@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getTenantContext } from '@/server/tenant'
@@ -8,7 +7,7 @@ import { listCustomers } from '@/modules/customers/queries'
 import { formatCop } from '@/shared/format'
 import { PageHeader } from '@/shared/ui/page-header'
 import { EmptyState } from '@/shared/ui/empty-state'
-import { Input } from '@/shared/ui/input'
+import { CustomerSearch } from '@/modules/customers/ui/CustomerSearch'
 
 export default async function ClientesPage({
   params,
@@ -31,17 +30,7 @@ export default async function ClientesPage({
         description={`${customers.length} ${customers.length === 1 ? 'cliente' : 'clientes'}`}
       />
 
-      {/* Búsqueda — form nativo GET (URL state, sin JS de cliente) */}
-      <form className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          name="q"
-          defaultValue={q ?? ''}
-          placeholder="Buscar por nombre o teléfono…"
-          className="pl-9"
-          aria-label="Buscar clientes"
-        />
-      </form>
+      <CustomerSearch slug={slug} initialQuery={q ?? ''} />
 
       {customers.length === 0 ? (
         <EmptyState

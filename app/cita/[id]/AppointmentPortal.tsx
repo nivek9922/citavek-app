@@ -54,7 +54,7 @@ export function AppointmentPortal({ appointmentId }: { appointmentId: string }) 
   const e164 = `+57${digits}`
 
   // ── Paso 1: verificación por teléfono ──────────────────────────────────────
-  function handlePhoneSubmit(e: React.FormEvent) {
+  function handlePhoneSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
     setError(null)
     startTransition(async () => {

@@ -120,28 +120,65 @@ function BarberRow({
   )
 }
 
+// ── Estado de horario por día ────────────────────────────────────────────────
+
+interface DayHour { active: boolean; start: string; end: string }
+type HoursState = Record<number, DayHour>
+
+function buildInitialHours(wh: BarberWithHours['workingHours']): HoursState {
+  const map: Record<number, { startMin: number; endMin: number }> = {}
+  for (const h of wh) map[h.dayOfWeek] = h
+
+  return Object.fromEntries(
+    DAYS.map(({ value }) => [
+      value,
+      {
+        active: value in map,
+        start:  minToTime(map[value]?.startMin ?? 540),   // default 09:00
+        end:    minToTime(map[value]?.endMin   ?? 1200),  // default 20:00
+      },
+    ]),
+  ) as HoursState
+}
+
+// ── Formulario ───────────────────────────────────────────────────────────────
+
 function BarberForm({
   tenantSlug, barber, onDone,
 }: { tenantSlug: string; barber: BarberWithHours | null; onDone: () => void }) {
   const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState('')
+  const [error, setError]   = useState('')
+  const [hours, setHours]   = useState<HoursState>(() =>
+    buildInitialHours(barber?.workingHours ?? []),
+  )
 
-  // Días activos del barbero (para pre-seleccionar checkboxes)
-  const activeDays = new Set(barber?.workingHours.map((wh) => wh.dayOfWeek) ?? [1,2,3,4,5,6])
+  function toggleDay(day: number) {
+    setHours((prev) => ({
+      ...prev,
+      [day]: { ...prev[day]!, active: !prev[day]!.active },
+    }))
+  }
 
-  // Horario del primer WorkingHour como referencia
-  const firstWh    = barber?.workingHours[0]
-  const defaultStart = firstWh ? minToTime(firstWh.startMin) : '09:00'
-  const defaultEnd   = firstWh ? minToTime(firstWh.endMin)   : '20:00'
+  function setDayTime(day: number, field: 'start' | 'end', value: string) {
+    setHours((prev) => ({ ...prev, [day]: { ...prev[day]!, [field]: value } }))
+  }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
-    const fd       = new FormData(e.currentTarget)
-    const checked  = DAYS.filter((d) => fd.get(`day_${d.value}`) === 'on').map((d) => d.value)
-    fd.set('workDays',  checked.join(','))
-    fd.set('startMin',  String(timeToMin(fd.get('startTime') as string)))
-    fd.set('endMin',    String(timeToMin(fd.get('endTime')   as string)))
+
+    const hoursJson = JSON.stringify(
+      DAYS
+        .filter(({ value }) => hours[value]?.active)
+        .map(({ value }) => ({
+          dayOfWeek: value,
+          startMin:  timeToMin(hours[value]!.start),
+          endMin:    timeToMin(hours[value]!.end),
+        })),
+    )
+
+    const fd = new FormData(e.currentTarget)
+    fd.set('hoursJson', hoursJson)
 
     startTransition(async () => {
       try {
@@ -157,14 +194,18 @@ function BarberForm({
     <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
       <h3 className="mb-4 font-semibold">{barber ? 'Editar barbero' : 'Nuevo barbero'}</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Datos básicos */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="displayName">Nombre completo</Label>
-            <Input id="displayName" name="displayName" required defaultValue={barber?.displayName} placeholder="Carlos Andrés Pérez" />
+            <Input id="displayName" name="displayName" required
+              defaultValue={barber?.displayName} placeholder="Carlos Andrés Pérez" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="nickname">Apodo (opcional)</Label>
-            <Input id="nickname" name="nickname" defaultValue={barber?.nickname ?? ''} placeholder="El Negro" />
+            <Input id="nickname" name="nickname"
+              defaultValue={barber?.nickname ?? ''} placeholder="El Negro" />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="specialties">Especialidades (separadas por coma)</Label>
@@ -173,30 +214,55 @@ function BarberForm({
           </div>
         </div>
 
-        {/* Días de trabajo */}
+        {/* Horario por día */}
         <div className="space-y-2">
-          <Label>Días de trabajo</Label>
-          <div className="flex flex-wrap gap-2">
-            {DAYS.map((d) => (
-              <label key={d.value} className="flex cursor-pointer items-center gap-1.5">
-                <input type="checkbox" name={`day_${d.value}`}
-                  defaultChecked={activeDays.has(d.value)}
-                  className="h-4 w-4 rounded accent-primary" />
-                <span className="text-sm">{d.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+          <Label>Horario de trabajo</Label>
+          <div className="overflow-hidden rounded-xl border border-border">
+            {DAYS.map(({ value, label }, idx) => {
+              const day = hours[value]!
+              return (
+                <div
+                  key={value}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 text-sm transition-smooth',
+                    idx < DAYS.length - 1 && 'border-b border-border',
+                    !day.active && 'opacity-40',
+                  )}
+                >
+                  <label className="flex w-10 shrink-0 cursor-pointer items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={day.active}
+                      onChange={() => toggleDay(value)}
+                      className="h-4 w-4 rounded accent-primary"
+                    />
+                    <span className="font-medium">{label}</span>
+                  </label>
 
-        {/* Horario */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="startTime">Hora de inicio</Label>
-            <Input id="startTime" name="startTime" type="time" defaultValue={defaultStart} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="endTime">Hora de cierre</Label>
-            <Input id="endTime" name="endTime" type="time" defaultValue={defaultEnd} required />
+                  <div className="flex flex-1 items-center gap-2">
+                    <input
+                      type="time"
+                      value={day.start}
+                      disabled={!day.active}
+                      onChange={(e) => setDayTime(value, 'start', e.target.value)}
+                      className="w-24 rounded-md border border-input bg-background px-2 py-1 text-xs disabled:cursor-not-allowed"
+                    />
+                    <span className="text-muted-foreground">—</span>
+                    <input
+                      type="time"
+                      value={day.end}
+                      disabled={!day.active}
+                      onChange={(e) => setDayTime(value, 'end', e.target.value)}
+                      className="w-24 rounded-md border border-input bg-background px-2 py-1 text-xs disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  {!day.active && (
+                    <span className="text-xs text-muted-foreground">No trabaja</span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 

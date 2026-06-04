@@ -1,6 +1,5 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
 import { authClient }   from '@/lib/auth-client'
 import { Input }        from '@/shared/ui/input'
@@ -22,14 +21,13 @@ function slugify(name: string) {
 }
 
 export function SignUpForm() {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showPass,  setShowPass]  = useState(false)
   const [color,     setColor]     = useState('#E0A300')
   const [error,     setError]     = useState('')
   const [step,      setStep]      = useState<'form' | 'creating'>('form')
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     const fd = new FormData(e.currentTarget)
@@ -46,13 +44,12 @@ export function SignUpForm() {
       try {
         setStep('creating')
 
-        // Paso 1: crear cuenta (better-auth setea la cookie de sesión)
-        const { error: authError } = await authClient.signUp.email({
-          name:        ownerName,
-          email,
-          password,
-          callbackURL: '/redirect',
-        })
+        // Paso 1: crear cuenta (better-auth setea la cookie de sesión).
+        // Sin callbackURL para evitar que el cliente navegue automáticamente.
+        const { data: authData, error: authError } = await authClient.signUp.email(
+          { name: ownerName, email, password },
+          { onError: () => {} },  // evita que mejor-auth lance excepciones no controladas
+        )
 
         if (authError) {
           const msg = authError.code === 'USER_ALREADY_EXISTS'
@@ -63,13 +60,15 @@ export function SignUpForm() {
           return
         }
 
-        // Paso 2: crear la barbería (Server Action usa la sesión recién creada)
+        // Paso 2: crear la barbería (Server Action usa la sesión recién creada).
+        // Se pasa userId del signup como fallback por si la cookie aún no propagó.
         const res = await createBarberiaForSelfAction({
           name:         shopName,
           slug,
           city,
           phone,
           primaryColor: color,
+          _userId:      authData?.user.id,
         })
 
         if (!res.ok) {
@@ -78,8 +77,8 @@ export function SignUpForm() {
           return
         }
 
-        router.push(`/${res.slug}/panel`)
-        router.refresh()
+        // Hard navigation para que el nuevo request incluya la sesión recién creada.
+        window.location.href = `/${res.slug}/panel`
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error inesperado. Intenta de nuevo.')
         setStep('form')

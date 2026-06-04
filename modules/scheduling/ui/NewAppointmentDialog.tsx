@@ -27,7 +27,7 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
   const [isPending, start]  = useTransition()
   const [error, setError]   = useState('')
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     const fd    = new FormData(e.currentTarget)

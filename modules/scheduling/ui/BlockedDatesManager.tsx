@@ -40,7 +40,7 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers }: Props) 
   const upcoming = list.filter((e) => e.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date))
   const past     = list.filter((e) => e.date <  TODAY).sort((a, b) => b.date.localeCompare(a.date))
 
-  function handleAdd(e: React.FormEvent) {
+  function handleAdd(e: React.SyntheticEvent) {
     e.preventDefault()
     if (!date) return
     setError(null)

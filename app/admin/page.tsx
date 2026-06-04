@@ -1,9 +1,13 @@
 import Link from 'next/link'
 import { ExternalLink, Users, Scissors, AlertTriangle, CalendarDays, TrendingUp } from 'lucide-react'
 import { requireSuperAdmin }          from '@/server/super-admin'
-import { listOrganizationsForAdmin, getPlatformKPIs } from '@/modules/tenancy/queries'
-import { OrgStatusToggle }            from '@/modules/tenancy/ui/OrgStatusToggle'
-import { CreateBarberiaForm }         from '@/modules/identity/ui/CreateBarberiaForm'
+import {
+  listOrganizationsForAdmin,
+  getPlatformKPIs,
+} from '@/modules/tenancy/queries'
+import { OrgStatusToggle } from '@/modules/tenancy/ui/OrgStatusToggle'
+import { OrgDeleteButton } from '@/modules/tenancy/ui/OrgDeleteButton'
+import { CreateBarberiaForm } from '@/modules/identity/ui/CreateBarberiaForm'
 
 const CHURN_DAYS = 30
 
@@ -21,7 +25,11 @@ export default async function AdminPage() {
 
   const churnRisk = orgs.filter((o) => {
     const last = o.appointments[0]?.startAt
-    return o.status === 'active' && (!last || daysSince(last) > CHURN_DAYS)
+    // Solo flaggear orgs que llevan más tiempo que la ventana de churn.
+    // Orgs nuevas sin citas no son churn — son onboarding.
+    return o.status === 'active'
+      && daysSince(o.createdAt) > CHURN_DAYS
+      && (!last || daysSince(last) > CHURN_DAYS)
   })
 
   return (
@@ -136,6 +144,13 @@ export default async function AdminPage() {
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Link>
+                  <OrgDeleteButton
+                    orgId={org.id}
+                    slug={org.slug}
+                    name={org.name}
+                    appointments={org._count.appointments}
+                    barbers={org._count.barbers}
+                  />
                 </div>
               </div>
             )

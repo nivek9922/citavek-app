@@ -6,14 +6,18 @@ import { requirePermission } from '@/server/auth-guards'
 import { db } from '@/server/db'
 
 const barberSchema = z.object({
-  displayName:  z.string().min(2).max(80),
-  nickname:     z.string().max(30).optional(),
-  specialties:  z.string().transform((v) =>
+  displayName: z.string().min(2).max(80),
+  nickname:    z.string().max(30).optional(),
+  specialties: z.string().transform((v) =>
     v.split(',').map((s) => s.trim()).filter(Boolean)),
-  // Horario: días marcados + hora inicio/fin
-  workDays:     z.string().transform((v) => v.split(',').map(Number).filter((n) => !isNaN(n))),
-  startMin:     z.coerce.number().int().min(0).max(1439),
-  endMin:       z.coerce.number().int().min(0).max(1439),
+  // Horarios por día como JSON: [{ dayOfWeek, startMin, endMin }, ...]
+  hoursJson: z.string().transform((v) =>
+    z.array(z.object({
+      dayOfWeek: z.number().int().min(0).max(6),
+      startMin:  z.number().int().min(0).max(1439),
+      endMin:    z.number().int().min(0).max(1439),
+    })).parse(JSON.parse(v))
+  ),
 })
 
 export async function upsertBarberAction(slug: string, id: string | null, formData: FormData) {
@@ -24,9 +28,7 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
     displayName: formData.get('displayName'),
     nickname:    formData.get('nickname') || undefined,
     specialties: formData.get('specialties') || '',
-    workDays:    formData.get('workDays') || '',
-    startMin:    formData.get('startMin'),
-    endMin:      formData.get('endMin'),
+    hoursJson:   formData.get('hoursJson') || '[]',
   }
   const input = barberSchema.parse(raw)
 
@@ -37,14 +39,12 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
       where: { id },
       data: { displayName: input.displayName, nickname: input.nickname ?? null, specialties: input.specialties },
     })
-    // Regenerar horarios
     await db.workingHour.deleteMany({ where: { barberId: id } })
-    await db.workingHour.createMany({
-      data: input.workDays.map((day) => ({
-        barberId: id, dayOfWeek: day,
-        startMin: input.startMin, endMin: input.endMin,
-      })),
-    })
+    if (input.hoursJson.length > 0) {
+      await db.workingHour.createMany({
+        data: input.hoursJson.map((h) => ({ barberId: id, ...h })),
+      })
+    }
   } else {
     const barber = await db.barber.create({
       data: {
@@ -55,12 +55,11 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
         active:         true,
       },
     })
-    await db.workingHour.createMany({
-      data: input.workDays.map((day) => ({
-        barberId: barber.id, dayOfWeek: day,
-        startMin: input.startMin, endMin: input.endMin,
-      })),
-    })
+    if (input.hoursJson.length > 0) {
+      await db.workingHour.createMany({
+        data: input.hoursJson.map((h) => ({ barberId: barber.id, ...h })),
+      })
+    }
   }
   revalidatePath(`/${slug}/panel/equipo`)
 }
