@@ -5,12 +5,54 @@ import { z } from 'zod'
 import { auth } from '@/server/auth'
 import { db } from '@/server/db'
 import { requireSuperAdmin } from '@/server/super-admin'
+import { getSession } from '@/server/session'
+import { prismaIdentityRepository as repo } from './infrastructure/prisma-identity-repository'
+import { createOrganization } from './application/create-organization'
+import { getPrimaryMembership } from './queries'
 
 // ── Sign out ──────────────────────────────────────────────────────────────
 
 export async function signOutAction() {
   await auth.api.signOut({ headers: await headers() })
   redirect('/login')
+}
+
+// ── Registro self-service: owner crea su propia barbería ─────────────────
+
+const selfRegisterSchema = z.object({
+  name:         z.string().min(2).max(80),
+  slug:         z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Solo letras minúsculas, números y guiones'),
+  city:         z.string().min(2).max(60),
+  phone:        z.string().min(7).max(20),
+  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#E0A300'),
+})
+
+export type SelfRegisterInput = z.infer<typeof selfRegisterSchema>
+
+export async function createBarberiaForSelfAction(
+  input: SelfRegisterInput,
+): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  try {
+    const session = await getSession()
+    if (!session) return { ok: false, error: 'Sesión no encontrada. Intenta de nuevo.' }
+
+    const data = selfRegisterSchema.parse(input)
+
+    // Restricción MVP: un owner solo puede tener una barbería (delivery-level).
+    const existing = await getPrimaryMembership(session.user.id)
+    if (existing) return { ok: false, error: 'Ya tienes una barbería registrada.' }
+
+    return createOrganization(repo, {
+      userId:       session.user.id,
+      name:         data.name,
+      slug:         data.slug,
+      city:         data.city,
+      phone:        data.phone,
+      primaryColor: data.primaryColor,
+    })
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Error inesperado.' }
+  }
 }
 
 // ── Crear barbería + owner (solo super-admin) ─────────────────────────────
@@ -36,59 +78,29 @@ export async function createBarberiaAction(
     await requireSuperAdmin()
     const data = createBarberiaSchema.parse(input)
 
-    // Verificar slug único
-    const exists = await db.organization.findUnique({ where: { slug: data.slug } })
-    if (exists) return { ok: false, error: `El slug "${data.slug}" ya está en uso.` }
-
-    // Crear usuario owner (o reutilizar si ya existe)
+    // Crear usuario owner vía better-auth (o reutilizar si ya existe).
+    // Los headers se pasan para que better-auth procese el request inline,
+    // evitando un loop HTTP interno que causa memory pressure en dev.
     let ownerUser = await db.user.findUnique({ where: { email: data.ownerEmail } })
     if (!ownerUser) {
-      // Crear via better-auth API
       const created = await auth.api.signUpEmail({
-        body: {
-          email:    data.ownerEmail,
-          password: data.ownerPassword,
-          name:     data.ownerName,
-        },
+        body:    { email: data.ownerEmail, password: data.ownerPassword, name: data.ownerName },
+        headers: await headers(),
       })
       if (!created?.user) return { ok: false, error: 'No se pudo crear el usuario owner.' }
       ownerUser = await db.user.findUnique({ where: { email: data.ownerEmail } })
       if (!ownerUser) return { ok: false, error: 'Error al recuperar el usuario creado.' }
     }
 
-    // Crear organización
-    const org = await db.organization.create({
-      data: {
-        name:     data.name,
-        slug:     data.slug,
-        city:     data.city,
-        address:  data.address,
-        phone:    data.phone,
-        timezone: 'America/Bogota',
-        currency: 'COP',
-        status:   'active',
-      },
+    return createOrganization(repo, {
+      userId:       ownerUser.id,
+      name:         data.name,
+      slug:         data.slug,
+      city:         data.city,
+      phone:        data.phone,
+      primaryColor: data.primaryColor,
     })
-
-    // Crear branding
-    await db.branding.create({
-      data: { organizationId: org.id, primaryColor: data.primaryColor },
-    })
-
-    // Añadir owner como miembro
-    await db.member.create({
-      data: {
-        id:             crypto.randomUUID(),
-        organizationId: org.id,
-        userId:         ownerUser.id,
-        role:           'owner',
-        createdAt:      new Date(),
-      },
-    })
-
-    return { ok: true, slug: org.slug }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Error inesperado'
-    return { ok: false, error: msg }
+    return { ok: false, error: err instanceof Error ? err.message : 'Error inesperado.' }
   }
 }

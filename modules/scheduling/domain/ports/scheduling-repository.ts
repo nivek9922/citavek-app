@@ -93,4 +93,26 @@ export interface SchedulingRepository {
     newStartAt: Date,
     newEndAt: Date,
   ): Promise<void>
+
+  /**
+   * ¿Está bloqueado ese día para el barbero?
+   * Comprueba también excepciones globales de la org (barberId = null).
+   * `dateStr` es YYYY-MM-DD en la zona horaria del tenant.
+   */
+  isDateBlocked(organizationId: string, barberId: string, dateStr: string): Promise<boolean>
+
+  /** Bloquea un día para un barbero (o para toda la org si barberId es null). */
+  blockDate(
+    organizationId: string,
+    barberId: string | null,
+    dateStr: string,
+    reason?: string | null,
+  ): Promise<void>
+
+  /** Elimina el bloqueo de un día (no falla si no existía). */
+  unblockDate(
+    organizationId: string,
+    barberId: string | null,
+    dateStr: string,
+  ): Promise<void>
 }

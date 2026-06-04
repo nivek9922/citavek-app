@@ -9,14 +9,18 @@ import { bookAppointment }          from './application/book-appointment'
 import { createManualAppointment }  from './application/create-manual-appointment'
 import { changeAppointmentStatus }  from './application/change-appointment-status'
 import { rescheduleAppointment }    from './application/reschedule-appointment'
-import { getAvailableSlots } from './queries'
+import { getAvailableSlots }         from './application/get-available-slots'
+import { blockBarberDate }           from './application/block-barber-date'
+import { unblockBarberDate }         from './application/unblock-barber-date'
 
 // ── Slots disponibles (lectura pública / read side) ─────────────────────────
+// serviceId viene del cliente (el usuario eligió el servicio), pero la duración
+// la deriva el servidor desde la DB — el cliente nunca puede manipularla.
 
 const getSlotsSchema = z.object({
-  barberId:    z.string().min(1),
-  dateISO:     z.string().datetime(),
-  durationMin: z.number().int().min(5).max(480),
+  barberId:  z.string().min(1),
+  serviceId: z.string().min(1),
+  dateISO:   z.string().datetime(),
 })
 
 export async function getAvailableSlotsAction(
@@ -26,14 +30,15 @@ export async function getAvailableSlotsAction(
   const ctx    = await getTenantContext(slug)
   const parsed = getSlotsSchema.parse(input)
 
-  const slots = await getAvailableSlots({
+  const result = await getAvailableSlots(repo, {
     organizationId: ctx.id,
     barberId:       parsed.barberId,
+    serviceId:      parsed.serviceId,
     date:           new Date(parsed.dateISO),
-    timezone:       ctx.timezone,
-    durationMin:    parsed.durationMin,
   })
-  return { slots: slots.map((d) => d.toISOString()) }
+
+  if (!result.ok) return { slots: [] }
+  return { slots: result.slots.map((d) => d.toISOString()) }
 }
 
 // ── Reservar cita (pública) ─────────────────────────────────────────────────
@@ -150,6 +155,60 @@ export async function rescheduleAppointmentAction(
   } catch (err) {
     console.error('[rescheduleAppointmentAction]', err)
     return { ok: false, error: 'No se pudo reprogramar la cita.' }
+  }
+}
+
+// ── Bloquear / desbloquear día en la agenda (panel) ────────────────────────
+
+const blockDateSchema = z.object({
+  barberId: z.string().min(1).nullable(),
+  dateStr:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido'),
+  reason:   z.string().trim().max(120).optional(),
+})
+
+export async function blockBarberDateAction(
+  slug: string,
+  input: z.infer<typeof blockDateSchema>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const ctx    = await getTenantContext(slug)
+    await requirePermission(ctx.id, 'settings:update')
+    const parsed = blockDateSchema.parse(input)
+
+    const result = await blockBarberDate(repo, {
+      organizationId: ctx.id,
+      barberId:       parsed.barberId,
+      dateStr:        parsed.dateStr,
+      reason:         parsed.reason ?? null,
+    })
+
+    if (result.ok) revalidatePath(`/${slug}/panel`)
+    return result
+  } catch (err) {
+    console.error('[blockBarberDateAction]', err)
+    return { ok: false, error: 'No se pudo bloquear el día.' }
+  }
+}
+
+export async function unblockBarberDateAction(
+  slug: string,
+  input: { barberId: string | null; dateStr: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const ctx = await getTenantContext(slug)
+    await requirePermission(ctx.id, 'settings:update')
+
+    const result = await unblockBarberDate(repo, {
+      organizationId: ctx.id,
+      barberId:       input.barberId,
+      dateStr:        input.dateStr,
+    })
+
+    if (result.ok) revalidatePath(`/${slug}/panel`)
+    return result
+  } catch (err) {
+    console.error('[unblockBarberDateAction]', err)
+    return { ok: false, error: 'No se pudo desbloquear el día.' }
   }
 }
 

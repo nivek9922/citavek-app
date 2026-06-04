@@ -40,6 +40,9 @@ function createFakeRepo(opts: FakeOptions = {}) {
     getOrgTimezone:              vi.fn(async () => 'America/Bogota'),
     getBarberWorkingHours:       vi.fn(async () => []),
     getBarberBusySlots:          vi.fn(async () => []),
+    isDateBlocked:               vi.fn(async () => false),
+    blockDate:                   vi.fn(async () => undefined),
+    unblockDate:                 vi.fn(async () => undefined),
   }
   return { repo, updates }
 }

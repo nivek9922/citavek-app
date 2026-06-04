@@ -92,12 +92,13 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
       )}
 
       {flow.step === 3 && flow.draft.barber && flow.draft.service && (
-        // key = barbero + duración → React resetea el componente automáticamente
+        // key = barbero + servicio → React resetea el componente automáticamente
         // cuando cambia cualquiera de los dos. Patrón correcto para evitar setState en effect.
         <StepDateTime
-          key={`${flow.draft.barber.id}-${flow.draft.service.durationMin}`}
+          key={`${flow.draft.barber.id}-${flow.draft.service.id}`}
           tenantSlug={tenantSlug}
           barber={flow.draft.barber}
+          serviceId={flow.draft.service.id}
           durationMin={flow.draft.service.durationMin}
           selectedAt={flow.draft.startAt}
           onSelect={flow.setStartAt}

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LoginForm } from '@/modules/identity/ui/LoginForm'
 
 export const metadata = { title: 'Iniciar sesión — BookingFlow' }
@@ -17,9 +18,11 @@ export default function LoginPage() {
           <LoginForm />
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          ¿Problemas para entrar?{' '}
-          <span className="text-primary">Contacta a tu administrador</span>
+        <p className="text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?{' '}
+          <Link href="/registro" className="font-medium text-primary hover:underline">
+            Registra tu barbería
+          </Link>
         </p>
       </div>
     </div>

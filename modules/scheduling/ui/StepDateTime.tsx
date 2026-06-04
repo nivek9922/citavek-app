@@ -13,12 +13,13 @@ const PAGE_SIZE = 7
 interface Props {
   tenantSlug:  string
   barber:      BarberDTO
-  durationMin: number
+  serviceId:   string
+  durationMin: number  // solo para el indicador visual de ocupación (OccupancyBar)
   selectedAt:  Date | undefined
   onSelect:    (startAt: Date) => void
 }
 
-export function StepDateTime({ tenantSlug, barber, durationMin, selectedAt, onSelect }: Props) {
+export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selectedAt, onSelect }: Props) {
   const [offset,       setOffset]       = useState(0)  // cuántos días desde hoy empieza la página
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [slots,        setSlots]        = useState<Date[]>([])
@@ -27,20 +28,17 @@ export function StepDateTime({ tenantSlug, barber, durationMin, selectedAt, onSe
   // Días de la página actual: empezamos en mañana (+1 día desde hoy)
   const days = Array.from({ length: PAGE_SIZE }, (_, i) => addDays(new Date(), 1 + offset + i))
 
-  // Cuando cambia la fecha seleccionada, pide los slots disponibles.
-  // No llamamos setState síncronamente dentro del effect: usamos startTransition
-  // para envolver toda la actualización. isPending maneja el estado de carga en el UI.
   useEffect(() => {
     if (!selectedDate) return
     startTransition(async () => {
       const res = await getAvailableSlotsAction(tenantSlug, {
-        barberId:    barber.id,
-        dateISO:     selectedDate.toISOString(),
-        durationMin,
+        barberId:  barber.id,
+        serviceId,
+        dateISO:   selectedDate.toISOString(),
       })
       setSlots(res.slots.map((s) => new Date(s)))
     })
-  }, [selectedDate, barber.id, durationMin, tenantSlug])
+  }, [selectedDate, barber.id, serviceId, tenantSlug])
 
   // Nota: el reset al cambiar barber/duration lo maneja el `key` en BookingFlow.
   // Este componente se desmonta y remonta limpio cuando cambia la key.

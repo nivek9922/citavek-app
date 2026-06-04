@@ -23,6 +23,9 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null) {
     getBarberBusySlots:          vi.fn(async () => []),
     getAppointmentForReschedule: vi.fn(async () => null),
     updateAppointmentTime:       vi.fn(async () => undefined),
+    isDateBlocked:               vi.fn(async () => false),
+    blockDate:                   vi.fn(async () => undefined),
+    unblockDate:                 vi.fn(async () => undefined),
   }
   return { repo, updates }
 }

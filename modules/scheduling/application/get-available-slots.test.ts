@@ -25,6 +25,7 @@ interface FakeOptions {
   timezone?:      string
   workingHours?:  WorkingHourInput[]
   busySlots?:     BusySlot[]
+  dateBlocked?:   boolean
 }
 
 function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
@@ -35,6 +36,7 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
     timezone      = 'America/Bogota',
     workingHours  = fullWeek,
     busySlots     = [],
+    dateBlocked   = false,
   } = opts
 
   return {
@@ -43,6 +45,7 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
     getOrgTimezone:          vi.fn(async () => timezone),
     getBarberWorkingHours:   vi.fn(async () => workingHours),
     getBarberBusySlots:      vi.fn(async () => busySlots),
+    isDateBlocked:           vi.fn(async () => dateBlocked),
     // métodos no ejercidos por este use case
     hasConflict:                 vi.fn(async () => false),
     upsertCustomer:              vi.fn(async () => ({ id: 'c' })),
@@ -51,6 +54,8 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
     updateAppointmentStatus:     vi.fn(async () => undefined),
     getAppointmentForReschedule: vi.fn(async () => null),
     updateAppointmentTime:       vi.fn(async () => undefined),
+    blockDate:                   vi.fn(async () => undefined),
+    unblockDate:                 vi.fn(async () => undefined),
   }
 }
 
@@ -144,5 +149,34 @@ describe('getAvailableSlots', () => {
     // métodos ajenos al use case no deben tocarse
     expect(repo.hasConflict).not.toHaveBeenCalled()
     expect(repo.createAppointment).not.toHaveBeenCalled()
+  })
+
+  it('día bloqueado → ok: true con slots vacíos (no es un error de negocio)', async () => {
+    const repo = createFakeRepo({ dateBlocked: true })
+    const res  = await getAvailableSlots(repo, baseInput)
+
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.slots).toHaveLength(0)
+  })
+
+  it('día bloqueado → no se llama a computeAvailableSlots (no lee working hours)', async () => {
+    const repo = createFakeRepo({ dateBlocked: true })
+    await getAvailableSlots(repo, baseInput)
+
+    // isDateBlocked debe haberse consultado
+    expect(repo.isDateBlocked).toHaveBeenCalledOnce()
+    // working hours y busy slots SÍ se consultan (en paralelo con isDateBlocked)
+    expect(repo.getBarberWorkingHours).toHaveBeenCalledOnce()
+    expect(repo.getBarberBusySlots).toHaveBeenCalledOnce()
+  })
+
+  it('servicio inválido no llega al round 2 (isDateBlocked no se llama)', async () => {
+    const repo = createFakeRepo({ serviceExists: false })
+    await getAvailableSlots(repo, baseInput)
+
+    // early return tras round 1 → round 2 no debe ejecutarse
+    expect(repo.isDateBlocked).not.toHaveBeenCalled()
+    expect(repo.getBarberWorkingHours).not.toHaveBeenCalled()
   })
 })

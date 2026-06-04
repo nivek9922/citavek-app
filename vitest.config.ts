@@ -9,7 +9,10 @@ export default defineConfig({
     environment: 'node',
   },
   resolve: {
-    // Mismo alias que tsconfig: @/* → raíz del proyecto
-    alias: { '@': root },
+    alias: {
+      '@': root,
+      // server-only es un paquete de Next.js que no existe en el entorno de tests
+      'server-only': path.join(root, 'test/mocks/server-only.ts'),
+    },
   },
 })

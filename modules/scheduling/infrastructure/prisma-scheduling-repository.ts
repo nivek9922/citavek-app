@@ -134,4 +134,32 @@ export const prismaSchedulingRepository: SchedulingRepository = {
       select: { startAt: true, endAt: true },
     })
   },
+
+  async isDateBlocked(organizationId, barberId, dateStr) {
+    const exception = await db.scheduleException.findFirst({
+      where: {
+        organizationId,
+        date: dateStr,
+        OR: [{ barberId }, { barberId: null }],
+      },
+      select: { id: true },
+    })
+    return exception !== null
+  },
+
+  async blockDate(organizationId, barberId, dateStr, reason) {
+    await db.scheduleException.upsert({
+      where: {
+        organizationId_barberId_date: { organizationId, barberId: barberId ?? '', date: dateStr },
+      },
+      update: { reason: reason ?? null },
+      create: { organizationId, barberId, date: dateStr, reason: reason ?? null },
+    })
+  },
+
+  async unblockDate(organizationId, barberId, dateStr) {
+    await db.scheduleException.deleteMany({
+      where: { organizationId, barberId: barberId ?? null, date: dateStr },
+    })
+  },
 }

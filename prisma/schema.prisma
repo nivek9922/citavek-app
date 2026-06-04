@@ -64,11 +64,12 @@ model Organization {
   currency String             @default("COP")
   status   OrganizationStatus @default(active)
 
-  branding     Branding?
-  services     Service[]
-  barbers      Barber[]
-  customers    Customer[]
-  appointments Appointment[]
+  branding           Branding?
+  services           Service[]
+  barbers            Barber[]
+  customers          Customer[]
+  appointments       Appointment[]
+  scheduleExceptions ScheduleException[]
 
   members     Member[]
   invitations Invitation[]
@@ -141,8 +142,9 @@ model Barber {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  workingHours WorkingHour[]
-  appointments Appointment[]
+  workingHours       WorkingHour[]
+  appointments       Appointment[]
+  scheduleExceptions ScheduleException[]
 
   @@index([organizationId, active, sortOrder])
   @@index([userId])
@@ -160,6 +162,26 @@ model WorkingHour {
 
   @@index([barberId, dayOfWeek])
   @@map("working_hour")
+}
+
+model ScheduleException {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // null = toda la organización bloqueada ese día (festivo global)
+  barberId String?
+  barber   Barber? @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  date   String // YYYY-MM-DD en zona horaria del tenant
+  reason String? // "Festivo nacional", "Vacaciones", etc.
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  // Un barbero (o la org) solo puede tener una excepción por día
+  @@unique([organizationId, barberId, date])
+  @@index([organizationId, date])
+  @@map("schedule_exception")
 }
 
 // ──────────────────── CRM mínimo ────────────────────
