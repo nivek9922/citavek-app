@@ -7,6 +7,9 @@ export interface TenantContext {
   id: string
   slug: string
   name: string
+  city: string | null
+  address: string | null
+  phone: string | null
   timezone: string
   currency: string
   branding: {
@@ -26,6 +29,9 @@ export const getTenantContext = cache(async (slug: string): Promise<TenantContex
       id: true,
       slug: true,
       name: true,
+      city: true,
+      address: true,
+      phone: true,
       timezone: true,
       currency: true,
       branding: {

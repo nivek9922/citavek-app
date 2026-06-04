@@ -48,13 +48,16 @@ export default async function TenantPage({
             </p>
           )}
 
-          <div className="mt-4 flex items-center justify-center gap-5 text-sm text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-primary" /> Colombia
+              <MapPin className="h-4 w-4 text-primary" />
+              {ctx.address ? `${ctx.address}${ctx.city ? `, ${ctx.city}` : ''}` : (ctx.city ?? 'Colombia')}
             </span>
-            <span className="flex items-center gap-1.5">
-              <Phone className="h-4 w-4 text-primary" /> WhatsApp
-            </span>
+            {ctx.phone && (
+              <span className="flex items-center gap-1.5">
+                <Phone className="h-4 w-4 text-primary" /> {ctx.phone}
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -68,7 +71,14 @@ export default async function TenantPage({
               {services.length} servicios disponibles
             </span>
           </div>
-          <BookingFlow tenantSlug={slug} services={services} barbers={barbers} />
+          <BookingFlow
+            tenantSlug={slug}
+            services={services}
+            barbers={barbers}
+            shopName={ctx.name}
+            shopPhone={ctx.phone}
+            shopAddress={ctx.address}
+          />
         </div>
       </section>
 

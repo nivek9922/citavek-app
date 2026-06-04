@@ -20,11 +20,12 @@ interface Props {
   onConfirm:    () => void
   isPending:    boolean
   canConfirm:   boolean
+  error?:       string
 }
 
 export function StepConfirm({
   service, barber, startAt, customerName, customerPhone,
-  onCustomer, onConfirm, isPending, canConfirm,
+  onCustomer, onConfirm, isPending, canConfirm, error,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -75,6 +76,12 @@ export function StepConfirm({
           </div>
         </div>
       </div>
+
+      {error && (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       <Button
         className="w-full"

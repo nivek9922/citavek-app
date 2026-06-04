@@ -14,15 +14,19 @@ import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
 
 interface Props {
-  tenantSlug: string
-  services:   ServiceDTO[]
-  barbers:    BarberDTO[]
+  tenantSlug:  string
+  services:    ServiceDTO[]
+  barbers:     BarberDTO[]
+  shopName:    string
+  shopPhone:   string | null
+  shopAddress: string | null
 }
 
-export function BookingFlow({ tenantSlug, services, barbers }: Props) {
+export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone, shopAddress }: Props) {
   const flow = useBookingFlow()
   const [isPending, startTransition] = useTransition()
   const [confirmed, setConfirmed] = useState<{ startAt: Date; priceCop: number } | null>(null)
+  const [error, setError] = useState('')
 
   if (confirmed && flow.draft.service && flow.draft.barber) {
     return (
@@ -31,6 +35,9 @@ export function BookingFlow({ tenantSlug, services, barbers }: Props) {
         barber={flow.draft.barber}
         startAt={confirmed.startAt}
         priceCop={confirmed.priceCop}
+        shopName={shopName}
+        shopPhone={shopPhone}
+        shopAddress={shopAddress}
         onNew={() => { setConfirmed(null); flow.reset() }}
       />
     )
@@ -40,6 +47,7 @@ export function BookingFlow({ tenantSlug, services, barbers }: Props) {
     const { service, barber, startAt, customerName, customerPhone } = flow.draft
     if (!service || !barber || !startAt) return
 
+    setError('')
     startTransition(async () => {
       // Nota: precio y duración los deriva el servidor desde el serviceId.
       const res = await bookAppointmentAction(tenantSlug, {
@@ -52,7 +60,7 @@ export function BookingFlow({ tenantSlug, services, barbers }: Props) {
       if (res.ok) {
         setConfirmed({ startAt, priceCop: service.priceCop })
       } else {
-        alert(res.error)
+        setError(res.error)
       }
     })
   }
@@ -107,6 +115,7 @@ export function BookingFlow({ tenantSlug, services, barbers }: Props) {
           onConfirm={handleConfirm}
           isPending={isPending}
           canConfirm={flow.canConfirm}
+          error={error}
         />
       )}
     </div>

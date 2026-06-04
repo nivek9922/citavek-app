@@ -104,9 +104,13 @@ los marcados como **activos**; el resto existe como frontera reservada.
 
 ## 5. Clean Architecture (pragmática) y estructura
 
+> Detalle y reglas vigentes en [`.claude/architecture.md`](../.claude/architecture.md)
+> (arquitectura híbrida DDD + Clean + Hexagonal + Modular Monolith, con CQRS-lite).
+> Implementación de referencia: módulo **`scheduling`** (ports/adapters/use cases).
+
 Organizamos **por bounded context (feature)**, y dentro de cada uno por **capas**. La
 regla de dependencias apunta siempre hacia adentro: `presentation → application →
-domain`, e `infrastructure` implementa puertos de `application`.
+domain`, e `infrastructure` implementa puertos del dominio (Ports & Adapters).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

@@ -1,21 +1,13 @@
 import Link from 'next/link'
 import { ExternalLink, Users, Scissors, Plus } from 'lucide-react'
 import { requireSuperAdmin } from '@/server/super-admin'
-import { db } from '@/server/db'
+import { listOrganizationsForAdmin } from '@/modules/tenancy/queries'
 import { CreateBarberiaForm } from '@/modules/identity/ui/CreateBarberiaForm'
 
 export default async function AdminPage() {
   await requireSuperAdmin()
 
-  const orgs = await db.organization.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      branding: { select: { primaryColor: true } },
-      _count: {
-        select: { barbers: true, appointments: true },
-      },
-    },
-  })
+  const orgs = await listOrganizationsForAdmin()
 
   return (
     <div className="space-y-10">

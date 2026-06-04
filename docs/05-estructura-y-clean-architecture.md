@@ -5,6 +5,17 @@
 > **slice vertical completo de ejemplo** (módulo Catalog / Service) para que el
 > patrón sea concreto y replicable.
 
+> **⚠️ Fuente autoritativa de arquitectura:** [`.claude/architecture.md`](../.claude/architecture.md).
+> El proyecto adopta **arquitectura híbrida** (DDD + Clean + Hexagonal + Modular
+> Monolith) con separación **comando/lectura (CQRS-lite)**:
+> - **Escritura (lógica de negocio):** `Server Action → Use Case → Port → Adapter Prisma`.
+> - **Lectura (read models):** `queries.ts` usa Prisma directo y devuelve DTOs.
+>
+> El módulo **`scheduling`** es la **implementación de referencia** del patrón completo
+> (`domain/ports/`, `application/` use cases, `infrastructure/` adapter Prisma). Los CRUD
+> simples (`catalog`, `staff`) usan la forma ligera. Ninguna página de `app/` accede a
+> Prisma directamente: todo pasa por `queries.ts` (lecturas) o `actions.ts` (escrituras).
+
 ---
 
 ## 1. Árbol de carpetas
