@@ -41,12 +41,11 @@ export function BookingFlow({ tenantSlug, services, barbers }: Props) {
     if (!service || !barber || !startAt) return
 
     startTransition(async () => {
+      // Nota: precio y duración los deriva el servidor desde el serviceId.
       const res = await bookAppointmentAction(tenantSlug, {
         serviceId:     service.id,
         barberId:      barber.id,
         startAtISO:    startAt.toISOString(),
-        durationMin:   service.durationMin,
-        priceCop:      service.priceCop,
         customerName:  customerName.trim(),
         customerPhone: customerPhone,
       })
@@ -85,7 +84,10 @@ export function BookingFlow({ tenantSlug, services, barbers }: Props) {
       )}
 
       {flow.step === 3 && flow.draft.barber && flow.draft.service && (
+        // key = barbero + duración → React resetea el componente automáticamente
+        // cuando cambia cualquiera de los dos. Patrón correcto para evitar setState en effect.
         <StepDateTime
+          key={`${flow.draft.barber.id}-${flow.draft.service.durationMin}`}
           tenantSlug={tenantSlug}
           barber={flow.draft.barber}
           durationMin={flow.draft.service.durationMin}

@@ -1,32 +1,44 @@
 import 'server-only'
-import { startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns'
-import { toZonedTime } from 'date-fns-tz'
+import { format, addDays, parseISO, startOfWeek, endOfWeek } from 'date-fns'
+import { fromZonedTime, toZonedTime } from 'date-fns-tz'
 import { db } from '@/server/db'
 
-export async function getDashboardKPIs(organizationId: string, timezone: string) {
-  const nowUTC   = new Date()
-  const nowLocal = toZonedTime(nowUTC, timezone)
+// ── Helpers de zona horaria ─────────────────────────────────────────────────
 
-  const todayStart = startOfDay(nowLocal)
-  const todayEnd   = endOfDay(nowLocal)
-  const weekStart  = startOfWeek(nowLocal, { weekStartsOn: 1 })
-  const weekEnd    = endOfWeek(nowLocal,   { weekStartsOn: 1 })
+/** Fecha calendario "hoy" (YYYY-MM-DD) en la zona horaria del tenant. */
+export function tenantToday(timezone: string): string {
+  return format(toZonedTime(new Date(), timezone), 'yyyy-MM-dd')
+}
+
+/** Rango UTC [start, end) del día calendario local del tenant.
+ *  Cada medianoche se calcula en la TZ → correcto incluso con DST. */
+function localDayBoundsUTC(dateStr: string, timezone: string) {
+  const nextStr = format(addDays(parseISO(dateStr), 1), 'yyyy-MM-dd')
+  return {
+    start: fromZonedTime(`${dateStr}T00:00:00`, timezone),
+    end:   fromZonedTime(`${nextStr}T00:00:00`, timezone),
+  }
+}
+
+// ── KPIs del dashboard (siempre "hoy" + "esta semana") ──────────────────────
+
+export async function getDashboardKPIs(organizationId: string, timezone: string) {
+  const today = tenantToday(timezone)
+  const { start: todayStart, end: todayEnd } = localDayBoundsUTC(today, timezone)
+
+  const localNow      = toZonedTime(new Date(), timezone)
+  const weekStartStr  = format(startOfWeek(localNow, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  const weekEndStr    = format(endOfWeek(localNow,   { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  const weekStart     = localDayBoundsUTC(weekStartStr, timezone).start
+  const weekEnd       = localDayBoundsUTC(weekEndStr,   timezone).end
 
   const [todayApts, weekApts, barbers] = await Promise.all([
     db.appointment.findMany({
-      where: {
-        organizationId,
-        startAt: { gte: todayStart, lte: todayEnd },
-        status:  { not: 'cancelled' },
-      },
+      where: { organizationId, startAt: { gte: todayStart, lt: todayEnd }, status: { not: 'cancelled' } },
       select: { status: true, priceCop: true, barberId: true },
     }),
     db.appointment.findMany({
-      where: {
-        organizationId,
-        startAt: { gte: weekStart, lte: weekEnd },
-        status:  'completed',
-      },
+      where: { organizationId, startAt: { gte: weekStart, lt: weekEnd }, status: 'completed' },
       select: { priceCop: true },
     }),
     db.barber.findMany({
@@ -35,15 +47,11 @@ export async function getDashboardKPIs(organizationId: string, timezone: string)
     }),
   ])
 
-  const earningsToday = todayApts
-    .filter((a) => a.status === 'completed')
-    .reduce((s, a) => s + a.priceCop, 0)
-
+  const earningsToday = todayApts.filter((a) => a.status === 'completed').reduce((s, a) => s + a.priceCop, 0)
   const pendingToday  = todayApts.filter((a) => a.status === 'confirmed').length
   const cutsToday     = todayApts.filter((a) => a.status === 'completed').length
   const earningsWeek  = weekApts.reduce((s, a) => s + a.priceCop, 0)
 
-  // Top barbero por citas hoy
   const countByBarber: Record<string, number> = {}
   for (const a of todayApts) countByBarber[a.barberId] = (countByBarber[a.barberId] ?? 0) + 1
   const topBarberId = Object.entries(countByBarber).sort((a, b) => b[1] - a[1])[0]?.[0]
@@ -52,15 +60,19 @@ export async function getDashboardKPIs(organizationId: string, timezone: string)
   return { earningsToday, pendingToday, cutsToday, earningsWeek, topBarber }
 }
 
-export async function getTodayAppointments(organizationId: string, timezone: string) {
-  const nowLocal   = toZonedTime(new Date(), timezone)
-  const todayStart = startOfDay(nowLocal)
-  const todayEnd   = endOfDay(nowLocal)
+// ── Citas de un día calendario específico (agenda navegable) ────────────────
+
+export async function getAppointmentsForDate(
+  organizationId: string,
+  timezone: string,
+  dateStr: string,
+) {
+  const { start, end } = localDayBoundsUTC(dateStr, timezone)
 
   return db.appointment.findMany({
     where: {
       organizationId,
-      startAt: { gte: todayStart, lte: todayEnd },
+      startAt: { gte: start, lt: end },
       status:  { not: 'cancelled' },
     },
     orderBy: { startAt: 'asc' },
@@ -73,4 +85,4 @@ export async function getTodayAppointments(organizationId: string, timezone: str
   })
 }
 
-export type AppointmentRow = Awaited<ReturnType<typeof getTodayAppointments>>[number]
+export type AppointmentRow = Awaited<ReturnType<typeof getAppointmentsForDate>>[number]

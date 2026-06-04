@@ -39,22 +39,24 @@ Do not introduce microservices.
 
 Do not introduce event-driven architectures unless explicitly required.
 
-# Data Access Flow
+# Data Access Flow (command vs query)
 
-Always follow:
+This project splits reads from writes (CQRS-lite). See architecture.md.
 
-UI
-→ Server Action
-→ Use Case
-→ Repository
-→ Prisma
-→ Database
+**Commands (writes / business workflows):**
 
-Never skip layers.
+UI → Server Action → Use Case → Repository Port → Prisma Adapter → Database
 
-Never access Prisma directly from UI.
+**Queries (reads for the UI):**
 
-Never access Prisma directly from pages.
+Server Component / Server Action → `queries.ts` (DAL) → Prisma → DTO
+
+Rules:
+- Never access Prisma directly from UI or from `app/` pages/components — go through
+  `queries.ts` (reads) or `actions.ts` (writes).
+- Read models (`queries.ts`) MAY use Prisma directly and return DTOs; they carry no
+  business logic, so they do not need ports.
+- The command side of complex domains goes through ports/adapters and use cases.
 
 # Prisma Rules
 
@@ -70,21 +72,24 @@ Avoid database logic inside:
 * Pages
 * Layouts
 
-# Repository Pattern
+# Repository Pattern (Ports & Adapters)
 
-Repositories are mandatory.
+A repository interface is a **Port** in the domain; its Prisma implementation is an
+**Adapter** in `infrastructure/`.
 
 Example:
 
-AppointmentRepository
+Port (domain):        AppointmentRepository
+Adapter (infra):      PrismaAppointmentRepository
 
-CustomerRepository
+Use ports for the **command side of complex domains** (`scheduling`, future
+`subscriptions`) — anywhere there is real business logic, transactions, or a need to
+unit-test without the database.
 
-BusinessRepository
-
-SubscriptionRepository
-
-Repositories abstract persistence details.
+Do NOT create a port/adapter for thin CRUD with no domain logic (`catalog`, `staff`):
+`actions.ts` may call Prisma directly there, while still enforcing validation,
+authorization, and tenant scoping. An empty layer is worse than no layer
+(see the Complexity Rule in architecture.md).
 
 # Use Cases
 

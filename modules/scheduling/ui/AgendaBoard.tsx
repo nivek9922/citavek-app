@@ -1,10 +1,10 @@
 'use client'
 import { useTransition } from 'react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { CheckCircle2, XCircle, UserX, Clock } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 import { formatCop } from '@/shared/format'
+import { EmptyState } from '@/shared/ui/empty-state'
 import { updateAppointmentStatusAction } from '@/modules/scheduling/actions'
 import type { AppointmentRow } from '@/modules/analytics/queries'
 
@@ -32,9 +32,11 @@ interface Props {
 export function AgendaBoard({ appointments, tenantSlug }: Props) {
   if (appointments.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl border border-border text-sm text-muted-foreground">
-        Sin citas para hoy.
-      </div>
+      <EmptyState
+        icon="📅"
+        title="Sin citas este día"
+        description="Cuando lleguen reservas, aparecerán aquí ordenadas por hora."
+      />
     )
   }
 

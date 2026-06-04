@@ -1,7 +1,7 @@
 'use client'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { User, Phone, Calendar, Clock, Scissors } from 'lucide-react'
+import { User, Calendar, Clock, Scissors } from 'lucide-react'
 import { Separator } from '@/shared/ui/separator'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'

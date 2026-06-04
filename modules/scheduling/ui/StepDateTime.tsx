@@ -27,10 +27,11 @@ export function StepDateTime({ tenantSlug, barber, durationMin, selectedAt, onSe
   // Días de la página actual: empezamos en mañana (+1 día desde hoy)
   const days = Array.from({ length: PAGE_SIZE }, (_, i) => addDays(new Date(), 1 + offset + i))
 
-  // Cuando cambia la fecha seleccionada, pide los slots disponibles
+  // Cuando cambia la fecha seleccionada, pide los slots disponibles.
+  // No llamamos setState síncronamente dentro del effect: usamos startTransition
+  // para envolver toda la actualización. isPending maneja el estado de carga en el UI.
   useEffect(() => {
     if (!selectedDate) return
-    setSlots([])
     startTransition(async () => {
       const res = await getAvailableSlotsAction(tenantSlug, {
         barberId:    barber.id,
@@ -41,11 +42,8 @@ export function StepDateTime({ tenantSlug, barber, durationMin, selectedAt, onSe
     })
   }, [selectedDate, barber.id, durationMin, tenantSlug])
 
-  // Si cambia el barbero o la duración, resetear
-  useEffect(() => {
-    setSelectedDate(undefined)
-    setSlots([])
-  }, [barber.id, durationMin])
+  // Nota: el reset al cambiar barber/duration lo maneja el `key` en BookingFlow.
+  // Este componente se desmonta y remonta limpio cuando cambia la key.
 
   return (
     <div className="space-y-5">
@@ -65,7 +63,7 @@ export function StepDateTime({ tenantSlug, barber, durationMin, selectedAt, onSe
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="min-w-[80px] text-center text-xs text-muted-foreground">
+            <span className="min-w-20 text-center text-xs text-muted-foreground">
               {offset === 0
                 ? 'Esta semana'
                 : `+${offset} días`}

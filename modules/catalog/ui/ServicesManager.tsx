@@ -35,7 +35,7 @@ export function ServicesManager({ services, tenantSlug }: Props) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Servicios</h2>
+        <h2 className="font-display text-2xl tracking-wide">Servicios</h2>
         <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4" /> Añadir servicio
         </Button>

@@ -39,7 +39,7 @@ export function BarbersManager({ barbers, tenantSlug }: Props) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Equipo</h2>
+        <h2 className="font-display text-2xl tracking-wide">Equipo</h2>
         <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4" /> Añadir barbero
         </Button>
@@ -83,7 +83,7 @@ function BarberRow({
         <div className="flex items-center gap-2">
           <p className="font-medium">
             {barber.displayName.split(' ').slice(0, 2).join(' ')}
-            {barber.nickname && <span className="text-muted-foreground"> "{barber.nickname}"</span>}
+            {barber.nickname && <span className="text-muted-foreground"> &ldquo;{barber.nickname}&rdquo;</span>}
           </p>
           {!barber.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
         </div>

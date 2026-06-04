@@ -42,5 +42,7 @@ function patchFile(file, patch) {
   return true
 }
 
-patchFile(JS_FILE,  jsPatch)  ? console.log(`✓ Parcheado: ${JS_FILE}`)  : console.log(`⚠ No encontrado: ${JS_FILE}`)
-patchFile(DTS_FILE, dtsPatch) ? console.log(`✓ Parcheado: ${DTS_FILE}`) : console.log(`⚠ No encontrado: ${DTS_FILE}`)
+const okJs  = patchFile(JS_FILE,  jsPatch)
+const okDts = patchFile(DTS_FILE, dtsPatch)
+console.log(okJs  ? `✓ Parcheado: ${JS_FILE}`  : `⚠ No encontrado: ${JS_FILE}`)
+console.log(okDts ? `✓ Parcheado: ${DTS_FILE}` : `⚠ No encontrado: ${DTS_FILE}`)

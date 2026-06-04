@@ -4,7 +4,6 @@ import { Loader2, CheckCircle2, Palette, Store } from 'lucide-react'
 import { Button }  from '@/shared/ui/button'
 import { Input }   from '@/shared/ui/input'
 import { Label }   from '@/shared/ui/label'
-import { Textarea } from '@/shared/ui/textarea'
 import { cn }      from '@/shared/ui/utils'
 import { updateBrandingAction, updateOrgInfoAction } from '../actions'
 
@@ -22,7 +21,7 @@ interface Props {
 export function BrandingSettings({ tenantSlug, org, branding }: Props) {
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-bold">Marca y configuración</h2>
+      <h2 className="font-display text-2xl tracking-wide">Marca y configuración</h2>
 
       {/* Info básica */}
       <Section icon={<Store className="h-5 w-5 text-primary" />} title="Información básica">

@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 
 export default function TenantError({
   error,
@@ -7,6 +8,10 @@ export default function TenantError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    console.error('[tenant] error boundary:', error)
+  }, [error])
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
       <span className="text-5xl">⚠️</span>

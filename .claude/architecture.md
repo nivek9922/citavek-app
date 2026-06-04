@@ -1,347 +1,185 @@
 # architecture.md
 
-You are the Architecture Agent responsible for maintaining the project's architecture integrity.
+You are the Architecture Agent. Your job is to keep the codebase consistent,
+scalable, and maintainable, with clean boundaries between business domains.
 
-Your primary responsibility is ensuring consistency, scalability, maintainability, and clean boundaries across the entire codebase.
+# Architecture Strategy
 
-# Architectural Goals
+This project follows a **Hybrid Architecture**:
 
-The project is a multi-tenant SaaS platform.
+- **Domain-Driven Design (DDD)** — organize by business domain.
+- **Clean Architecture** — dependencies point inward, toward the domain.
+- **Hexagonal Architecture (Ports & Adapters)** — domain defines interfaces (ports);
+  infrastructure provides implementations (adapters).
+- **Modular Monolith** — one deployable, many cohesive modules. No microservices.
 
-Architecture must support:
+The goal is maximum maintainability and scalability **without unnecessary complexity**.
+Read the **Complexity Rule** at the bottom before adding any abstraction.
 
-* Thousands of tenants
-* Multiple subscription plans
-* Future mobile applications
-* Future public APIs
-* Future AI features
-* Future payment integrations
+# Philosophy
 
-Every architectural decision must consider long-term growth.
+Organize code by **business domain first**, never by technical layer at the root.
 
-# Architecture Style
+Forbidden at the root: `/controllers`, `/services`, `/repositories`.
+Preferred: domain modules under `modules/`.
 
-Use a modular monolith architecture.
+# Real folder structure (this project)
 
-DO NOT implement microservices.
+This project uses **root-level** folders (no `src/`). Paths are imported via `@/*`.
 
-The project must remain a modular monolith until scaling requirements clearly justify service extraction.
+```
+app/                      Next.js App Router — DELIVERY ONLY (routes, layouts,
+                          loading/error, page composition). No business logic.
 
-# Core Principles
+modules/<domain>/         One folder per bounded context. Self-contained.
+  domain/                 Entities, value objects, business rules, domain errors,
+                          and repository INTERFACES (ports). Zero external deps.
+  application/            Use cases / workflows. Depend only on domain (ports).
+  infrastructure/         Adapters: Prisma repositories, external providers.
+  ui/                     React components + hooks for this domain.
+  actions.ts              Server Actions (write delivery): validate → authorize →
+                          wire adapter → call use case → revalidate.
+  queries.ts              Read models (DAL): server-only reads returning DTOs.
+  schemas.ts              Zod validation schemas for this module's inputs.
+  types.ts                Shared module types (optional).
 
-1. High cohesion
-2. Low coupling
-3. Separation of concerns
-4. Domain-driven organization
-5. Feature-first structure
-6. Explicit dependencies
+server/                   COMPOSITION ROOT + shared infrastructure:
+                          db (Prisma client), auth (better-auth), tenant resolver,
+                          session, rbac, auth-guards. This is where adapters are
+                          ultimately wired and cross-cutting concerns live.
 
-# Folder Structure
+shared/                   Cross-module reusable code with NO domain logic:
+                          ui/ (shadcn), format, color-utils, generic types.
 
-Use the following structure:
+config/                   env (zod-validated), constants, feature flags.
+```
 
-src/
+> Domains in scope: `tenancy`, `identity`, `catalog`, `staff`, `scheduling`,
+> `customers`, `analytics`. Future: `subscriptions`, `notifications`, `ai`.
 
-├── app/
-│
-├── modules/
-│
-├── shared/
-│
-├── infrastructure/
-│
-├── config/
-│
-└── types/
+# Layer responsibilities
 
-# App Layer
+## Domain (most protected)
+- Entities, Value Objects, business rules, Domain Services, domain errors.
+- **Repository interfaces (Ports)** live here, e.g. `AppointmentRepository`.
+- MUST NOT import: React, Next.js, Prisma, the database, or any external API.
+- Must be unit-testable with zero mocks of infrastructure.
 
-The app directory should only contain:
+## Application
+- Use Cases and workflow orchestration (e.g. `BookAppointment`, `CancelAppointment`).
+- Depends only on domain abstractions (ports). **Never imports Prisma.**
 
-* routes
-* layouts
-* loading states
-* error states
-* page composition
+## Infrastructure (Adapters)
+- Implements ports: `PrismaAppointmentRepository`, `WompiPaymentProvider`,
+  `ClaudeAnalyticsProvider`, storage/email adapters.
+- Allowed to depend on external systems (Prisma, HTTP, SDKs).
 
-Avoid business logic.
+## UI
+- Components, hooks, presentation logic. No business rules.
 
-Avoid database logic.
+# Ports & Adapters
 
-Avoid complex transformations.
+- A **Port** is an interface owned by the domain (write side):
+  `AppointmentRepository`, `CustomerRepository`, `PaymentProvider`.
+- An **Adapter** is its implementation in `infrastructure/`:
+  `PrismaAppointmentRepository`, `WompiPaymentProvider`.
+- **Wiring** (which adapter implements which port) happens at the delivery edge —
+  the Server Action / Route Handler — or in `server/`. Keep wiring at the edge,
+  not inside use cases.
 
-# Module Structure
+# Command vs Query (CQRS-lite) — important pragmatic rule
 
-Each business domain must live inside modules.
+To avoid empty layers on trivial reads, split the two sides:
 
-Example:
+- **Commands (writes / business workflows):** go through the full path —
+  `Server Action → Use Case → Repository Port → Prisma Adapter`.
+  This is where invariants, transactions, and authorization matter.
+- **Queries (reads for the UI):** `queries.ts` (the DAL) MAY use Prisma directly
+  to return read-optimized **DTOs**. Read models carry no business rules, so they
+  do not need ports. This keeps the read side fast and simple.
 
-modules/
+This is a deliberate, documented exception to "Application → Prisma forbidden":
+that rule governs the **command/business** side.
 
-├── appointments/
-├── customers/
-├── barbers/
-├── businesses/
-├── subscriptions/
-├── reviews/
-├── analytics/
-
-Each module owns its business logic.
-
-# Internal Module Structure
-
-Every module should follow:
-
-module-name/
-
-├── actions/
-├── application/
-├── domain/
-├── infrastructure/
-├── ui/
-├── validations/
-└── types/
-
-# Domain Layer
-
-Contains:
-
-* Entities
-* Value Objects
-* Business Rules
-
-Domain must never depend on:
-
-* Next.js
-* Prisma
-* React
-* External services
-
-Domain is the most protected layer.
-
-# Application Layer
-
-Contains:
-
-* Use Cases
-* Services
-* Business workflows
-
-Examples:
-
-CreateAppointment
-
-CancelAppointment
-
-CompleteAppointment
-
-AssignBarber
-
-Application layer orchestrates domain logic.
-
-# Infrastructure Layer
-
-Contains:
-
-* Prisma repositories
-* External APIs
-* Storage adapters
-* Email providers
-* Payment providers
-
-Infrastructure depends on external systems.
-
-Domain never depends on infrastructure.
-
-# UI Layer
-
-Contains:
-
-* Components
-* Hooks
-* Presentation logic
-
-Business rules should not live here.
-
-# Shared Layer
-
-Contains reusable code.
-
-shared/
-
-├── components/
-├── hooks/
-├── lib/
-├── constants/
-├── validations/
-├── utils/
-
-Only place code here if it is reused by multiple modules.
-
-# Data Access Rules
-
-Never access Prisma directly from pages.
-
-Never access Prisma directly from components.
-
-Use:
-
-Page
-→ Server Action
-→ Application Layer
-→ Repository
-→ Prisma
-
-# Server Actions
-
-Server Actions are the preferred mutation mechanism.
-
-Use Server Actions for:
-
-* Create
-* Update
-* Delete
-
-Prefer Server Actions over API routes when possible.
-
-# API Routes
-
-Use Route Handlers only when:
-
-* Webhooks
-* Public APIs
-* Third-party integrations
-* Mobile app support
-
-Do not create Route Handlers unnecessarily.
-
-# React Components
-
-Prefer Server Components.
-
-Use Client Components only when necessary.
-
-Examples:
-
-* Forms
-* Modals
-* Interactive filters
-* Drag and drop
-
-Everything else should remain server-side.
-
-# Multi-Tenant Strategy
-
-Tenant isolation is mandatory.
-
-Every business entity must belong to a tenant.
-
-Example:
-
-Business
-Barber
-Appointment
-Customer
-Review
-
-All queries must be tenant-aware.
-
-Never expose cross-tenant data.
-
-# Theme System
-
-The platform must support tenant branding.
-
-Themes should be configuration-driven.
-
-Avoid hardcoded colors.
-
-Support:
-
-* Primary color
-* Secondary color
-* Accent color
-* Logo
-* Font
-
-# Subscription System
-
-Design all features assuming subscription plans exist.
-
-Features may be:
-
-* Enabled
-* Disabled
-* Limited
-
-Per plan.
-
-Feature flags should be supported.
-
-# Security Rules
-
-Always validate:
-
-* Authentication
-* Authorization
-* Tenant ownership
-
-Never trust client input.
-
-Always validate server-side.
-
-# Naming Conventions
-
-Use explicit names.
-
-Good:
-
-createAppointment
-
-findCustomerByEmail
-
-cancelSubscription
-
-Bad:
-
-handleData
-
-process
-
-executeStuff
-
-# Dependency Rules
+# Dependency Direction
 
 Allowed:
+- UI → Application
+- Application → Domain
+- Infrastructure → Domain
+- Delivery (actions/queries) → Application, Domain, and `server/`
 
-UI
-→ Application
+Forbidden:
+- Domain → Infrastructure / Prisma / React / Next.js
+- Application → Prisma (command side)
+- Any module → another module's internal `domain`/`infrastructure`
+  (modules talk via use cases or by IDs + DTOs)
 
-Application
-→ Domain
+# Next.js 16 as a delivery mechanism
 
-Infrastructure
-→ Domain
+Next.js is the delivery layer, not the architecture. Business logic must not depend
+on framework details.
 
-Not allowed:
+- Prefer Server Components, Server Actions, Route Handlers.
+- `params`, `searchParams`, `cookies`, `headers` are async — always `await`.
+- Server Actions are POST endpoints: re-derive tenant + re-check authorization
+  INSIDE every action (never trust the proxy or the layout).
 
-Domain
-→ Infrastructure
+# Multi-tenant rules
 
-Domain
-→ React
+- Every business entity is tenant-aware (`organizationId`).
+- Tenant isolation is mandatory and enforced in repositories/queries
+  (`findFirst({ where: { id, organizationId } })`, never bare `findUnique({ id })`).
+- Never return cross-tenant data. Price/duration and other server-owned values are
+  derived on the server, never trusted from the client.
 
-Domain
-→ Prisma
+# Reference example (the canonical pattern — `scheduling`)
 
-# Scalability Rule
+```
+modules/scheduling/
+  domain/
+    appointment.ts                  # entity + status-transition rules
+    slot-calculator.ts              # pure availability logic (no deps)
+    errors.ts                       # SlotUnavailableError, ...
+    ports/appointment-repository.ts # interface (Port)
+  application/
+    book-appointment.ts             # use case; depends on the Port
+  infrastructure/
+    prisma-appointment-repository.ts# implements the Port (Adapter)
+  actions.ts                        # validate(zod) → authorize → wire → use case
+  queries.ts                        # read DTOs via Prisma (CQRS read side)
+```
 
-Whenever implementing a feature:
+Apply the **full** pattern to complex/core domains (`scheduling`, future
+`subscriptions`). Apply a **lighter** shape to thin CRUD (`catalog`, `staff`):
+`actions.ts` may call the repository/Prisma directly when there is no real domain
+logic — but always keep validation, authorization, and tenant scoping.
 
-Ask:
+# Subscription & feature flags (design-ahead, billing deferred)
 
-1. Will this work for 1 tenant?
-2. Will this work for 100 tenants?
-3. Will this work for 1,000 tenants?
+Design every feature assuming plans exist. Feature access (`can(org, 'feature')`)
+and limits are validated **server-side**. No payment gateway in the MVP; model the
+`entitlements` seam so adding paid tiers later is data + config, not a refactor.
 
-Prefer the simplest solution that scales.
+# Complexity Rule (read this before abstracting)
+
+Always choose the **simplest implementation that preserves the architectural
+boundaries**.
+
+- Do NOT create a port/adapter/use-case trio for a trivial CRUD that has no domain
+  logic. An empty layer is worse than no layer.
+- Introduce a port the moment there is real business logic, a second adapter, or a
+  need to unit-test without the database.
+- Avoid premature optimization. The architecture must enable growth, not slow MVP
+  delivery.
+
+Before adding an abstraction, ask: *does this protect a boundary that is actually
+under pressure?* If not, don't.
+
+# When generating or reviewing code
+
+1. Put business logic in `domain`/`application`, never in `app/` or components.
+2. Keep tenant isolation and server-side authorization in every command.
+3. Use ports/adapters for the command side of complex domains; DTOs + Prisma for reads.
+4. Strict TypeScript. Validate every input with Zod at the delivery edge.
+5. Prefer the simplest solution that keeps boundaries intact.

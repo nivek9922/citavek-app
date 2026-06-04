@@ -7,16 +7,75 @@ import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../generated/prisma/client'
 import type { AppointmentStatus, AppointmentSource } from '../generated/prisma/client'
+import { auth } from '../server/auth.config'
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 })
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Usuarios de prueba ─────────────────────────────────────────────────────
 
-function minutesToTime(min: number) {
-  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+const TEST_USERS = [
+  {
+    name:     'Kevin Rodríguez (Admin)',
+    email:    process.env.SUPER_ADMIN_EMAIL ?? 'nivek9922@gmail.com',
+    password: 'Admin2024!',
+    slug:     null, // super-admin, no pertenece a ninguna barbería
+  },
+  {
+    name:     'Carlos Mosquera (San Fernando)',
+    email:    'owner@sanfernando.demo',
+    password: 'Demo2024!',
+    slug:     'san-fernando-cali',
+  },
+  {
+    name:     'Sebastián Arango (Envigado)',
+    email:    'owner@envigado.demo',
+    password: 'Demo2024!',
+    slug:     'envigado-cuts',
+  },
+  {
+    name:     'Diego Peñaloza (Chapinero)',
+    email:    'owner@chapinero.demo',
+    password: 'Demo2024!',
+    slug:     'chapinero-shave',
+  },
+]
+
+async function seedUsers() {
+  console.log('\n👤 Creando usuarios de prueba...')
+  for (const u of TEST_USERS) {
+    // Verificar si ya existe
+    const exists = await db.user.findUnique({ where: { email: u.email } })
+    if (!exists) {
+      try {
+        await auth.api.signUpEmail({ body: { email: u.email, password: u.password, name: u.name } })
+        console.log(`   ✓ Usuario creado: ${u.email}`)
+      } catch {
+        console.log(`   ⚠ No se pudo crear ${u.email} (puede que ya exista)`)
+      }
+    } else {
+      console.log(`   · Ya existe: ${u.email}`)
+    }
+
+    // Vincular al tenant si tiene slug
+    if (u.slug) {
+      const org    = await db.organization.findUnique({ where: { slug: u.slug } })
+      const user   = await db.user.findUnique({ where: { email: u.email } })
+      if (org && user) {
+        const member = await db.member.findFirst({ where: { organizationId: org.id, userId: user.id } })
+        if (!member) {
+          await db.member.create({
+            data: { id: crypto.randomUUID(), organizationId: org.id, userId: user.id, role: 'owner', createdAt: new Date() },
+          })
+          console.log(`   ✓ Vinculado a ${u.slug} como owner`)
+        }
+      }
+    }
+  }
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 // Horarios estándar Lun–Sáb 9:00–20:00
 const STANDARD_HOURS = [1, 2, 3, 4, 5, 6].map((day) => ({
@@ -64,7 +123,12 @@ function genAppointments(params: {
   for (let dayOffset = -2; dayOffset <= 6; dayOffset++) {
     const slotsToday = dayOffset === 0 ? 6 : dayOffset === 1 ? 5 : 3
     for (let s = 0; s < slotsToday; s++) {
-      const svc = params.services[i % params.services.length]
+      const svc      = params.services[i % params.services.length]
+      const barberId = params.barberIds[i % params.barberIds.length]
+      const name     = names[i % names.length]
+      const phone    = phones[i % phones.length]
+      if (!svc || !barberId || !name || !phone) { i++; continue }
+
       const hour = 9 + s * 2
       const startAt = new Date(today)
       startAt.setDate(today.getDate() + dayOffset)
@@ -85,9 +149,9 @@ function genAppointments(params: {
       appointments.push({
         organizationId: params.orgId,
         serviceId: svc.id,
-        barberId: params.barberIds[i % params.barberIds.length],
-        customerName: names[i % names.length],
-        customerPhone: phones[i % phones.length],
+        barberId,
+        customerName: name,
+        customerPhone: phone,
         startAt,
         endAt,
         durationMin: svc.durationMin,
@@ -277,10 +341,22 @@ async function main() {
     console.log(`   ✓ ${orgData.services.length} servicios · ${orgData.barbers.length} barberos · ${appts.length} citas`)
   }
 
+  // Crear usuarios después de crear las orgs para que los slugs existan
+  await seedUsers()
+
   console.log('\n✅ Seed completado.')
-  console.log('\nURLs de demo:')
+  console.log('\n─── Usuarios de prueba ─────────────────────────────────────')
+  console.log('  Super-admin:')
+  console.log(`    Email:     ${process.env.SUPER_ADMIN_EMAIL ?? 'nivek9922@gmail.com'}`)
+  console.log(`    Password:  Admin2024!`)
+  console.log(`    Acceso:    /admin`)
+  console.log('\n  Dueños de barberías (password: Demo2024!):')
+  for (const u of TEST_USERS.filter((u) => u.slug)) {
+    console.log(`    ${u.email.padEnd(30)} → /${u.slug}/panel`)
+  }
+  console.log('\n─── URLs públicas ───────────────────────────────────────────')
   for (const org of ORGS) {
-    console.log(`   http://localhost:3000/${org.slug}`)
+    console.log(`    http://localhost:3000/${org.slug}`)
   }
 }
 

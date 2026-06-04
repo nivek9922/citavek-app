@@ -4,7 +4,6 @@ import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers }  from '@/modules/staff/queries'
 import { formatCop, formatDuration } from '@/shared/format'
 import { Badge }             from '@/shared/ui/badge'
-import { Separator }         from '@/shared/ui/separator'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -31,7 +30,7 @@ export default async function TenantPage({
       <section className="relative overflow-hidden">
         {/* Glow radial desde el color primario */}
         <div className="absolute inset-0 bg-gradient-hero opacity-60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-background/60 to-background" />
 
         <div className="relative mx-auto max-w-3xl px-5 pt-16 pb-10 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
