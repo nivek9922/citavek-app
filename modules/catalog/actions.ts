@@ -1,9 +1,12 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { getTenantContext }   from '@/server/tenant'
-import { requirePermission }  from '@/server/auth-guards'
-import { db } from '@/server/db'
+import { getTenantContext }  from '@/server/tenant'
+import { requirePermission } from '@/server/auth-guards'
+import { createService }   from './application/create-service'
+import { updateService }   from './application/update-service'
+import { toggleService }   from './application/toggle-service'
+import { prismaCatalogRepository as repo } from './infrastructure/prisma-catalog-repository'
 
 const serviceSchema = z.object({
   name:        z.string().min(2).max(80),
@@ -20,11 +23,9 @@ export async function upsertServiceAction(slug: string, id: string | null, formD
   const input = serviceSchema.parse(Object.fromEntries(formData))
 
   if (id) {
-    const existing = await db.service.findFirst({ where: { id, organizationId: ctx.id } })
-    if (!existing) throw new Error('Servicio no encontrado')
-    await db.service.update({ where: { id }, data: input })
+    await updateService(repo, id, ctx.id, input)
   } else {
-    await db.service.create({ data: { ...input, organizationId: ctx.id } })
+    await createService(repo, ctx.id, input)
   }
   revalidatePath(`/${slug}/panel/servicios`)
 }
@@ -32,8 +33,6 @@ export async function upsertServiceAction(slug: string, id: string | null, formD
 export async function toggleServiceAction(slug: string, id: string, active: boolean) {
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'service:update')
-  const existing = await db.service.findFirst({ where: { id, organizationId: ctx.id } })
-  if (!existing) throw new Error('Servicio no encontrado')
-  await db.service.update({ where: { id }, data: { active } })
+  await toggleService(repo, id, ctx.id, active)
   revalidatePath(`/${slug}/panel/servicios`)
 }

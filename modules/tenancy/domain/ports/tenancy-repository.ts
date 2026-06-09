@@ -1,0 +1,15 @@
+import type { Organization, OrgStatus, BrandingData, OrgInfoData } from '../organization'
+
+export interface DeleteResult {
+  slug:          string
+  memberUserIds: string[]
+}
+
+export interface TenancyRepository {
+  findById(id: string): Promise<Organization | null>
+  setStatus(id: string, status: OrgStatus): Promise<void>
+  updateBranding(organizationId: string, data: BrandingData): Promise<void>
+  updateInfo(id: string, data: OrgInfoData): Promise<void>
+  /** Borra la org + citas en transacción. Devuelve datos necesarios para cleanup post-borrado. */
+  deleteWithCascade(id: string): Promise<DeleteResult>
+}

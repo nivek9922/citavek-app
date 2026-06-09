@@ -3,14 +3,16 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
-import { db } from '@/server/db'
+import { createBarber }   from './application/create-barber'
+import { updateBarber }   from './application/update-barber'
+import { toggleBarber }   from './application/toggle-barber'
+import { prismaStaffRepository as repo } from './infrastructure/prisma-staff-repository'
 
 const barberSchema = z.object({
   displayName: z.string().min(2).max(80),
   nickname:    z.string().max(30).optional(),
   specialties: z.string().transform((v) =>
     v.split(',').map((s) => s.trim()).filter(Boolean)),
-  // Horarios por día como JSON: [{ dayOfWeek, startMin, endMin }, ...]
   hoursJson: z.string().transform((v) =>
     z.array(z.object({
       dayOfWeek: z.number().int().min(0).max(6),
@@ -33,38 +35,18 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
   const input = barberSchema.parse(raw)
 
   if (id) {
-    const existing = await db.barber.findFirst({ where: { id, organizationId: ctx.id } })
-    if (!existing) throw new Error('Barbero no encontrado')
-    // Reemplazo de horarios atómico: si falla el createMany, el deleteMany se
-    // revierte y el barbero no queda sin horario (y por tanto no-reservable).
-    await db.$transaction(async (tx) => {
-      await tx.barber.update({
-        where: { id },
-        data: { displayName: input.displayName, nickname: input.nickname ?? null, specialties: input.specialties },
-      })
-      await tx.workingHour.deleteMany({ where: { barberId: id } })
-      if (input.hoursJson.length > 0) {
-        await tx.workingHour.createMany({
-          data: input.hoursJson.map((h) => ({ barberId: id, ...h })),
-        })
-      }
+    await updateBarber(repo, id, ctx.id, {
+      displayName: input.displayName,
+      nickname:    input.nickname ?? null,
+      specialties: input.specialties,
+      hours:       input.hoursJson,
     })
   } else {
-    await db.$transaction(async (tx) => {
-      const barber = await tx.barber.create({
-        data: {
-          organizationId: ctx.id,
-          displayName:    input.displayName,
-          nickname:       input.nickname ?? null,
-          specialties:    input.specialties,
-          active:         true,
-        },
-      })
-      if (input.hoursJson.length > 0) {
-        await tx.workingHour.createMany({
-          data: input.hoursJson.map((h) => ({ barberId: barber.id, ...h })),
-        })
-      }
+    await createBarber(repo, ctx.id, {
+      displayName: input.displayName,
+      nickname:    input.nickname,
+      specialties: input.specialties,
+      hours:       input.hoursJson,
     })
   }
   revalidatePath(`/${slug}/panel/equipo`)
@@ -73,8 +55,6 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
 export async function toggleBarberAction(slug: string, id: string, active: boolean) {
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'barber:update')
-  const existing = await db.barber.findFirst({ where: { id, organizationId: ctx.id } })
-  if (!existing) throw new Error('Barbero no encontrado')
-  await db.barber.update({ where: { id }, data: { active } })
+  await toggleBarber(repo, id, ctx.id, active)
   revalidatePath(`/${slug}/panel/equipo`)
 }

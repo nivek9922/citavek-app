@@ -3,9 +3,14 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
-import { requireSuperAdmin, isSuperAdmin }  from '@/server/super-admin'
+import { requireSuperAdmin, isSuperAdmin } from '@/server/super-admin'
 import { db } from '@/server/db'
 import log from '@/server/logger'
+import { setOrgStatus }      from './application/set-org-status'
+import { deleteOrganization } from './application/delete-organization'
+import { updateBranding }    from './application/update-branding'
+import { updateOrgInfo }     from './application/update-org-info'
+import { prismaTenancyRepository as repo } from './infrastructure/prisma-tenancy-repository'
 
 const brandingSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
@@ -32,12 +37,7 @@ export async function updateBrandingAction(slug: string, formData: FormData) {
     coverUrl:     formData.get('coverUrl') || undefined,
   })
 
-  await db.branding.upsert({
-    where:  { organizationId: ctx.id },
-    update: input,
-    create: { organizationId: ctx.id, ...input },
-  })
-
+  await updateBranding(repo, ctx.id, input)
   revalidatePath(`/${slug}/panel/marca`)
 }
 
@@ -52,29 +52,20 @@ export async function updateOrgInfoAction(slug: string, formData: FormData) {
     phone:   formData.get('phone')   || undefined,
   })
 
-  await db.organization.update({ where: { id: ctx.id }, data: input })
+  await updateOrgInfo(repo, ctx.id, input)
   revalidatePath(`/${slug}/panel/marca`)
 }
 
 // ── Super-admin: suspender / reactivar suscripción ───────────────────────────
-// Estado del ciclo de vida de la SUSCRIPCIÓN. `suspended` corta el acceso pero
-// conserva todos los datos (impago, pausa). Reversible. Hoy manual; en el futuro
-// lo disparará el cobro automático.
 
 export async function setOrgStatusAction(
   orgId: string,
   status: 'active' | 'suspended',
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // requireSuperAdmin fuera del try para que redirect() se propague correctamente.
-  // Next.js lanza un error interno NEXT_REDIRECT que el catch {} silenciaría.
   const session = await requireSuperAdmin()
   try {
-    const org = await db.organization.update({
-      where:  { id: orgId },
-      data:   { status },
-      select: { slug: true, name: true },
-    })
-    log.audit('org.status_changed', { orgId, slug: org.slug, status, by: session.user.email })
+    await setOrgStatus(repo, orgId, status)
+    log.audit('org.status_changed', { orgId, status, by: session.user.email })
     revalidatePath('/admin')
     return { ok: true }
   } catch (err) {
@@ -84,57 +75,29 @@ export async function setOrgStatusAction(
 }
 
 // ── Super-admin: eliminar barbería (borrado duro) ────────────────────────────
-// Distinto de suspender: BORRA permanentemente la barbería y todos sus datos.
-// Pensado para limpiar barberías de prueba en desarrollo. No reversible.
-// Las citas referencian service/barber con onDelete: Restrict, por eso se borran
-// primero dentro de la transacción; el resto (barberos, servicios, clientes,
-// branding, excepciones, members, invitations) cae por cascada al eliminar la org.
 
 export async function deleteOrgAction(
   orgId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireSuperAdmin()
   try {
+    const { slug, memberUserIds } = await deleteOrganization(repo, orgId)
+    log.audit('org.deleted', { orgId, slug, by: session.user.email })
 
-    // Capturamos slug (para invalidar cache) y los usuarios miembros ANTES de que
-    // el borrado en cascada elimine la org y las filas de `member`.
-    const [org, members] = await Promise.all([
-      db.organization.findUnique({ where: { id: orgId }, select: { slug: true } }),
-      db.member.findMany({ where: { organizationId: orgId }, select: { userId: true } }),
-    ])
-    const memberUserIds = members.map((m) => m.userId)
-
-    await db.$transaction([
-      db.appointment.deleteMany({ where: { organizationId: orgId } }),
-      db.organization.delete({ where: { id: orgId } }),
-    ])
-
-    if (org) {
-      log.audit('org.deleted', { orgId, slug: org.slug, by: session.user.email })
-    }
-
-    // Limpieza de usuarios que quedaron huérfanos: sin ninguna otra membresía
-    // ni rol de barbero en parte alguna. Así un correo de prueba puede volver a
-    // registrarse. Nunca se borra al super-admin. Best-effort: si esto falla, la
-    // barbería ya se eliminó correctamente y no queremos revertir eso.
+    // Best-effort: limpiar usuarios huérfanos (sin otras membresías ni rol de barbero).
+    // Nunca se borra al super-admin. Si esto falla, la barbería ya fue eliminada.
     if (memberUserIds.length > 0) {
       try {
         const orphans = await db.user.findMany({
-          where: {
-            id:      { in: memberUserIds },
-            members: { none: {} },
-            barbers: { none: {} },
-          },
+          where:  { id: { in: memberUserIds }, members: { none: {} }, barbers: { none: {} } },
           select: { id: true, email: true },
         })
-        const orphanIds = orphans
-          .filter((u) => !isSuperAdmin(u.email))
-          .map((u) => u.id)
+        const orphanIds = orphans.filter((u) => !isSuperAdmin(u.email)).map((u) => u.id)
         if (orphanIds.length > 0) {
           await db.user.deleteMany({ where: { id: { in: orphanIds } } })
         }
       } catch {
-        // ignorado a propósito: el borrado de la barbería ya fue exitoso
+        // ignorado a propósito
       }
     }
 
