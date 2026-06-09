@@ -102,18 +102,20 @@ export const prismaSchedulingRepository: SchedulingRepository = {
           source:          data.source,
           createdByUserId: data.createdByUserId ?? null,
           notes:           data.notes ?? null,
+          isOffHours:      data.isOffHours ?? false,
         },
         select: { id: true },
       })
     })
   },
 
-  async getAppointmentStatus(organizationId, appointmentId) {
+  async getAppointmentForStatusChange(organizationId, appointmentId) {
     const apt = await db.appointment.findFirst({
       where:  { id: appointmentId, organizationId },
-      select: { status: true },
+      select: { status: true, startAt: true },
     })
-    return (apt?.status as AppointmentStatusValue | undefined) ?? null
+    if (!apt) return null
+    return { status: apt.status as AppointmentStatusValue, startAt: apt.startAt }
   },
 
   async updateAppointmentStatus(organizationId, appointmentId, status, cancelledAt) {

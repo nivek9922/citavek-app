@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { formatInTimeZone } from 'date-fns-tz'
 import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
@@ -52,11 +53,13 @@ export function AgendaBoard({ appointments, tenantSlug, timezone }: Props) {
 
 function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; tenantSlug: string; timezone: string }) {
   const [isPending, setIsPending] = useState(false)
+  const isFuture = new Date(apt.startAt).getTime() > Date.now()
 
   async function update(status: string) {
     setIsPending(true)
     try {
-      await updateAppointmentStatusAction(tenantSlug, apt.id, status)
+      const res = await updateAppointmentStatusAction(tenantSlug, apt.id, status)
+      if (!res.ok) toast.error(res.error)
     } finally {
       setIsPending(false)
     }
@@ -126,6 +129,8 @@ function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; t
             icon={<CheckCircle2 className="h-3.5 w-3.5" />}
             label="Completar"
             className="text-green-400 hover:bg-green-500/10"
+            disabled={isFuture || isPending}
+            title={isFuture ? 'No puedes completar una cita futura' : undefined}
           />
           <ActionBtn
             onClick={() => update('no_show')}
@@ -162,18 +167,23 @@ function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; t
 }
 
 function ActionBtn({
-  onClick, icon, label, className,
+  onClick, icon, label, className, disabled, title,
 }: {
   onClick: () => void
   icon: React.ReactNode
   label: string
   className?: string
+  disabled?: boolean
+  title?: string
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       className={cn(
         'flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-smooth',
+        'disabled:cursor-not-allowed disabled:opacity-40',
         className,
       )}
     >

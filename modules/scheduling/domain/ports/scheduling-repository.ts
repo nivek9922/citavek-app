@@ -46,6 +46,7 @@ export interface NewAppointment {
   source:          AppointmentSourceValue
   createdByUserId?: string | null
   notes?:           string | null
+  isOffHours?:      boolean
 }
 
 export interface SchedulingRepository {
@@ -73,7 +74,11 @@ export interface SchedulingRepository {
 
   createAppointment(data: NewAppointment): Promise<{ id: string }>
 
-  getAppointmentStatus(organizationId: string, appointmentId: string): Promise<AppointmentStatusValue | null>
+  /** Datos mínimos de una cita para validar un cambio de estado. */
+  getAppointmentForStatusChange(
+    organizationId: string,
+    appointmentId: string,
+  ): Promise<{ status: AppointmentStatusValue; startAt: Date } | null>
 
   updateAppointmentStatus(
     organizationId: string,

@@ -30,6 +30,7 @@ export function AdminOrgsSection({ initialOrgs }: Props) {
       branding:     { primaryColor: data.primaryColor },
       _count:        { barbers: 0, appointments: 0 },
       appointments: [],
+      health:       { created: 0, cancelled: 0, score: 0, level: 'red' },
     }
     setOrgs((prev) => [newOrg, ...prev])
   }

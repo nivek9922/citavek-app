@@ -1,3 +1,4 @@
+import { isWithinWorkingHours } from '../domain/working-hours'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
 export interface CreateManualAppointmentInput {
@@ -12,7 +13,7 @@ export interface CreateManualAppointmentInput {
 }
 
 export type CreateManualAppointmentResult =
-  | { ok: true; appointmentId: string }
+  | { ok: true; appointmentId: string; offHours: boolean }
   | { ok: false; error: string }
 
 /** Use case: alta manual de cita desde el panel (staff). */
@@ -33,6 +34,18 @@ export async function createManualAppointment(
     return { ok: false, error: 'Ese barbero ya tiene una cita en ese horario.' }
   }
 
+  // Fuera de horario no bloquea: se registra el flag y la UI lo informa.
+  const [timezone, workingHours] = await Promise.all([
+    repo.getOrgTimezone(input.organizationId),
+    repo.getBarberWorkingHours(input.organizationId, input.barberId),
+  ])
+  const offHours = !isWithinWorkingHours({
+    startAt:     input.startAt,
+    durationMin: service.durationMin,
+    timezone,
+    workingHours,
+  })
+
   const customer = await repo.upsertCustomer(input.organizationId, input.customerName, input.customerPhone)
 
   const appointment = await repo.createAppointment({
@@ -50,7 +63,8 @@ export async function createManualAppointment(
     source:          'manual',
     createdByUserId: input.createdByUserId,
     notes:           input.notes ?? null,
+    isOffHours:      offHours,
   })
 
-  return { ok: true, appointmentId: appointment.id }
+  return { ok: true, appointmentId: appointment.id, offHours }
 }

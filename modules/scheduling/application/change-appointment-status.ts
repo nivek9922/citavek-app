@@ -1,4 +1,4 @@
-import { canTransition, type AppointmentStatusValue } from '../domain/appointment'
+import { canTransition, FutureCompletionError, type AppointmentStatusValue } from '../domain/appointment'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
 export interface ChangeAppointmentStatusInput {
@@ -12,11 +12,16 @@ export async function changeAppointmentStatus(
   repo: SchedulingRepository,
   input: ChangeAppointmentStatusInput,
 ): Promise<void> {
-  const current = await repo.getAppointmentStatus(input.organizationId, input.appointmentId)
-  if (!current) throw new Error('Cita no encontrada')
+  const apt = await repo.getAppointmentForStatusChange(input.organizationId, input.appointmentId)
+  if (!apt) throw new Error('Cita no encontrada')
 
-  if (!canTransition(current, input.newStatus)) {
-    throw new Error(`Transición inválida: ${current} → ${input.newStatus}`)
+  if (!canTransition(apt.status, input.newStatus)) {
+    throw new Error(`Transición inválida: ${apt.status} → ${input.newStatus}`)
+  }
+
+  // Protección de ingresos: no se puede completar una cita que aún no empieza.
+  if (input.newStatus === 'completed' && apt.startAt.getTime() > Date.now()) {
+    throw new FutureCompletionError()
   }
 
   const cancelledAt = input.newStatus === 'cancelled' ? new Date() : null

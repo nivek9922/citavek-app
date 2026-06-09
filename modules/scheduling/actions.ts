@@ -7,7 +7,7 @@ import { requirePermission } from '@/server/auth-guards'
 import { headers } from 'next/headers'
 import { rateLimit, clientIpFrom } from '@/server/rate-limit'
 import log from '@/server/logger'
-import { SlotConflictError } from './domain/appointment'
+import { SlotConflictError, FutureCompletionError } from './domain/appointment'
 import { isAnyBarber } from './domain/any-barber'
 import { prismaSchedulingRepository as repo } from './infrastructure/prisma-scheduling-repository'
 import { bookAppointment }          from './application/book-appointment'
@@ -157,7 +157,7 @@ export type ManualAppointmentInput = z.infer<typeof manualSchema>
 export async function createManualAppointmentAction(
   slug: string,
   input: ManualAppointmentInput,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; offHours: boolean } | { ok: false; error: string }> {
   // Guards fuera del try: notFound()/redirect() lanzan errores de control de flujo
   // de Next.js que un catch silenciaría (sesión expirada → "No se pudo crear" en
   // vez de ir a login).
@@ -181,7 +181,7 @@ export async function createManualAppointmentAction(
     })
 
     if (result.ok) revalidatePath(`/${slug}/panel`)
-    return result.ok ? { ok: true } : result
+    return result.ok ? { ok: true, offHours: result.offHours } : result
   } catch (err) {
     if (err instanceof SlotConflictError) {
       return { ok: false, error: 'Ese barbero ya tiene una cita en ese horario.' }
@@ -290,15 +290,23 @@ export async function updateAppointmentStatusAction(
   slug: string,
   appointmentId: string,
   newStatus: string,
-) {
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'appointment:update')
+  try {
+    await changeAppointmentStatus(repo, {
+      organizationId: ctx.id,
+      appointmentId,
+      newStatus: statusSchema.parse(newStatus),
+    })
 
-  await changeAppointmentStatus(repo, {
-    organizationId: ctx.id,
-    appointmentId,
-    newStatus: statusSchema.parse(newStatus),
-  })
-
-  revalidatePath(`/${slug}/panel`)
+    revalidatePath(`/${slug}/panel`)
+    return { ok: true }
+  } catch (err) {
+    if (err instanceof FutureCompletionError) {
+      return { ok: false, error: 'No puedes completar una cita futura.' }
+    }
+    log.error('updateAppointmentStatusAction', { err: String(err) })
+    return { ok: false, error: 'No se pudo actualizar la cita.' }
+  }
 }

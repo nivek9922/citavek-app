@@ -35,7 +35,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
     // métodos no ejercidos por este use case
     upsertCustomer:              vi.fn(async () => ({ id: 'c' })),
     createAppointment:           vi.fn(async () => ({ id: 'a' })),
-    getAppointmentStatus:        vi.fn(async () => null),
+    getAppointmentForStatusChange: vi.fn(async () => null),
     updateAppointmentStatus:     vi.fn(async () => undefined),
     getOrgTimezone:              vi.fn(async () => 'America/Bogota'),
     getBarberWorkingHours:       vi.fn(async () => []),

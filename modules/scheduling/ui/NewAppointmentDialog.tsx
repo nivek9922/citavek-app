@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Plus, Loader2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -43,6 +44,9 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
         notes:         (fd.get('notes') as string) || undefined,
       })
       if (res.ok) {
+        if (res.offHours) {
+          toast.warning('Nota: Esta cita se registra fuera del horario habitual')
+        }
         setOpen(false)
       } else {
         setError(res.error)

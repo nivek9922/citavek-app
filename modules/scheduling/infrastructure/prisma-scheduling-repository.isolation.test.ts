@@ -105,8 +105,8 @@ describe('PrismaSchedulingRepository — tenant isolation', () => {
     expect(where).toMatchObject({ organizationId: ORG_A })
   })
 
-  it('getAppointmentStatus filtra por organizationId', async () => {
-    await repo.getAppointmentStatus(ORG_A, 'apt-1')
+  it('getAppointmentForStatusChange filtra por organizationId', async () => {
+    await repo.getAppointmentForStatusChange(ORG_A, 'apt-1')
     const where = lastWhere(mockDb.appointment.findFirst)
     expect(where).toMatchObject({ organizationId: ORG_A })
   })

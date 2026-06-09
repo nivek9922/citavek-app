@@ -1,9 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { changeAppointmentStatus } from './change-appointment-status'
-import type { AppointmentStatusValue } from '../domain/appointment'
+import { FutureCompletionError, type AppointmentStatusValue } from '../domain/appointment'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
-function createFakeRepo(currentStatus: AppointmentStatusValue | null) {
+const PAST   = new Date(Date.now() - 60 * 60_000) // hace 1 h
+const FUTURE = new Date(Date.now() + 60 * 60_000) // dentro de 1 h
+
+function createFakeRepo(currentStatus: AppointmentStatusValue | null, startAt: Date = PAST) {
   const updates: Array<{ id: string; status: AppointmentStatusValue; cancelledAt: Date | null }> = []
 
   const repo: SchedulingRepository = {
@@ -12,7 +15,9 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null) {
     hasConflict:             vi.fn(async () => false),
     upsertCustomer:          vi.fn(async () => ({ id: 'c' })),
     createAppointment:       vi.fn(async () => ({ id: 'a' })),
-    getAppointmentStatus:    vi.fn(async () => currentStatus),
+    getAppointmentForStatusChange: vi.fn(async () =>
+      currentStatus ? { status: currentStatus, startAt } : null,
+    ),
     updateAppointmentStatus: vi.fn(
       async (_org: string, id: string, status: AppointmentStatusValue, cancelledAt: Date | null) => {
         updates.push({ id, status, cancelledAt })
@@ -74,5 +79,41 @@ describe('changeAppointmentStatus', () => {
     await expect(
       changeAppointmentStatus(repo, { ...base, newStatus: 'completed' }),
     ).rejects.toThrow('Cita no encontrada')
+  })
+
+  it('rechaza completar una cita futura (protección de ingresos)', async () => {
+    const { repo, updates } = createFakeRepo('confirmed', FUTURE)
+
+    await expect(
+      changeAppointmentStatus(repo, { ...base, newStatus: 'completed' }),
+    ).rejects.toThrow(FutureCompletionError)
+
+    expect(updates).toHaveLength(0)
+  })
+
+  it('permite cancelar una cita futura', async () => {
+    const { repo, updates } = createFakeRepo('confirmed', FUTURE)
+
+    await changeAppointmentStatus(repo, { ...base, newStatus: 'cancelled' })
+
+    expect(updates).toHaveLength(1)
+    expect(updates[0]!.status).toBe('cancelled')
+  })
+
+  it('permite marcar no_show en una cita futura', async () => {
+    const { repo, updates } = createFakeRepo('confirmed', FUTURE)
+
+    await changeAppointmentStatus(repo, { ...base, newStatus: 'no_show' })
+
+    expect(updates).toHaveLength(1)
+  })
+
+  it('permite completar una cita cuyo inicio ya pasó', async () => {
+    const { repo, updates } = createFakeRepo('confirmed', PAST)
+
+    await changeAppointmentStatus(repo, { ...base, newStatus: 'completed' })
+
+    expect(updates).toHaveLength(1)
+    expect(updates[0]!.status).toBe('completed')
   })
 })

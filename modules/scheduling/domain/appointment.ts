@@ -41,3 +41,14 @@ export class SlotConflictError extends Error {
     this.name = 'SlotConflictError'
   }
 }
+
+/**
+ * Intento de marcar como completada una cita cuyo inicio aún no llega.
+ * Protege los ingresos/KPIs: una cita futura no puede generar revenue real.
+ */
+export class FutureCompletionError extends Error {
+  constructor() {
+    super('FUTURE_COMPLETION')
+    this.name = 'FutureCompletionError'
+  }
+}

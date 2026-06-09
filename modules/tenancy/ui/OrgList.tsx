@@ -3,10 +3,17 @@
 import Link from 'next/link'
 import { Scissors, ExternalLink, Users, CalendarDays } from 'lucide-react'
 import { type AdminOrgRow } from '@/modules/tenancy/queries'
+import { type HealthLevel } from '@/modules/tenancy/domain/health-score'
 import { OrgStatusToggle } from './OrgStatusToggle'
 import { OrgDeleteButton }  from './OrgDeleteButton'
 
 const CHURN_DAYS = 30
+
+const HEALTH_BADGE: Record<HealthLevel, { label: string; cls: string }> = {
+  green:  { label: 'saludable', cls: 'bg-green-500/10 text-green-400' },
+  yellow: { label: 'moderada',  cls: 'bg-yellow-500/10 text-yellow-400' },
+  red:    { label: 'en riesgo', cls: 'bg-destructive/10 text-destructive' },
+}
 
 function daysSince(date: Date) {
   return Math.floor((Date.now() - date.getTime()) / 86_400_000)
@@ -61,6 +68,12 @@ export function OrgList({ orgs, onStatusChange, onDelete }: Props) {
                       sin actividad
                     </span>
                   )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${HEALTH_BADGE[org.health.level].cls}`}
+                    title={`+${org.health.created} creadas / −${org.health.cancelled} canceladas (7d)`}
+                  >
+                    {HEALTH_BADGE[org.health.level].label}
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   /{org.slug}

@@ -234,6 +234,9 @@ model Appointment {
   source AppointmentSource @default(online)
   notes  String?
 
+  // Creada fuera del horario laboral del barbero (informativo, no bloquea)
+  isOffHours Boolean @default(false)
+
   createdByUserId String? // quién la creó (alta manual en panel)
 
   createdAt   DateTime  @default(now()) @db.Timestamptz(6)
