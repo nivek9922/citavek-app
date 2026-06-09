@@ -41,6 +41,7 @@ export default async function TenantPage({
             shopName={ctx.name}
             shopPhone={ctx.phone}
             shopAddress={ctx.address}
+            timezone={ctx.timezone}
           />
         </div>
       </div>
@@ -102,6 +103,7 @@ export default async function TenantPage({
             shopName={ctx.name}
             shopPhone={ctx.phone}
             shopAddress={ctx.address}
+            timezone={ctx.timezone}
           />
         </div>
       </section>

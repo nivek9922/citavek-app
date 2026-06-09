@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import { CalendarDays, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addDays, isSameDay, isSameMinute } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import { cn } from '@/shared/ui/utils'
 import { getAvailableSlotsAction } from '../actions'
@@ -17,9 +18,10 @@ interface Props {
   durationMin: number  // solo para el indicador visual de ocupación (OccupancyBar)
   selectedAt:  Date | undefined
   onSelect:    (startAt: Date) => void
+  timezone:    string
 }
 
-export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selectedAt, onSelect }: Props) {
+export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selectedAt, onSelect, timezone }: Props) {
   const [offset,       setOffset]       = useState(0)  // cuántos días desde hoy empieza la página
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [slots,        setSlots]        = useState<Date[]>([])
@@ -153,7 +155,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
                           : 'border-border hover:border-primary/50 hover:bg-accent/30',
                       )}
                     >
-                      {format(slot, 'HH:mm')}
+                      {formatInTimeZone(slot, timezone, 'HH:mm')}
                     </button>
                   )
                 })}

@@ -20,9 +20,10 @@ interface Props {
   shopName:    string
   shopPhone:   string | null
   shopAddress: string | null
+  timezone:    string
 }
 
-export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone, shopAddress }: Props) {
+export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone, shopAddress, timezone }: Props) {
   const flow = useBookingFlow()
   const [isPending, startTransition] = useTransition()
   const [confirmed, setConfirmed] = useState<{ startAt: Date; priceCop: number; appointmentId: string } | null>(null)
@@ -39,6 +40,7 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
         shopName={shopName}
         shopPhone={shopPhone}
         shopAddress={shopAddress}
+        timezone={timezone}
         onNew={() => { setConfirmed(null); flow.reset() }}
       />
     )
@@ -103,6 +105,7 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
           durationMin={flow.draft.service.durationMin}
           selectedAt={flow.draft.startAt}
           onSelect={flow.setStartAt}
+          timezone={timezone}
         />
       )}
 

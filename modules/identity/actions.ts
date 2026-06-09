@@ -8,6 +8,7 @@ import { db } from '@/server/db'
 import { requireSuperAdmin } from '@/server/super-admin'
 import { getSession } from '@/server/session'
 import { COLOMBIA_CITIES } from '@/shared/constants/colombia-cities'
+import { handlePrismaError } from '@/server/prisma-errors'
 import { prismaIdentityRepository as repo } from './infrastructure/prisma-identity-repository'
 import { createOrganization } from './application/create-organization'
 import { getPrimaryMembership } from './queries'
@@ -71,7 +72,7 @@ export async function createBarberiaForSelfAction(
       primaryColor: data.primaryColor,
     })
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Error inesperado.' }
+    return { ok: false, error: handlePrismaError(err) }
   }
 }
 
@@ -121,6 +122,6 @@ export async function createBarberiaAction(
     if (result.ok) revalidatePath('/admin')
     return result
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Error inesperado.' }
+    return { ok: false, error: handlePrismaError(err) }
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import { CalendarPlus, CheckCircle2, Copy, Link, MessageCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -19,11 +19,12 @@ interface Props {
   shopName:      string
   shopPhone:     string | null
   shopAddress:   string | null
+  timezone:      string
   onNew:         () => void
 }
 
 export function BookingSuccess({
-  service, barber, startAt, priceCop, appointmentId, shopName, shopPhone, shopAddress, onNew,
+  service, barber, startAt, priceCop, appointmentId, shopName, shopPhone, shopAddress, timezone, onNew,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const citaUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/cita/${appointmentId}`
@@ -35,7 +36,7 @@ export function BookingSuccess({
     })
   }
   const endAt     = new Date(startAt.getTime() + service.durationMin * 60_000)
-  const whenLabel = format(startAt, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
+  const whenLabel = formatInTimeZone(startAt, timezone, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
 
   const barberLabel = isAnyBarber(barber.id) ? 'el primer barbero disponible' : barber.displayName
   const barberFirst = isAnyBarber(barber.id) ? 'tu barbero asignado' : barber.displayName.split(' ')[0]

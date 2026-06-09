@@ -18,9 +18,8 @@ interface Props {
   tenantSlug: string
   exceptions: ScheduleExceptionDTO[]
   barbers:    Barber[]
+  todayStr:   string
 }
-
-const TODAY = new Date().toISOString().split('T')[0] ?? ''
 
 function formatDate(dateStr: string) {
   const [y = 0, m = 0, d = 0] = dateStr.split('-').map(Number)
@@ -29,7 +28,7 @@ function formatDate(dateStr: string) {
   }).format(new Date(y, m - 1, d))
 }
 
-export function BlockedDatesManager({ tenantSlug, exceptions, barbers }: Props) {
+export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr }: Props) {
   const [list, setList]           = useState<ScheduleExceptionDTO[]>(exceptions)
   const [date, setDate]           = useState('')
   const [scope, setScope]         = useState<string>('org')
@@ -37,8 +36,8 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers }: Props) 
   const [error, setError]         = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
 
-  const upcoming = list.filter((e) => e.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date))
-  const past     = list.filter((e) => e.date <  TODAY).sort((a, b) => b.date.localeCompare(a.date))
+  const upcoming = list.filter((e) => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date))
+  const past     = list.filter((e) => e.date <  todayStr).sort((a, b) => b.date.localeCompare(a.date))
 
   async function handleAdd(e: React.SyntheticEvent) {
     e.preventDefault()
@@ -103,7 +102,7 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers }: Props) 
             <Input
               id="block-date"
               type="date"
-              min={TODAY}
+              min={todayStr}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required

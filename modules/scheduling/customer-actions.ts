@@ -41,6 +41,6 @@ export async function cancelByCustomerAction(
     phoneSchema.parse(customerPhone)
     return cancelAppointmentByCustomer(repo, { appointmentId, customerPhone })
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Error inesperado.' }
+    return { ok: false, error: err instanceof Error ? err.message : 'No se pudo cancelar la cita. Intenta de nuevo.' }
   }
 }

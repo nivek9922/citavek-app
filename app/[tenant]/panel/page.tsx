@@ -153,6 +153,7 @@ export default async function PanelPage({
             prevWeekStr={prevWeekStr}
             nextWeekStr={nextWeekStr}
             weekLabel={weekLabel}
+            timezone={ctx.timezone}
           />
         ) : (
           <>
@@ -164,7 +165,7 @@ export default async function PanelPage({
               isToday={selectedDate === today}
               count={appointments.length}
             />
-            <AgendaBoard appointments={appointments} tenantSlug={slug} />
+            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} />
           </>
         )}
       </section>

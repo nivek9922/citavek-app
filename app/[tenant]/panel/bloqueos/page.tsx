@@ -3,6 +3,7 @@ import { requirePermission }      from '@/server/auth-guards'
 import { listScheduleExceptions } from '@/modules/scheduling/queries'
 import { listAllBarbersWithHours } from '@/modules/staff/queries'
 import { BlockedDatesManager }    from '@/modules/scheduling/ui/BlockedDatesManager'
+import { tenantToday }            from '@/modules/analytics/queries'
 
 export const metadata = { title: 'Días bloqueados' }
 
@@ -23,6 +24,7 @@ export default async function BloqueosPage({
       tenantSlug={slug}
       exceptions={exceptions}
       barbers={barbers.filter((b) => b.active).map((b) => ({ id: b.id, displayName: b.displayName }))}
+      todayStr={tenantToday(ctx.timezone)}
     />
   )
 }

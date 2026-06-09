@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 import type { WeekDay } from '@/modules/analytics/queries'
@@ -20,10 +21,11 @@ interface Props {
   prevWeekStr:  string
   nextWeekStr:  string
   weekLabel:    string
+  timezone:     string
 }
 
 export function AgendaWeekView({
-  slug, weekDays, todayStr, prevWeekStr, nextWeekStr, weekLabel,
+  slug, weekDays, todayStr, prevWeekStr, nextWeekStr, weekLabel, timezone,
 }: Props) {
   const base = `/${slug}/panel`
 
@@ -120,7 +122,7 @@ export function AgendaWeekView({
                       )} />
                       <div className="min-w-0">
                         <p className="font-semibold truncate">
-                          {format(new Date(apt.startAt), 'HH:mm')}
+                          {formatInTimeZone(new Date(apt.startAt), timezone, 'HH:mm')}
                         </p>
                         <p className="truncate text-muted-foreground">
                           {apt.customerName.split(' ')[0]}

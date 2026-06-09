@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 import { formatCop } from '@/shared/format'
@@ -27,9 +27,10 @@ const STATUS_COLOR: Record<string, string> = {
 interface Props {
   appointments: AppointmentRow[]
   tenantSlug:   string
+  timezone:     string
 }
 
-export function AgendaBoard({ appointments, tenantSlug }: Props) {
+export function AgendaBoard({ appointments, tenantSlug, timezone }: Props) {
   if (appointments.length === 0) {
     return (
       <EmptyState
@@ -43,13 +44,13 @@ export function AgendaBoard({ appointments, tenantSlug }: Props) {
   return (
     <div className="space-y-2">
       {appointments.map((apt) => (
-        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} />
+        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} />
       ))}
     </div>
   )
 }
 
-function AppointmentCard({ apt, tenantSlug }: { apt: AppointmentRow; tenantSlug: string }) {
+function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; tenantSlug: string; timezone: string }) {
   const [isPending, setIsPending] = useState(false)
 
   async function update(status: string) {
@@ -70,10 +71,10 @@ function AppointmentCard({ apt, tenantSlug }: { apt: AppointmentRow; tenantSlug:
         {/* Hora */}
         <div className="w-14 shrink-0 text-center">
           <p className="text-lg font-bold text-primary leading-none">
-            {format(new Date(apt.startAt), 'HH:mm')}
+            {formatInTimeZone(new Date(apt.startAt), timezone, 'HH:mm')}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            {format(new Date(apt.endAt), 'HH:mm')}
+            {formatInTimeZone(new Date(apt.endAt), timezone, 'HH:mm')}
           </p>
         </div>
 
@@ -92,7 +93,7 @@ function AppointmentCard({ apt, tenantSlug }: { apt: AppointmentRow; tenantSlug:
             <p className="text-xs text-muted-foreground">{apt.customerPhone}</p>
             {apt.customerPhone && (
               <a
-                href={`https://wa.me/57${apt.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${apt.customerName}, tu cita con ${apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]} el ${format(new Date(apt.startAt), 'dd/MM')} a las ${format(new Date(apt.startAt), 'HH:mm')} está confirmada 💈`)}`}
+                href={`https://wa.me/57${apt.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${apt.customerName}, tu cita con ${apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]} el ${formatInTimeZone(new Date(apt.startAt), timezone, 'dd/MM')} a las ${formatInTimeZone(new Date(apt.startAt), timezone, 'HH:mm')} está confirmada 💈`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Enviar WhatsApp"
