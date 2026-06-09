@@ -3,10 +3,12 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
-import { createBarber }   from './application/create-barber'
-import { updateBarber }   from './application/update-barber'
-import { toggleBarber }   from './application/toggle-barber'
+import { createBarber }        from './application/create-barber'
+import { updateBarber }        from './application/update-barber'
+import { toggleBarber }        from './application/toggle-barber'
+import { uploadBarberAvatar }  from './application/upload-barber-avatar'
 import { prismaStaffRepository as repo } from './infrastructure/prisma-staff-repository'
+import { cloudinaryAdapter } from '@/server/cloudinary'
 
 const barberSchema = z.object({
   displayName: z.string().min(2).max(80),
@@ -20,7 +22,6 @@ const barberSchema = z.object({
       endMin:    z.number().int().min(0).max(1439),
     })).parse(JSON.parse(v))
   ),
-  avatarUrl: z.string().url().max(500).optional().or(z.literal('')).transform((v) => v || null),
 })
 
 export async function upsertBarberAction(slug: string, id: string | null, formData: FormData) {
@@ -32,7 +33,6 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
     nickname:    formData.get('nickname') || undefined,
     specialties: formData.get('specialties') || '',
     hoursJson:   formData.get('hoursJson') || '[]',
-    avatarUrl:   formData.get('avatarUrl') || '',
   }
   const input = barberSchema.parse(raw)
 
@@ -42,7 +42,6 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
       nickname:    input.nickname ?? null,
       specialties: input.specialties,
       hours:       input.hoursJson,
-      avatarUrl:   input.avatarUrl,
     })
   } else {
     await createBarber(repo, ctx.id, {
@@ -50,10 +49,31 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
       nickname:    input.nickname,
       specialties: input.specialties,
       hours:       input.hoursJson,
-      avatarUrl:   input.avatarUrl,
     })
   }
   revalidatePath(`/${slug}/panel/equipo`)
+}
+
+export async function uploadBarberAvatarAction(
+  slug:     string,
+  barberId: string,
+  formData: FormData,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const ctx = await getTenantContext(slug)
+  await requirePermission(ctx.id, 'barber:update')
+  try {
+    const file = formData.get('file') as File | null
+    if (!file || file.size === 0) return { ok: false, error: 'No se recibió ningún archivo.' }
+    if (file.size > 4 * 1024 * 1024) return { ok: false, error: 'La imagen no puede superar los 4 MB.' }
+    if (!file.type.startsWith('image/')) return { ok: false, error: 'El archivo debe ser una imagen.' }
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const url = await uploadBarberAvatar(repo, cloudinaryAdapter, barberId, ctx.id, slug, buffer)
+    revalidatePath(`/${slug}`)
+    revalidatePath(`/${slug}/panel/equipo`)
+    return { ok: true, url }
+  } catch {
+    return { ok: false, error: 'No se pudo subir el avatar. Intenta de nuevo.' }
+  }
 }
 
 export async function toggleBarberAction(slug: string, id: string, active: boolean) {

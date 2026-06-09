@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { ExternalLink, LogOut } from 'lucide-react'
 import { getTenantContext }  from '@/server/tenant'
@@ -23,9 +24,15 @@ export default async function PanelLayout({
       {/* ── Sidebar (desktop) ── */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-card/40 lg:flex">
         <div className="flex items-center gap-3 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground">
-            {initial}
-          </div>
+          {ctx.branding.logoUrl ? (
+            <div className="relative h-9 w-9 overflow-hidden rounded-xl">
+              <Image src={ctx.branding.logoUrl} alt={ctx.name} fill unoptimized priority className="object-contain" />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground">
+              {initial}
+            </div>
+          )}
           <div className="min-w-0">
             <p className="truncate font-semibold leading-tight">{ctx.name}</p>
             <p className="text-xs text-muted-foreground">Panel de gestión</p>
@@ -63,9 +70,15 @@ export default async function PanelLayout({
         <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm lg:hidden">
           <div className="flex h-14 items-center justify-between px-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-primary text-xs font-bold text-primary-foreground">
-                {initial}
-              </div>
+              {ctx.branding.logoUrl ? (
+                <div className="relative h-7 w-7 overflow-hidden rounded-lg">
+                  <Image src={ctx.branding.logoUrl} alt={ctx.name} fill unoptimized priority className="object-contain" />
+                </div>
+              ) : (
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-primary text-xs font-bold text-primary-foreground">
+                  {initial}
+                </div>
+              )}
               <span className="font-semibold">{ctx.name}</span>
             </div>
             <form action={signOutAction}>

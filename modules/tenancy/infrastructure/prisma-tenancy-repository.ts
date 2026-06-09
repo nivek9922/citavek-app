@@ -21,6 +21,10 @@ export const prismaTenancyRepository: TenancyRepository = {
     })
   },
 
+  async patchBranding(organizationId, patch) {
+    await db.branding.update({ where: { organizationId }, data: patch })
+  },
+
   async updateInfo(id, data) {
     await db.organization.update({ where: { id }, data })
   },

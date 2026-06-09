@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     // y pueden provenir de cualquier dominio HTTPS. Se usa unoptimized en los
     // componentes para no pasar por el pipeline de optimización.
     remotePatterns: [
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: '**' },
     ],
   },

@@ -1,11 +1,19 @@
 'use client'
-import { useState } from 'react'
-import { Loader2, CheckCircle2, Palette, Store } from 'lucide-react'
+import Image from 'next/image'
+import { useState, useTransition, useRef } from 'react'
+import { toast } from 'sonner'
+import { Loader2, CheckCircle2, Palette, Store, ImageIcon } from 'lucide-react'
 import { Button }  from '@/shared/ui/button'
 import { Input }   from '@/shared/ui/input'
 import { Label }   from '@/shared/ui/label'
 import { cn }      from '@/shared/ui/utils'
-import { updateBrandingAction, updateOrgInfoAction } from '../actions'
+import {
+  updateBrandingAction,
+  updateOrgInfoAction,
+  uploadTenantLogoAction,
+  uploadTenantCoverAction,
+  deleteTenantBrandAssetAction,
+} from '../actions'
 
 const PALETTE = [
   '#E0A300', '#22C55E', '#F43F5E', '#3B82F6',
@@ -31,6 +39,28 @@ export function BrandingSettings({ tenantSlug, org, branding }: Props) {
       {/* Branding */}
       <Section icon={<Palette className="h-5 w-5 text-primary" />} title="Identidad visual">
         <BrandForm tenantSlug={tenantSlug} branding={branding} />
+      </Section>
+
+      {/* Imágenes */}
+      <Section icon={<ImageIcon className="h-5 w-5 text-primary" />} title="Imágenes">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <ImageUploader
+            label="Logo"
+            hint="Aparece en el header del panel."
+            currentUrl={branding?.logoUrl ?? null}
+            action={uploadTenantLogoAction}
+            deleteAction={(slug) => deleteTenantBrandAssetAction(slug, 'logo')}
+            tenantSlug={tenantSlug}
+          />
+          <ImageUploader
+            label="Imagen de portada"
+            hint="Fondo del hero en la página pública."
+            currentUrl={branding?.coverUrl ?? null}
+            action={uploadTenantCoverAction}
+            deleteAction={(slug) => deleteTenantBrandAssetAction(slug, 'cover')}
+            tenantSlug={tenantSlug}
+          />
+        </div>
       </Section>
     </div>
   )
@@ -134,12 +164,138 @@ function BrandForm({ tenantSlug, branding }: { tenantSlug: string; branding: Pro
 
       <Field label="Eslogan" name="tagline" defaultValue={branding?.tagline ?? ''}
         placeholder="El estilo del Valle, en tus manos." />
-      <Field label="URL del logo (opcional)" name="logoUrl" type="url"
-        defaultValue={branding?.logoUrl ?? ''} placeholder="https://..." />
-      <Field label="URL imagen de portada (opcional)" name="coverUrl" type="url"
-        defaultValue={branding?.coverUrl ?? ''} placeholder="https://..." />
 
       <SaveBtn isPending={isPending} saved={saved} />
+    </form>
+  )
+}
+
+type UploadAction = (
+  slug: string,
+  fd: FormData,
+) => Promise<{ ok: true; url: string } | { ok: false; error: string }>
+
+type DeleteAction = (
+  slug: string,
+) => Promise<{ ok: true } | { ok: false; error: string }>
+
+function ImageUploader({
+  label, hint, currentUrl, action, deleteAction, tenantSlug,
+}: {
+  label:         string
+  hint:          string
+  currentUrl:    string | null
+  action:        UploadAction
+  deleteAction?: DeleteAction
+  tenantSlug:    string
+}) {
+  const [preview,    setPreview]    = useState<string | null>(currentUrl)
+  const [hasFile,    setHasFile]    = useState(false)
+  const [isPending,  startUpload]   = useTransition()
+  const [isDeleting, startDelete]   = useTransition()
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) { setHasFile(false); return }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('El archivo supera los 4 MB.')
+      setHasFile(false)
+      e.target.value = ''
+      return
+    }
+    setPreview(URL.createObjectURL(file))
+    setHasFile(true)
+  }
+
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const file = fileRef.current?.files?.[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.set('file', file)
+    startUpload(async () => {
+      try {
+        const res = await action(tenantSlug, fd)
+        if (res.ok) {
+          toast.success('Imagen actualizada correctamente.')
+          setPreview(res.url)
+          setHasFile(false)
+          if (fileRef.current) fileRef.current.value = ''
+        } else {
+          toast.error(res.error)
+        }
+      } catch {
+        toast.error('Error de red. Intenta de nuevo.')
+      }
+    })
+  }
+
+  function handleDelete() {
+    if (!deleteAction) return
+    startDelete(async () => {
+      try {
+        const res = await deleteAction(tenantSlug)
+        if (res.ok) {
+          toast.success('Imagen eliminada.')
+          setPreview(null)
+          setHasFile(false)
+          if (fileRef.current) fileRef.current.value = ''
+        } else {
+          toast.error(res.error)
+        }
+      } catch {
+        toast.error('Error de red. Intenta de nuevo.')
+      }
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <Label>{label}</Label>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+
+      {preview ? (
+        <div className="relative h-24 w-full overflow-hidden rounded-xl border border-border">
+          <Image src={preview} alt={label} fill unoptimized priority className="object-cover" />
+        </div>
+      ) : (
+        <div className="flex h-24 w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 text-xs text-muted-foreground">
+          Sin imagen
+        </div>
+      )}
+
+      <Input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={onFileChange}
+        className="cursor-pointer text-sm"
+      />
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={isPending || isDeleting || !hasFile}>
+          {isPending ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo…</>
+          ) : (
+            'Subir imagen'
+          )}
+        </Button>
+        {preview && deleteAction && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isDeleting || isPending}
+            onClick={handleDelete}
+            className="text-destructive hover:text-destructive"
+          >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Eliminar'}
+          </Button>
+        )}
+      </div>
     </form>
   )
 }

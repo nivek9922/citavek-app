@@ -12,8 +12,8 @@ export interface Organization {
 export interface BrandingData {
   primaryColor: string
   tagline?:     string
-  logoUrl?:     string
-  coverUrl?:    string
+  logoUrl?:     string | null
+  coverUrl?:    string | null
 }
 
 export interface OrgInfoData {

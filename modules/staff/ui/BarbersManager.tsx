@@ -1,13 +1,14 @@
 'use client'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useTransition, useRef } from 'react'
+import { toast } from 'sonner'
 import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star } from 'lucide-react'
 import { Button }   from '@/shared/ui/button'
 import { Input }    from '@/shared/ui/input'
 import { Label }    from '@/shared/ui/label'
 import { Badge }    from '@/shared/ui/badge'
 import { cn }       from '@/shared/ui/utils'
-import { upsertBarberAction, toggleBarberAction } from '../actions'
+import { upsertBarberAction, toggleBarberAction, uploadBarberAvatarAction } from '../actions'
 import type { BarberWithHours } from '../queries'
 
 const DAYS = [
@@ -89,6 +90,7 @@ function BarberRow({
           alt={barber.displayName}
           width={40} height={40}
           unoptimized
+          priority
           className="h-10 w-10 shrink-0 rounded-full object-cover"
         />
       ) : (
@@ -230,12 +232,16 @@ function BarberForm({
             <Input id="specialties" name="specialties"
               defaultValue={barber?.specialties.join(', ')} placeholder="Fades, Diseños, Barba" />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="avatarUrl">URL de foto (opcional)</Label>
-            <Input id="avatarUrl" name="avatarUrl" type="url"
-              defaultValue={barber?.avatarUrl ?? ''} placeholder="https://…" />
-          </div>
         </div>
+
+        {/* Avatar — solo en edición */}
+        {barber && (
+          <AvatarUploader
+            tenantSlug={tenantSlug}
+            barberId={barber.id}
+            currentUrl={barber.avatarUrl ?? null}
+          />
+        )}
 
         {/* Horario por día */}
         <div className="space-y-2">
@@ -297,6 +303,90 @@ function BarberForm({
           <Button type="button" variant="ghost" size="sm" onClick={onDone}>Cancelar</Button>
         </div>
       </form>
+    </div>
+  )
+}
+
+// ── Avatar uploader ──────────────────────────────────────────────────────────
+
+function AvatarUploader({
+  tenantSlug, barberId, currentUrl,
+}: { tenantSlug: string; barberId: string; currentUrl: string | null }) {
+  const [preview,   setPreview] = useState<string | null>(currentUrl)
+  const [hasFile,   setHasFile] = useState(false)
+  const [isPending, start]      = useTransition()
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) { setHasFile(false); return }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('El archivo supera los 4 MB.')
+      setHasFile(false)
+      e.target.value = ''
+      return
+    }
+    setPreview(URL.createObjectURL(file))
+    setHasFile(true)
+  }
+
+  function handleUpload() {
+    const file = fileRef.current?.files?.[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.set('file', file)
+    start(async () => {
+      try {
+        const res = await uploadBarberAvatarAction(tenantSlug, barberId, fd)
+        if (res.ok) {
+          toast.success('Avatar actualizado correctamente.')
+          setPreview(res.url)
+          setHasFile(false)
+          if (fileRef.current) fileRef.current.value = ''
+        } else {
+          toast.error(res.error)
+        }
+      } catch {
+        toast.error('Error de red. Intenta de nuevo.')
+      }
+    })
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border p-3">
+      <p className="text-xs font-medium text-muted-foreground">Foto del barbero</p>
+      <div className="flex items-center gap-3">
+        {preview ? (
+            <Image
+            src={preview}
+            alt="Avatar"
+            width={56}
+            height={56}
+            unoptimized
+            className="h-14 w-14 shrink-0 rounded-full object-cover border border-border"
+          />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary border border-border">
+            ?
+          </div>
+        )}
+        <div className="flex-1 space-y-1.5">
+          <Input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={onFileChange}
+            className="cursor-pointer text-xs"
+          />
+          <Button type="button" size="sm" disabled={isPending || !hasFile} onClick={handleUpload}>
+            {isPending ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Subiendo…</>
+            ) : (
+              'Subir foto'
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -9,6 +9,7 @@ const BASE_BARBER: Barber = {
   organizationId: 'org-1',
   displayName:    'Carlos López',
   nickname:       null,
+  avatarUrl:      null,
   specialties:    [],
   active:         true,
   rating:         0,

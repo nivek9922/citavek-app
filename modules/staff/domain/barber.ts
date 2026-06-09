@@ -11,6 +11,7 @@ export interface Barber {
   organizationId: string
   displayName:    string
   nickname:       string | null
+  avatarUrl:      string | null
   specialties:    string[]
   active:         boolean
   rating:         number

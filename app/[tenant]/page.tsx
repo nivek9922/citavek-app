@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { MapPin, Phone, Star, Clock, Scissors } from 'lucide-react'
 import { getTenantContext } from '@/server/tenant'
 import { listActiveServices } from '@/modules/catalog/queries'
@@ -53,6 +54,16 @@ export default async function TenantPage({
 
       {/* ─── HERO ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
+        {ctx.branding.coverUrl && (
+          <Image
+            src={ctx.branding.coverUrl}
+            alt=""
+            fill
+            unoptimized
+            priority
+            className="object-cover object-center"
+          />
+        )}
         {/* Glow radial desde el color primario */}
         <div className="absolute inset-0 bg-gradient-hero opacity-60" />
         <div className="absolute inset-0 bg-linear-to-b from-transparent via-background/60 to-background" />

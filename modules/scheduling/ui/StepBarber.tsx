@@ -47,7 +47,7 @@ export function StepBarber({ barbers, selectedId, onSelect }: Props) {
             </CardContent>
           </Card>
         </button>
-        {barbers.map((b) => (
+        {barbers.map((b, i) => (
           <button key={b.id} onClick={() => onSelect(b)} className="text-left">
             <Card className={cn(
               'cursor-pointer transition-smooth hover:border-primary/60',
@@ -60,6 +60,7 @@ export function StepBarber({ barbers, selectedId, onSelect }: Props) {
                     alt={b.displayName}
                     width={48} height={48}
                     unoptimized
+                    priority={i === 0}
                     className="h-12 w-12 shrink-0 rounded-full object-cover"
                   />
                 ) : (

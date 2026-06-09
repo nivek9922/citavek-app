@@ -12,6 +12,7 @@ function createFakeRepo(org: Organization | null = BASE_ORG) {
     findById:          vi.fn(async () => org),
     setStatus:         vi.fn(async (_id, s) => { statusSet.push(s) }),
     updateBranding:    vi.fn(async () => undefined),
+    patchBranding:     vi.fn(async () => undefined),
     updateInfo:        vi.fn(async () => undefined),
     deleteWithCascade: vi.fn(async () => ({ slug: org?.slug ?? '', memberUserIds: [] })),
   }

@@ -15,6 +15,7 @@ export const prismaStaffRepository: StaffRepository = {
           displayName: data.displayName,
           nickname:    data.nickname ?? null,
           specialties: data.specialties,
+          avatarUrl:   data.avatarUrl ?? null,
           active:      true,
         },
       })
@@ -35,6 +36,7 @@ export const prismaStaffRepository: StaffRepository = {
           ...(data.displayName !== undefined && { displayName: data.displayName }),
           ...(data.nickname    !== undefined && { nickname:    data.nickname }),
           ...(data.specialties !== undefined && { specialties: data.specialties }),
+          ...(data.avatarUrl   !== undefined && { avatarUrl:   data.avatarUrl }),
         },
       })
       if (data.hours !== undefined) {
