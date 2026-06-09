@@ -1,152 +1,86 @@
-@AGENTS.md
+# Context
+You are working on BookingFlow KR, a multi-tenant SaaS platform for appointment management.
 
-# CLAUDE.md
+## Product Vision
+The platform helps businesses manage:
+- appointments
+- customers
+- staff schedules
+- subscriptions
+- payments
+- tenant branding
+- analytics
 
-You are a Senior Staff Software Engineer specialized in building scalable SaaS platforms.
+The system must be designed to support:
+- barber shops
+- hair salons
+- beauty salons
+- future appointment-based businesses
 
-# Project Overview
+## Stack
+- Next.js 16 (App Router strictly)
+- React 19
+- TypeScript
+- PostgreSQL
+- Prisma
+- Tailwind CSS
+- shadcn/ui
 
-This project is a multi-tenant SaaS platform for appointment management and business operations.
+## Architecture Rules
+The project follows:
+- Modular Monolith
+- Clean Architecture
+- Hexagonal Architecture
+- DDD-inspired module organization
 
-The platform is initially focused on:
+### Folder/Layer Rules
+- Domain: Contains business rules, entities, value objects, and ports.
+- Application: Contains use cases and orchestration.
+- Infrastructure: Contains Prisma, external services, and adapters.
+- UI: Contains React components and presentation logic.
 
-* Barber shops
-* Hair salons
-* Beauty salons
+### Dependency Direction
+Allowed:
+- UI -> Application
+- Application -> Domain
+- Infrastructure -> Domain
 
-But must be designed to support any appointment-based business in the future.
+Forbidden:
+- Domain depending on Prisma, React, Next.js, or any external library.
+- Application depending directly on Prisma (use ports/interfaces).
+- UI containing business rules.
+- Leaking Prisma Models to the UI. Always map DB results to Domain Entities or plain DTOs before passing them to Client Components.
 
-# Primary Goals
-
-1. Ship MVP fast.
-2. Maintain enterprise-grade architecture.
-3. Support multi-tenancy from day one.
-4. Enable future AI integrations.
-5. Scale to thousands of tenants.
-
-# Technology Stack
-
-## Core
-
-* Next.js 16
-* React 19
-* TypeScript
-* PostgreSQL
-* Prisma ORM
-
-## UI
-
-* Tailwind CSS 4
-* shadcn/ui
-* Radix UI
-
-## Validation
-
-* Zod
-
-## State Management
-
-* Zustand
-* TanStack Query
-
-## Forms
-
-* React Hook Form
-
-## Authentication
-
-Authentication provider will be selected later.
-
-The application must be provider-agnostic.
-
-Never tightly couple business logic to authentication vendors.
-
-# Next.js 16 Rules
-
-Always use modern Next.js 16 patterns.
-
+## Next.js 16 & React 19 Rules
 Prefer:
-
-* Server Components
-* Server Actions
-* Streaming
-* Partial Prerendering
-* Dynamic Route Segments
-* Suspense Boundaries
+- Server Components by default.
+- Server Actions for all mutations.
+- React 19 hooks for UI state (`useOptimistic`, `useActionState`, `useFormStatus`).
+- Immediate cache invalidation using `revalidatePath` or `revalidateTag` at the end of successful Server Actions.
+- Suspense and streaming for parallel data fetching.
 
 Avoid:
+- Client Components (`"use client"`) unless interactivity (e.g., onClick, hooks) is strictly required. Push `"use client"` down the component tree to the leaf nodes.
+- Overusing `useEffect`. State derivation and Server Actions should replace most effects.
+- Passing non-serializable data from Server to Client.
 
-* Unnecessary Client Components
-* Legacy Pages Router
-* Excessive useEffect
-* Client-side data fetching when Server Components can be used
+## Performance Rules
+Always think about:
+- Rendering cost and reducing LCP (Largest Contentful Paint).
+- Minimizing client JS bundle size.
+- Database query efficiency (avoid N+1 queries in Prisma).
+- Avoiding unnecessary re-renders.
 
-# Architecture Principles
+## Testing Rules
+Every important feature must include:
+- Unit tests for domain and use cases.
+- Integration tests for repositories and server actions.
 
-Always prioritize:
+## Working Style
+Before implementing:
+1. Analyze the problem.
+2. Identify the root cause.
+3. Propose the smallest correct solution.
+4. Validate edge cases.
 
-1. Simplicity
-2. Scalability
-3. Maintainability
-4. Type Safety
-5. Developer Experience
-
-Never sacrifice architecture quality for short-term speed.
-
-# SaaS Principles
-
-Assume:
-
-* Multiple tenants
-* Multiple subscription plans
-* Tenant-specific branding
-* Tenant-specific permissions
-* Tenant-specific data isolation
-
-Every feature should be evaluated through a multi-tenant lens.
-
-# Coding Standards
-
-* Strict TypeScript
-* Functional programming when practical
-* Small reusable components
-* Explicit naming
-* Self-documenting code
-
-Avoid:
-
-* Large files
-* God components
-* Business logic inside UI components
-* Duplicate code
-
-# Decision Making
-
-Before implementing any feature:
-
-1. Analyze business requirements.
-2. Analyze scalability implications.
-3. Analyze multi-tenant implications.
-4. Analyze security implications.
-5. Propose the simplest maintainable solution.
-
-# Future Integrations
-
-Design the system to support:
-
-* AI assistants
-* Payments
-* Notifications
-* Analytics
-* Mobile applications
-* Public APIs
-
-# Expected Output
-
-Whenever generating code:
-
-* Follow project architecture.
-* Follow clean architecture principles.
-* Follow Next.js 16 best practices.
-* Keep code production-ready.
-* Explain architectural decisions when necessary.
+Do not guess. Do not over-engineer. Do not rewrite large parts without need. Do not use magic strings (e.g., "any"); use proper typing, nulls, or domain constants.

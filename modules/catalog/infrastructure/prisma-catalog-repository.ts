@@ -7,7 +7,12 @@ export const prismaCatalogRepository: CatalogRepository = {
   },
 
   async create(organizationId, data) {
-    return db.service.create({ data: { ...data, organizationId } })
+    const { _max } = await db.service.aggregate({
+      where: { organizationId },
+      _max:  { sortOrder: true },
+    })
+    const sortOrder = (_max.sortOrder ?? -1) + 1
+    return db.service.create({ data: { ...data, organizationId, sortOrder } })
   },
 
   async update(id, _organizationId, data) {

@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CheckCircle2, XCircle, UserX, Clock } from 'lucide-react'
+import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 import { formatCop } from '@/shared/format'
 import { EmptyState } from '@/shared/ui/empty-state'
@@ -88,7 +88,27 @@ function AppointmentCard({ apt, tenantSlug }: { apt: AppointmentRow; tenantSlug:
           <p className="mt-0.5 text-sm text-muted-foreground">
             {apt.service.name} · {apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]}
           </p>
-          <p className="text-xs text-muted-foreground">{apt.customerPhone}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground">{apt.customerPhone}</p>
+            {apt.customerPhone && (
+              <a
+                href={`https://wa.me/57${apt.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${apt.customerName}, tu cita con ${apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]} el ${format(new Date(apt.startAt), 'dd/MM')} a las ${format(new Date(apt.startAt), 'HH:mm')} está confirmada 💈`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Enviar WhatsApp"
+                className="flex items-center gap-0.5 rounded-full bg-[#25D366]/10 px-2 py-0.5 text-[10px] font-medium text-[#25D366] hover:bg-[#25D366]/20 transition-smooth"
+              >
+                <Phone className="h-3 w-3" />
+                WA
+              </a>
+            )}
+          </div>
+          {apt.notes && (
+            <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground italic">
+              <MessageSquare className="mt-0.5 h-3 w-3 shrink-0" />
+              {apt.notes}
+            </p>
+          )}
         </div>
 
         {/* Precio */}

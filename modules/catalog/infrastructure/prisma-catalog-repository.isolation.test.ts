@@ -8,8 +8,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockDb = vi.hoisted(() => ({
   service: {
-    findFirst: vi.fn(async () => null),
-    create:    vi.fn(async () => ({
+    findFirst:  vi.fn(async () => null),
+    aggregate:  vi.fn(async () => ({ _max: { sortOrder: 0 } })),
+    create:     vi.fn(async () => ({
       id: 'svc-1', name: 'Corte', description: null, durationMin: 30,
       priceCop: 20000, category: 'corte', active: true, sortOrder: 1,
       imageUrl: null, organizationId: 'org-a',

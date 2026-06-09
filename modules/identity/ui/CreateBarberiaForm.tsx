@@ -5,7 +5,12 @@ import Link    from 'next/link'
 import { Input }   from '@/shared/ui/input'
 import { Label }   from '@/shared/ui/label'
 import { Button }  from '@/shared/ui/button'
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/shared/ui/select'
 import { cn }      from '@/shared/ui/utils'
+import { COLOMBIA_CITIES, type ColombiaCity } from '@/shared/constants/colombia-cities'
 import { createBarberiaAction } from '@/modules/identity/actions'
 
 const PALETTE = ['#E0A300', '#22C55E', '#F43F5E', '#3B82F6', '#A855F7', '#06B6D4', '#F97316', '#1A1A1A']
@@ -27,6 +32,7 @@ export function CreateBarberiaForm({ onCreated }: Props = {}) {
   const [error,       setError]       = useState('')
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
   const [color,       setColor]       = useState('#E0A300')
+  const [city,        setCity]        = useState<ColombiaCity | ''>('')
 
   function slugify(name: string) {
     return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -40,10 +46,12 @@ export function CreateBarberiaForm({ onCreated }: Props = {}) {
     const fd   = new FormData(e.currentTarget)
     const form = e.currentTarget
 
+    if (!city) { setError('Selecciona una ciudad.'); return }
+
     const input = {
       name:          fd.get('name')          as string,
       slug:          fd.get('slug')          as string,
-      city:          fd.get('city')          as string,
+      city,
       address:       fd.get('address')       as string,
       phone:         fd.get('phone')         as string,
       primaryColor:  color,
@@ -78,7 +86,19 @@ export function CreateBarberiaForm({ onCreated }: Props = {}) {
           <Field label="Slug (URL)" name="slug" placeholder="san-fernando-cali"
             hint="bookingflow.co/san-fernando-cali"
             onInput={(e) => { (e.target as HTMLInputElement).dataset.edited = '1' }} />
-          <Field label="Ciudad" name="city" placeholder="Cali, Valle" />
+          <div className="space-y-1.5">
+            <Label htmlFor="city">Ciudad</Label>
+            <Select value={city} onValueChange={(v) => setCity(v as ColombiaCity)}>
+              <SelectTrigger id="city">
+                <SelectValue placeholder="Selecciona una ciudad" />
+              </SelectTrigger>
+              <SelectContent>
+                {COLOMBIA_CITIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Field label="Dirección" name="address" placeholder="Cra 39 #5-12" />
           <Field label="Teléfono / WhatsApp" name="phone" placeholder="+573187654321" />
 

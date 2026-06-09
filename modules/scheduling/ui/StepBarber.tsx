@@ -1,8 +1,20 @@
 'use client'
-import { Star, User } from 'lucide-react'
+import Image from 'next/image'
+import { Star, User, Shuffle } from 'lucide-react'
 import { Card, CardContent } from '@/shared/ui/card'
 import { cn } from '@/shared/ui/utils'
+import { ANY_BARBER_ID } from '@/modules/scheduling/domain/any-barber'
 import type { BarberDTO } from '@/modules/staff/queries'
+
+export const ANY_BARBER: BarberDTO = {
+  id: ANY_BARBER_ID,
+  displayName: 'Sin preferencia',
+  nickname: null,
+  avatarUrl: null,
+  specialties: [],
+  rating: 0,
+  reviewsCount: 0,
+}
 
 interface Props {
   barbers:    BarberDTO[]
@@ -18,6 +30,23 @@ export function StepBarber({ barbers, selectedId, onSelect }: Props) {
         <h3 className="font-semibold">Elige tu barbero</h3>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
+        {/* Tarjeta especial: sin preferencia */}
+        <button onClick={() => onSelect(ANY_BARBER)} className="text-left sm:col-span-2">
+          <Card className={cn(
+            'cursor-pointer transition-smooth hover:border-primary/60',
+            selectedId === ANY_BARBER_ID && 'border-primary bg-primary/5',
+          )}>
+            <CardContent className="flex items-center gap-3 p-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted">
+                <Shuffle className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium">El primero disponible</p>
+                <p className="text-xs text-muted-foreground">Asignamos al barbero con más disponibilidad</p>
+              </div>
+            </CardContent>
+          </Card>
+        </button>
         {barbers.map((b) => (
           <button key={b.id} onClick={() => onSelect(b)} className="text-left">
             <Card className={cn(
@@ -25,9 +54,19 @@ export function StepBarber({ barbers, selectedId, onSelect }: Props) {
               selectedId === b.id && 'border-primary bg-primary/5',
             )}>
               <CardContent className="flex items-center gap-3 p-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-lg font-bold text-primary-foreground">
-                  {b.displayName.charAt(0)}
-                </div>
+                {b.avatarUrl ? (
+                  <Image
+                    src={b.avatarUrl}
+                    alt={b.displayName}
+                    width={48} height={48}
+                    unoptimized
+                    className="h-12 w-12 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-lg font-bold text-primary-foreground">
+                    {b.displayName.charAt(0)}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="truncate font-medium">
                     {b.nickname

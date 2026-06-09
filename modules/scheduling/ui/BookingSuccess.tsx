@@ -6,6 +6,7 @@ import { CalendarPlus, CheckCircle2, Copy, Link, MessageCircle } from 'lucide-re
 import { Button } from '@/shared/ui/button'
 import { formatCop } from '@/shared/format'
 import { buildWhatsAppLink, buildIcsDataUri } from '@/shared/booking-links'
+import { isAnyBarber } from '@/modules/scheduling/domain/any-barber'
 import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
 
@@ -36,16 +37,19 @@ export function BookingSuccess({
   const endAt     = new Date(startAt.getTime() + service.durationMin * 60_000)
   const whenLabel = format(startAt, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
 
+  const barberLabel = isAnyBarber(barber.id) ? 'el primer barbero disponible' : barber.displayName
+  const barberFirst = isAnyBarber(barber.id) ? 'tu barbero asignado' : barber.displayName.split(' ')[0]
+
   const waLink = shopPhone
     ? buildWhatsAppLink(
         shopPhone,
-        `Hola ${shopName} 👋, confirmo mi cita:\n• ${service.name}\n• Con ${barber.displayName}\n• ${whenLabel}`,
+        `Hola ${shopName} 👋, confirmo mi cita:\n• ${service.name}\n• Con ${barberLabel}\n• ${whenLabel}`,
       )
     : null
 
   const icsUri = buildIcsDataUri({
     title:       `${service.name} — ${shopName}`,
-    description: `Cita con ${barber.displayName}`,
+    description: `Cita con ${barberLabel}`,
     location:    shopAddress ?? shopName,
     start:       startAt,
     end:         endAt,
@@ -61,7 +65,7 @@ export function BookingSuccess({
         <h3 className="font-display text-2xl tracking-wide">¡Cita confirmada!</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Te esperamos el <strong className="text-foreground">{whenLabel}</strong> con{' '}
-          {barber.displayName.split(' ')[0]}.
+          {barberFirst}.
         </p>
       </div>
 

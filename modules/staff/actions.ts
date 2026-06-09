@@ -20,6 +20,7 @@ const barberSchema = z.object({
       endMin:    z.number().int().min(0).max(1439),
     })).parse(JSON.parse(v))
   ),
+  avatarUrl: z.string().url().max(500).optional().or(z.literal('')).transform((v) => v || null),
 })
 
 export async function upsertBarberAction(slug: string, id: string | null, formData: FormData) {
@@ -31,6 +32,7 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
     nickname:    formData.get('nickname') || undefined,
     specialties: formData.get('specialties') || '',
     hoursJson:   formData.get('hoursJson') || '[]',
+    avatarUrl:   formData.get('avatarUrl') || '',
   }
   const input = barberSchema.parse(raw)
 
@@ -40,6 +42,7 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
       nickname:    input.nickname ?? null,
       specialties: input.specialties,
       hours:       input.hoursJson,
+      avatarUrl:   input.avatarUrl,
     })
   } else {
     await createBarber(repo, ctx.id, {
@@ -47,6 +50,7 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
       nickname:    input.nickname,
       specialties: input.specialties,
       hours:       input.hoursJson,
+      avatarUrl:   input.avatarUrl,
     })
   }
   revalidatePath(`/${slug}/panel/equipo`)

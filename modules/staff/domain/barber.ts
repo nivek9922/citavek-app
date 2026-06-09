@@ -22,6 +22,7 @@ export interface CreateBarberData {
   nickname?:   string
   specialties: string[]
   hours:       WorkingHour[]
+  avatarUrl?:  string | null
 }
 
 export interface UpdateBarberData {
@@ -29,6 +30,7 @@ export interface UpdateBarberData {
   nickname?:    string | null
   specialties?: string[]
   hours?:       WorkingHour[]
+  avatarUrl?:   string | null
 }
 
 export class InvalidBarberError extends Error {

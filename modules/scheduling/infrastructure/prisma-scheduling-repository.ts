@@ -199,6 +199,7 @@ export const prismaSchedulingRepository: SchedulingRepository = {
         startAt:        true,
         endAt:          true,
         customerName:   true,
+        notes:          true,
         service:  { select: { name: true, durationMin: true, priceCop: true } },
         barber:   { select: { displayName: true, nickname: true } },
         organization: {
@@ -214,6 +215,7 @@ export const prismaSchedulingRepository: SchedulingRepository = {
       startAt:        apt.startAt,
       endAt:          apt.endAt,
       customerName:   apt.customerName,
+      notes:          apt.notes ?? null,
       service:        apt.service,
       barber:         apt.barber,
       organization:   { ...apt.organization, phone: apt.organization.phone ?? null },

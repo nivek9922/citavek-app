@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState } from 'react'
 import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star } from 'lucide-react'
 import { Button }   from '@/shared/ui/button'
@@ -82,9 +83,19 @@ function BarberRow({
 
   return (
     <div className={cn('flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth', !barber.active && 'opacity-50')}>
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-        {barber.displayName.charAt(0)}
-      </div>
+      {barber.avatarUrl ? (
+        <Image
+          src={barber.avatarUrl}
+          alt={barber.displayName}
+          width={40} height={40}
+          unoptimized
+          className="h-10 w-10 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+          {barber.displayName.charAt(0)}
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="font-medium">
@@ -218,6 +229,11 @@ function BarberForm({
             <Label htmlFor="specialties">Especialidades (separadas por coma)</Label>
             <Input id="specialties" name="specialties"
               defaultValue={barber?.specialties.join(', ')} placeholder="Fades, Diseños, Barba" />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="avatarUrl">URL de foto (opcional)</Label>
+            <Input id="avatarUrl" name="avatarUrl" type="url"
+              defaultValue={barber?.avatarUrl ?? ''} placeholder="https://…" />
           </div>
         </div>
 

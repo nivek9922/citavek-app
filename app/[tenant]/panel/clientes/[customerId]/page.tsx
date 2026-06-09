@@ -8,6 +8,7 @@ import { requireMembership } from '@/server/auth-guards'
 import { getCustomerDetail } from '@/modules/customers/queries'
 import { formatCop } from '@/shared/format'
 import { EmptyState } from '@/shared/ui/empty-state'
+import { CustomerNotes } from '@/modules/customers/ui/CustomerNotes'
 
 const STATUS_LABEL: Record<string, string> = {
   confirmed: 'Confirmada', completed: 'Completada',
@@ -64,6 +65,9 @@ export default async function ClienteDetailPage({
         <Stat label="Completadas"   value={String(completed)} />
         <Stat label="Total gastado" value={formatCop(totalSpent)} highlight />
       </div>
+
+      {/* Notas internas */}
+      <CustomerNotes slug={slug} customerId={customerId} initialNotes={customer.notes ?? null} />
 
       {/* Historial */}
       <section>

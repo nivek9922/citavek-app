@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Analytics }     from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Toaster }       from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         {/* Vercel Analytics: pageviews, eventos y Core Web Vitals.
             Solo activos en producción en Vercel; no-op en local. */}
+        <Toaster position="bottom-right" richColors closeButton />
         <Analytics />
         <SpeedInsights />
       </body>

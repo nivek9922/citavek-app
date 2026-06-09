@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { AlertCircle, Calendar, CheckCircle2, Clock, Phone, Scissors } from 'lucide-react'
+import { AlertCircle, Calendar, CheckCircle2, Clock, MessageSquare, Phone, Scissors } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
@@ -180,6 +180,13 @@ export function AppointmentPortal({ appointmentId }: { appointmentId: string }) 
         <div className="rounded-lg bg-muted/50 px-3 py-2 text-right font-medium">
           {fmtCop(apt.service.priceCop)}
         </div>
+
+        {apt.notes && (
+          <div className="flex items-start gap-3 rounded-lg bg-muted/30 px-3 py-2">
+            <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground italic">{apt.notes}</p>
+          </div>
+        )}
       </div>
 
       <ErrorMessage message={error} />

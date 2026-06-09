@@ -7,6 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
 import { formatCop, formatDuration } from '@/shared/format'
+import { isAnyBarber } from '@/modules/scheduling/domain/any-barber'
 import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
 
@@ -36,8 +37,11 @@ export function StepConfirm({
         <div className="space-y-2 text-sm">
           <Row icon={<Scissors className="h-4 w-4 text-primary" />} label={service.name}
             sub={`${formatDuration(service.durationMin)} · ${formatCop(service.priceCop)}`} />
-          <Row icon={<User className="h-4 w-4 text-primary" />} label={barber.displayName}
-            sub={barber.nickname ? `"${barber.nickname}"` : undefined} />
+          <Row
+            icon={<User className="h-4 w-4 text-primary" />}
+            label={isAnyBarber(barber.id) ? 'Primer disponible' : barber.displayName}
+            sub={!isAnyBarber(barber.id) && barber.nickname ? `"${barber.nickname}"` : undefined}
+          />
           <Row icon={<Calendar className="h-4 w-4 text-primary" />}
             label={format(startAt, "EEEE d 'de' MMMM", { locale: es })} />
           <Row icon={<Clock className="h-4 w-4 text-primary" />}

@@ -7,6 +7,7 @@ import { auth } from '@/server/auth'
 import { db } from '@/server/db'
 import { requireSuperAdmin } from '@/server/super-admin'
 import { getSession } from '@/server/session'
+import { COLOMBIA_CITIES } from '@/shared/constants/colombia-cities'
 import { prismaIdentityRepository as repo } from './infrastructure/prisma-identity-repository'
 import { createOrganization } from './application/create-organization'
 import { getPrimaryMembership } from './queries'
@@ -23,7 +24,7 @@ export async function signOutAction() {
 const selfRegisterSchema = z.object({
   name:         z.string().min(2).max(80),
   slug:         z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Solo letras minúsculas, números y guiones'),
-  city:         z.string().min(2).max(60),
+  city:         z.enum(COLOMBIA_CITIES),
   phone:        z.string().min(7).max(20),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#E0A300'),
   // userId enviado por el cliente como fallback si la cookie aún no propagó al SA.
@@ -79,7 +80,7 @@ export async function createBarberiaForSelfAction(
 const createBarberiaSchema = z.object({
   name:          z.string().min(2).max(80),
   slug:          z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Solo letras, números y guiones'),
-  city:          z.string().min(2).max(60),
+  city:          z.enum(COLOMBIA_CITIES),
   address:       z.string().min(2).max(120),
   phone:         z.string().min(7).max(20),
   primaryColor:  z.string().regex(/^#[0-9A-Fa-f]{6}$/),

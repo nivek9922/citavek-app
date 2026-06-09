@@ -1,6 +1,8 @@
 'use client'
-import { useState } from 'react'
-import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react'
+import Image from 'next/image'
+import { useOptimistic, useState, useTransition } from 'react'
+import { toast } from 'sonner'
+import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button }    from '@/shared/ui/button'
 import { Input }     from '@/shared/ui/input'
 import { Label }     from '@/shared/ui/label'
@@ -8,7 +10,7 @@ import { Textarea }  from '@/shared/ui/textarea'
 import { Badge }     from '@/shared/ui/badge'
 import { cn }        from '@/shared/ui/utils'
 import { formatCop, formatDuration } from '@/shared/format'
-import { upsertServiceAction, toggleServiceAction } from '../actions'
+import { upsertServiceAction, toggleServiceAction, reorderServiceAction } from '../actions'
 import type { ServiceDTO } from '../queries'
 
 const CATEGORIES = [
@@ -19,18 +21,63 @@ const CATEGORIES = [
   { value: 'infantil',    label: 'Infantil' },
 ]
 
+type OptAction =
+  | { type: 'toggle';  id: string; active: boolean }
+  | { type: 'reorder'; id: string; direction: 'up' | 'down' }
+
+function applyOptimistic(state: ServiceDTO[], action: OptAction): ServiceDTO[] {
+  if (action.type === 'toggle') {
+    return state.map((s) => s.id === action.id ? { ...s, active: action.active } : s)
+  }
+  if (action.type === 'reorder') {
+    const idx     = state.findIndex((s) => s.id === action.id)
+    const swapIdx = action.direction === 'up' ? idx - 1 : idx + 1
+    if (idx === -1 || swapIdx < 0 || swapIdx >= state.length) return state
+    const next = [...state]
+    const temp = next[idx]!.sortOrder
+    next[idx]     = { ...next[idx]!,     sortOrder: next[swapIdx]!.sortOrder }
+    next[swapIdx] = { ...next[swapIdx]!, sortOrder: temp }
+    return [...next].sort((a, b) => a.sortOrder - b.sortOrder)
+  }
+  return state
+}
+
 interface Props {
   services:   ServiceDTO[]
   tenantSlug: string
 }
 
-export function ServicesManager({ services, tenantSlug }: Props) {
-  const [showForm, setShowForm] = useState(false)
-  const [editing,  setEditing]  = useState<ServiceDTO | null>(null)
+export function ServicesManager({ services: initial, tenantSlug }: Props) {
+  // useOptimistic recibe `initial` directamente desde el Server Component.
+  // Cuando revalidatePath() dispara un re-render del RSC, `initial` cambia y
+  // useOptimistic lo recoge automáticamente — sin useState que lo bloquee.
+  const [optimistic, setOptimistic] = useOptimistic(initial, applyOptimistic)
+  const [isPending,  startTransition] = useTransition()
+  const [togglingId, setTogglingId]  = useState<string | null>(null)
+  const [showForm,   setShowForm]    = useState(false)
+  const [editing,    setEditing]     = useState<ServiceDTO | null>(null)
 
   const openCreate = () => { setEditing(null); setShowForm(true) }
   const openEdit   = (s: ServiceDTO) => { setEditing(s); setShowForm(true) }
   const close      = () => { setShowForm(false); setEditing(null) }
+
+  function toggle(id: string, active: boolean) {
+    setTogglingId(id)
+    startTransition(async () => {
+      setOptimistic({ type: 'toggle', id, active })
+      const res = await toggleServiceAction(tenantSlug, id, active)
+      setTogglingId(null)
+      if (res && !res.ok) toast.error(res.error ?? 'No se pudo cambiar el estado.')
+    })
+  }
+
+  function reorder(id: string, direction: 'up' | 'down') {
+    startTransition(async () => {
+      setOptimistic({ type: 'reorder', id, direction })
+      const res = await reorderServiceAction(tenantSlug, id, direction)
+      if (!res.ok) toast.error(res.error ?? 'No se pudo reordenar.')
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -41,7 +88,6 @@ export function ServicesManager({ services, tenantSlug }: Props) {
         </Button>
       </div>
 
-      {/* Formulario create/edit */}
       {showForm && (
         <ServiceForm
           tenantSlug={tenantSlug}
@@ -50,19 +96,22 @@ export function ServicesManager({ services, tenantSlug }: Props) {
         />
       )}
 
-      {/* Lista */}
       <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
-        {services.length === 0 && (
+        {optimistic.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Sin servicios. Añade el primero.
           </p>
         )}
-        {services.map((svc) => (
+        {optimistic.map((svc, idx) => (
           <ServiceRow
             key={svc.id}
             service={svc}
-            tenantSlug={tenantSlug}
+            isToggling={togglingId === svc.id}
+            isPendingReorder={isPending && togglingId === null}
+            onToggle={() => toggle(svc.id, !svc.active)}
             onEdit={() => openEdit(svc)}
+            onMoveUp={idx > 0 ? () => reorder(svc.id, 'up') : undefined}
+            onMoveDown={idx < optimistic.length - 1 ? () => reorder(svc.id, 'down') : undefined}
           />
         ))}
       </div>
@@ -70,25 +119,36 @@ export function ServicesManager({ services, tenantSlug }: Props) {
   )
 }
 
-function ServiceRow({
-  service, tenantSlug, onEdit,
-}: { service: ServiceDTO; tenantSlug: string; onEdit: () => void }) {
-  const [isPending, setIsPending] = useState(false)
+interface RowProps {
+  service:          ServiceDTO
+  isToggling:       boolean
+  isPendingReorder: boolean
+  onToggle:         () => void
+  onEdit:           () => void
+  onMoveUp?:        () => void
+  onMoveDown?:      () => void
+}
 
-  async function toggle() {
-    setIsPending(true)
-    try {
-      await toggleServiceAction(tenantSlug, service.id, !service.active)
-    } finally {
-      setIsPending(false)
-    }
-  }
-
+function ServiceRow({ service, isToggling, isPendingReorder, onToggle, onEdit, onMoveUp, onMoveDown }: RowProps) {
   return (
     <div className={cn(
       'flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth',
       !service.active && 'opacity-50',
+      isPendingReorder && 'opacity-70',
     )}>
+      {service.imageUrl ? (
+        <Image
+          src={service.imageUrl}
+          alt={service.name}
+          width={40} height={40}
+          unoptimized
+          className="h-10 w-10 shrink-0 rounded-lg object-cover"
+        />
+      ) : (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-lg">
+          {service.category === 'corte' ? '✂️' : service.category === 'barba' ? '🪒' : service.category === 'combo' ? '💈' : service.category === 'tratamiento' ? '✨' : '👦'}
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="font-medium">{service.name}</p>
@@ -104,13 +164,23 @@ function ServiceRow({
         <p className="text-xs text-muted-foreground">{formatDuration(service.durationMin)}</p>
       </div>
       <div className="flex items-center gap-1">
+        <div className="flex flex-col">
+          <button onClick={onMoveUp} disabled={!onMoveUp || isPendingReorder} title="Subir"
+            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed">
+            <ChevronUp className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onMoveDown} disabled={!onMoveDown || isPendingReorder} title="Bajar"
+            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed">
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <button onClick={onEdit} title="Editar"
           className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
           <Pencil className="h-4 w-4" />
         </button>
-        <button onClick={toggle} disabled={isPending} title={service.active ? 'Desactivar' : 'Activar'}
+        <button onClick={onToggle} disabled={isToggling} title={service.active ? 'Desactivar' : 'Activar'}
           className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
-          {isPending
+          {isToggling
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : service.active
               ? <ToggleRight className="h-5 w-5 text-primary" />
@@ -125,7 +195,7 @@ function ServiceForm({
   tenantSlug, service, onDone,
 }: { tenantSlug: string; service: ServiceDTO | null; onDone: () => void }) {
   const [isPending, setIsPending] = useState(false)
-  const [error, setError] = useState('')
+  const [error,     setError]     = useState('')
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -166,6 +236,11 @@ function ServiceForm({
           <Label htmlFor="description">Descripción (opcional)</Label>
           <Textarea id="description" name="description" rows={2} maxLength={300}
             defaultValue={service?.description ?? ''} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="imageUrl">URL de imagen (opcional)</Label>
+          <Input id="imageUrl" name="imageUrl" type="url"
+            defaultValue={service?.imageUrl ?? ''} placeholder="https://…" />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex gap-2">

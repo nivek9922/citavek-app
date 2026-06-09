@@ -28,6 +28,7 @@ export interface CustomerAppointment {
   service:        { name: string; durationMin: number; priceCop: number }
   barber:         { displayName: string; nickname: string | null }
   organization:   { name: string; slug: string; timezone: string; phone: string | null }
+  notes?:         string | null
 }
 
 export interface NewAppointment {

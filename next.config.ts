@@ -1,6 +1,14 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  images: {
+    // Las URLs de avatar e imagen de servicio son proporcionadas por el usuario
+    // y pueden provenir de cualquier dominio HTTPS. Se usa unoptimized en los
+    // componentes para no pasar por el pipeline de optimización.
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+    ],
+  },
   turbopack: {
     root: __dirname,
   },

@@ -5,7 +5,12 @@ import { authClient }   from '@/lib/auth-client'
 import { Input }        from '@/shared/ui/input'
 import { Label }        from '@/shared/ui/label'
 import { Button }       from '@/shared/ui/button'
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from '@/shared/ui/select'
 import { cn }           from '@/shared/ui/utils'
+import { COLOMBIA_CITIES, type ColombiaCity } from '@/shared/constants/colombia-cities'
 import { createBarberiaForSelfAction } from '@/modules/identity/actions'
 
 const PALETTE = ['#E0A300', '#22C55E', '#F43F5E', '#3B82F6', '#A855F7', '#06B6D4', '#F97316', '#1A1A1A']
@@ -24,6 +29,7 @@ export function SignUpForm() {
   const [isPending, startTransition] = useTransition()
   const [showPass,  setShowPass]  = useState(false)
   const [color,     setColor]     = useState('#E0A300')
+  const [city,      setCity]      = useState<ColombiaCity | ''>('')
   const [error,     setError]     = useState('')
   const [step,      setStep]      = useState<'form' | 'creating'>('form')
 
@@ -37,8 +43,9 @@ export function SignUpForm() {
     const password   = fd.get('password')   as string
     const shopName   = fd.get('shopName')   as string
     const slug       = fd.get('slug')       as string
-    const city       = fd.get('city')       as string
     const phone      = fd.get('phone')      as string
+
+    if (!city) { setError('Selecciona tu ciudad.'); return }
 
     startTransition(async () => {
       try {
@@ -148,7 +155,19 @@ export function SignUpForm() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Ciudad" name="city" placeholder="Cali" disabled={isPending} />
+          <div className="space-y-1.5">
+            <Label htmlFor="city">Ciudad</Label>
+            <Select value={city} onValueChange={(v) => setCity(v as ColombiaCity)} disabled={isPending}>
+              <SelectTrigger id="city">
+                <SelectValue placeholder="Selecciona tu ciudad" />
+              </SelectTrigger>
+              <SelectContent>
+                {COLOMBIA_CITIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Field label="WhatsApp / Teléfono" name="phone" placeholder="+573187654321" disabled={isPending} />
         </div>
 

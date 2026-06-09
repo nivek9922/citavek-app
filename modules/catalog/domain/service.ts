@@ -22,6 +22,7 @@ export interface CreateServiceData {
   priceCop:     number
   category:     ServiceCategory
   sortOrder:    number
+  imageUrl?:    string | null
 }
 
 export type UpdateServiceData = Partial<CreateServiceData>

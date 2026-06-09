@@ -16,6 +16,7 @@ export const permissions = {
   'settings:update':      ['owner'],
   'analytics:revenue':    ['owner'],
   'analytics:agenda':     ['owner', 'barber'],
+  'customer:update':      ['owner'],
 } as const satisfies Record<string, string[]>
 
 export type Permission = keyof typeof permissions

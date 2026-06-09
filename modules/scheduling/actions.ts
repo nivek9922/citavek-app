@@ -8,6 +8,7 @@ import { headers } from 'next/headers'
 import { rateLimit, clientIpFrom } from '@/server/rate-limit'
 import log from '@/server/logger'
 import { SlotConflictError } from './domain/appointment'
+import { isAnyBarber } from './domain/any-barber'
 import { prismaSchedulingRepository as repo } from './infrastructure/prisma-scheduling-repository'
 import { bookAppointment }          from './application/book-appointment'
 import { createManualAppointment }  from './application/create-manual-appointment'
@@ -33,12 +34,38 @@ export async function getAvailableSlotsAction(
 ): Promise<{ slots: string[] }> {
   const ctx    = await getTenantContext(slug)
   const parsed = getSlotsSchema.parse(input)
+  const date   = new Date(parsed.dateISO)
+
+  if (isAnyBarber(parsed.barberId)) {
+    const { db } = await import('@/server/db')
+    const activeBarbers = await db.barber.findMany({
+      where: { organizationId: ctx.id, active: true },
+      select: { id: true },
+    })
+    const results = await Promise.all(
+      activeBarbers.map((b) =>
+        getAvailableSlots(repo, { organizationId: ctx.id, barberId: b.id, serviceId: parsed.serviceId, date }),
+      ),
+    )
+    const seen = new Set<string>()
+    const slots: string[] = []
+    for (const r of results) {
+      if (r.ok) {
+        for (const d of r.slots) {
+          const iso = d.toISOString()
+          if (!seen.has(iso)) { seen.add(iso); slots.push(iso) }
+        }
+      }
+    }
+    slots.sort()
+    return { slots }
+  }
 
   const result = await getAvailableSlots(repo, {
     organizationId: ctx.id,
     barberId:       parsed.barberId,
     serviceId:      parsed.serviceId,
-    date:           new Date(parsed.dateISO),
+    date,
   })
 
   if (!result.ok) return { slots: [] }
@@ -71,10 +98,32 @@ export async function bookAppointmentAction(
     const ctx    = await getTenantContext(slug)
     const parsed = bookSchema.parse(input)
 
+    let barberId = parsed.barberId
+    if (isAnyBarber(barberId)) {
+      const { db } = await import('@/server/db')
+      const activeBarbers = await db.barber.findMany({
+        where: { organizationId: ctx.id, active: true },
+        select: { id: true },
+        orderBy: { sortOrder: 'asc' },
+      })
+      const startAt = new Date(parsed.startAtISO)
+      for (const b of activeBarbers) {
+        const r = await getAvailableSlots(repo, {
+          organizationId: ctx.id, barberId: b.id,
+          serviceId: parsed.serviceId, date: startAt,
+        })
+        if (r.ok && r.slots.some((s) => s.toISOString() === startAt.toISOString())) {
+          barberId = b.id
+          break
+        }
+      }
+      if (isAnyBarber(barberId)) return { ok: false, error: 'No hay barberos disponibles en ese horario.' }
+    }
+
     const result = await bookAppointment(repo, {
       organizationId: ctx.id,
       serviceId:      parsed.serviceId,
-      barberId:       parsed.barberId,
+      barberId,
       startAt:        new Date(parsed.startAtISO),
       customerName:   parsed.customerName,
       customerPhone:  parsed.customerPhone,

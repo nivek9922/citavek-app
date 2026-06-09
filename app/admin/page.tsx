@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { AlertTriangle, Scissors, CalendarDays, TrendingUp } from 'lucide-react'
 import { requireSuperAdmin } from '@/server/super-admin'
 import {
@@ -6,6 +7,7 @@ import {
   getPlatformKPIs,
 } from '@/modules/tenancy/queries'
 import { AdminOrgsSection } from './AdminOrgsSection'
+import { AdminFilters }     from './AdminFilters'
 
 const CHURN_DAYS = 30
 
@@ -13,13 +15,27 @@ function daysSince(date: Date) {
   return Math.floor((Date.now() - date.getTime()) / 86_400_000)
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; city?: string }>
+}) {
   await requireSuperAdmin()
 
-  const [orgs, kpis] = await Promise.all([
+  const [orgs, kpis, { q, status, city }] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
+    searchParams,
   ])
+
+  // Filtrado server-side: el Server Component hace el trabajo, no el cliente.
+  const filtered = orgs.filter((o) => {
+    const query = (q ?? '').trim().toLowerCase()
+    if (query && !o.name.toLowerCase().includes(query) && !o.slug.toLowerCase().includes(query)) return false
+    if (status && status !== 'all' && o.status !== status) return false
+    if (city   && city   !== 'all' && o.city   !== city)   return false
+    return true
+  })
 
   const churnRisk = orgs.filter((o) => {
     const last = o.appointments[0]?.startAt
@@ -62,8 +78,15 @@ export default async function AdminPage() {
         </section>
       )}
 
-      {/* ── Lista + crear barbería (client, estado local) ── */}
-      <AdminOrgsSection initialOrgs={orgs} />
+      {/* ── Filtros + lista ── */}
+      <div className="space-y-4">
+        {/* Suspense porque AdminFilters usa useSearchParams() */}
+        <Suspense fallback={<div className="h-10 animate-pulse rounded-xl bg-muted/40" />}>
+          <AdminFilters total={orgs.length} filtered={filtered.length} />
+        </Suspense>
+
+        <AdminOrgsSection key={`${q ?? ''}-${status ?? ''}-${city ?? ''}`} initialOrgs={filtered} />
+      </div>
 
     </div>
   )

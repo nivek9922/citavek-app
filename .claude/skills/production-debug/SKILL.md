@@ -1,160 +1,80 @@
 # Production Debug Skill
 
 ## Purpose
+Investigate bugs that appear in production builds but not in development mode.
 
-Investigate issues that occur in production builds but not in development mode.
+This skill is for:
+- npm run build
+- npm run start
+- production-only bugs
+- cache inconsistencies
+- server action behavior differences
+- rendering differences between dev and production
 
-Focus on identifying root causes before proposing fixes.
+## Core Rule
+Do not modify code before understanding the root cause.
 
-Never start by modifying code.
+## Investigation Goals
+Identify:
+- root cause
+- affected files
+- affected module
+- rendering flow
+- cache flow
+- server action flow
+- reproduction steps
+- why it works in dev but fails in production
 
-Always investigate first.
+## Required Checks
+Always compare:
 
----
+### Development
+- npm run dev
 
-## Primary Scenario
+### Production
+- npm run build
+- npm run start
 
-The application behaves correctly during:
+Investigate differences in:
+- Server Components vs Client Components boundaries
+- Server Actions payload mapping (ensure Prisma Models aren't leaking)
+- caching (Data Cache vs Full Route Cache)
+- revalidation triggers
+- hydration mismatches
 
-npm run dev
+## Next.js 16 Focus Areas
+Pay special attention to:
+- `revalidatePath` and `revalidateTag` placement in Server Actions.
+- Correct usage of `useOptimistic` to prevent UI staleness instead of relying on `router.refresh()`.
+- Unintended caching of dynamic routes (check if `force-dynamic` or proper Next.js headers are missing).
+- Suspense boundaries failing in production builds.
 
-but behaves differently during:
+## Investigation Rules
+- Do not guess.
+- Do not refactor while investigating.
+- Do not optimize before proving the problem.
+- Do not add new abstractions during analysis.
+- Use evidence from code and behavior.
 
-npm run build && npm run start
-
----
-
-## Investigation Workflow
-
-### Phase 1
-
-Understand the problem.
-
-Document:
-
-* Expected behavior
-* Actual behavior
-* Reproduction steps
-* Affected pages
-* Affected modules
-
----
-
-### Phase 2
-
-Compare:
-
-Development Mode
-
-vs
-
-Production Mode
-
-Identify differences in:
-
-* Rendering
-* Caching
-* Routing
-* Server Actions
-* Suspense
-* Streaming
-* Revalidation
-
----
-
-### Phase 3
-
-Inspect Next.js behavior.
-
-Review:
-
-* Server Components
-* Client Components
-* Server Actions
-* Route Handlers
-* Cache Components
-* revalidatePath
-* revalidateTag
-* updateTag
-* refresh
-* router.refresh
-
-Determine whether behavior differs between development and production.
-
----
-
-### Phase 4
-
-Analyze data flow.
-
-Document:
-
-UI
-→ Action
-→ Use Case
-→ Repository
-→ Prisma
-→ Database
-
-Verify:
-
-* Database updates
-* Cache invalidation
-* UI refresh behavior
-
----
-
-### Phase 5
-
-Root Cause Analysis
-
-Produce evidence.
-
-Never guess.
-
-Explain:
-
-* Why issue occurs
-* Why it only occurs in production
-* Which files are involved
-* Which APIs are involved
-
----
-
-## Output
-
-Generate:
+## Output Required
+Generate a report called:
 
 PRODUCTION_BUG_ANALYSIS.md
 
-Structure:
+The report must include:
+- Problem summary
+- Reproduction steps
+- Expected behavior
+- Actual behavior
+- Root cause
+- Evidence
+- Minimal fix strategy prioritizing React 19 hooks and Cache Invalidation over full page reloads.
+- Validation plan
+- Risks
 
-### Problem
-
-### Reproduction
-
-### Root Cause
-
-### Evidence
-
-### Recommended Fix
-
-### Risks
-
-### Validation Plan
-
----
-
-## Rules
-
-Do not modify code during investigation.
-
-Do not refactor.
-
-Do not optimize.
-
-Do not rewrite architecture.
-
-Focus exclusively on identifying root cause.
-
-Root cause must be proven before fixes are proposed.
+## Acceptance Criteria
+The skill is successful only if it can:
+- explain the production-only bug clearly
+- identify the exact cause
+- recommend the smallest correct fix conforming strictly to Clean Architecture
+- avoid unrelated changes

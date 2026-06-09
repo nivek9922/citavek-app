@@ -1,5 +1,4 @@
 'use client'
-
 import { useState } from 'react'
 import { type AdminOrgRow } from '@/modules/tenancy/queries'
 import { OrgList }            from '@/modules/tenancy/ui/OrgList'
@@ -13,11 +12,11 @@ export function AdminOrgsSection({ initialOrgs }: Props) {
   const [orgs, setOrgs] = useState(initialOrgs)
 
   function onStatusChange(orgId: string, newStatus: 'active' | 'suspended') {
-    setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, status: newStatus } : o))
+    setOrgs((prev) => prev.map((o) => (o.id === orgId ? { ...o, status: newStatus } : o)))
   }
 
   function onDelete(orgId: string) {
-    setOrgs(prev => prev.filter(o => o.id !== orgId))
+    setOrgs((prev) => prev.filter((o) => o.id !== orgId))
   }
 
   function onCreated(data: { id: string; slug: string; name: string; city: string; primaryColor: string }) {
@@ -29,10 +28,10 @@ export function AdminOrgsSection({ initialOrgs }: Props) {
       status:       'active',
       createdAt:    new Date(),
       branding:     { primaryColor: data.primaryColor },
-      _count:       { barbers: 0, appointments: 0 },
+      _count:        { barbers: 0, appointments: 0 },
       appointments: [],
     }
-    setOrgs(prev => [newOrg, ...prev])
+    setOrgs((prev) => [newOrg, ...prev])
   }
 
   return (

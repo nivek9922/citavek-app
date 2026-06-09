@@ -1,8 +1,13 @@
 'use client'
+import Image from 'next/image'
 import { Clock } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 import { formatCop, formatDuration } from '@/shared/format'
 import type { ServiceDTO } from '@/modules/catalog/queries'
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  corte: '✂️', barba: '🪒', combo: '💈', tratamiento: '✨', infantil: '👦',
+}
 
 const CATEGORY_COLOR: Record<string, string> = {
   corte:       'bg-blue-500/10 text-blue-400',
@@ -40,6 +45,18 @@ export function StepService({ services, selectedId, onSelect }: Props) {
             )}
           >
             <div className="flex items-center justify-between gap-3">
+              {svc.imageUrl ? (
+                <Image
+                  src={svc.imageUrl} alt={svc.name}
+                  width={48} height={48}
+                  unoptimized
+                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent text-2xl">
+                  {CATEGORY_EMOJI[svc.category] ?? '✂️'}
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className={cn(
