@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { Loader2, CheckCircle2, Palette, Store } from 'lucide-react'
 import { Button }  from '@/shared/ui/button'
 import { Input }   from '@/shared/ui/input'
@@ -51,17 +51,20 @@ function Section({ icon, title, children }: {
 }
 
 function InfoForm({ tenantSlug, org }: { tenantSlug: string; org: Props['org'] }) {
-  const [isPending, startTransition] = useTransition()
-  const [saved,     setSaved]        = useState(false)
+  const [isPending, setIsPending] = useState(false)
+  const [saved,     setSaved]     = useState(false)
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaved(false)
-    startTransition(async () => {
+    setIsPending(true)
+    try {
       await updateOrgInfoAction(tenantSlug, new FormData(e.currentTarget))
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    })
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (
@@ -78,20 +81,23 @@ function InfoForm({ tenantSlug, org }: { tenantSlug: string; org: Props['org'] }
 }
 
 function BrandForm({ tenantSlug, branding }: { tenantSlug: string; branding: Props['branding'] }) {
-  const [color,     setColor]   = useState(branding?.primaryColor ?? '#E0A300')
-  const [isPending, startTransition] = useTransition()
-  const [saved,     setSaved]   = useState(false)
+  const [color,     setColor]     = useState(branding?.primaryColor ?? '#E0A300')
+  const [isPending, setIsPending] = useState(false)
+  const [saved,     setSaved]     = useState(false)
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaved(false)
+    setIsPending(true)
     const fd = new FormData(e.currentTarget)
     fd.set('primaryColor', color)
-    startTransition(async () => {
+    try {
       await updateBrandingAction(tenantSlug, fd)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    })
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (

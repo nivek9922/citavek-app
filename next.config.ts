@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
     'kysely',
     '@prisma/adapter-pg',
   ],
+  // Subresource Integrity: hashea los scripts en build y añade `integrity` a los
+  // <script>, para que el navegador rechace assets manipulados en tránsito.
+  experimental: {
+    sri: {
+      algorithm: 'sha256',
+    },
+  },
 }
 
 export default nextConfig

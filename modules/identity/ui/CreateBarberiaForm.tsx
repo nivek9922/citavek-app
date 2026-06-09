@@ -1,7 +1,7 @@
 'use client'
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { Loader2, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
+import { Loader2, CheckCircle2, ExternalLink } from 'lucide-react'
+import Link    from 'next/link'
 import { Input }   from '@/shared/ui/input'
 import { Label }   from '@/shared/ui/label'
 import { Button }  from '@/shared/ui/button'
@@ -10,23 +10,35 @@ import { createBarberiaAction } from '@/modules/identity/actions'
 
 const PALETTE = ['#E0A300', '#22C55E', '#F43F5E', '#3B82F6', '#A855F7', '#06B6D4', '#F97316', '#1A1A1A']
 
-export function CreateBarberiaForm() {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [error,     setError]   = useState('')
-  const [success,   setSuccess] = useState('')
-  const [color,     setColor]   = useState('#E0A300')
+interface CreatedData {
+  id:           string
+  slug:         string
+  name:         string
+  city:         string
+  primaryColor: string
+}
+
+interface Props {
+  onCreated?: (data: CreatedData) => void
+}
+
+export function CreateBarberiaForm({ onCreated }: Props = {}) {
+  const [isLoading,   setIsLoading]   = useState(false)
+  const [error,       setError]       = useState('')
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null)
+  const [color,       setColor]       = useState('#E0A300')
 
   function slugify(name: string) {
     return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60)
   }
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
-    setSuccess('')
-    const fd = new FormData(e.currentTarget)
+    setCreatedSlug(null)
+    const fd   = new FormData(e.currentTarget)
+    const form = e.currentTarget
 
     const input = {
       name:          fd.get('name')          as string,
@@ -40,14 +52,14 @@ export function CreateBarberiaForm() {
       ownerName:     fd.get('ownerName')     as string,
     }
 
-    startTransition(async () => {
-      const res = await createBarberiaAction(input)
-      if (!res.ok) { setError(res.error); return }
-      setSuccess(`✅ Barbería creada. Link: /${res.slug}`)
-      router.refresh()
-      ;(e.target as HTMLFormElement).reset()
-      setColor('#E0A300')
-    })
+    setIsLoading(true)
+    const res = await createBarberiaAction(input)
+    setIsLoading(false)
+    if (!res.ok) { setError(res.error); return }
+    setCreatedSlug(res.slug)
+    form.reset()
+    setColor('#E0A300')
+    onCreated?.({ id: res.id, slug: res.slug, name: input.name, city: input.city, primaryColor: color })
   }
 
   return (
@@ -103,14 +115,24 @@ export function CreateBarberiaForm() {
       {error && (
         <p className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{error}</p>
       )}
-      {success && (
-        <p className="flex items-center gap-2 rounded-xl bg-green-500/10 px-4 py-2.5 text-sm text-green-400">
-          <CheckCircle2 className="h-4 w-4 shrink-0" /> {success}
-        </p>
+      {createdSlug && (
+        <div className="flex items-center justify-between rounded-xl bg-green-500/10 px-4 py-2.5">
+          <span className="flex items-center gap-2 text-sm text-green-400">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            Barbería <strong>/{createdSlug}</strong> creada
+            {isLoading && <span className="text-xs text-muted-foreground">— actualizando lista…</span>}
+          </span>
+          <Link
+            href={`/${createdSlug}/panel`}
+            className="flex items-center gap-1 text-xs font-medium text-green-400 hover:text-green-300 transition-colors"
+          >
+            Ir al panel <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
       )}
 
-      <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-        {isPending
+      <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+        {isLoading
           ? <><Loader2 className="h-4 w-4 animate-spin" /> Creando…</>
           : 'Crear barbería'}
       </Button>

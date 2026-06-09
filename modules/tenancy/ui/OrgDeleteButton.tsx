@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -12,18 +12,14 @@ interface Props {
   name:         string
   appointments: number
   barbers:      number
+  onDelete:     (orgId: string) => void
 }
 
-/**
- * Borrado DURO de una barbería (limpieza de pruebas de dev). Distinto de suspender.
- * Exige escribir el slug exacto para confirmar, al estilo de GitHub, para evitar
- * eliminar por error una barbería real con datos.
- */
-export function OrgDeleteButton({ orgId, slug, name, appointments, barbers }: Props) {
-  const [open, setOpen]              = useState(false)
-  const [confirmText, setConfirm]    = useState('')
-  const [error, setError]            = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+export function OrgDeleteButton({ orgId, slug, name, appointments, barbers, onDelete }: Props) {
+  const [open, setOpen]           = useState(false)
+  const [confirmText, setConfirm] = useState('')
+  const [error, setError]         = useState<string | null>(null)
+  const [isPending, setIsPending] = useState(false)
 
   const matches = confirmText.trim() === slug
 
@@ -34,15 +30,14 @@ export function OrgDeleteButton({ orgId, slug, name, appointments, barbers }: Pr
     setError(null)
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!matches) return
     setError(null)
-    startTransition(async () => {
-      const res = await deleteOrgAction(orgId)
-      if (!res.ok) { setError(res.error); return }
-      // revalidatePath('/admin') en el server refresca la lista; la fila desaparece.
-      setOpen(false)
-    })
+    setIsPending(true)
+    const res = await deleteOrgAction(orgId)
+    setIsPending(false)
+    if (!res.ok) { setError(res.error); return }
+    onDelete(orgId)
   }
 
   return (

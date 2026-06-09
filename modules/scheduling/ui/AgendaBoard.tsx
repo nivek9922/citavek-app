@@ -1,5 +1,5 @@
 'use client'
-import { useTransition } from 'react'
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { CheckCircle2, XCircle, UserX, Clock } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
@@ -50,10 +50,16 @@ export function AgendaBoard({ appointments, tenantSlug }: Props) {
 }
 
 function AppointmentCard({ apt, tenantSlug }: { apt: AppointmentRow; tenantSlug: string }) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
 
-  const update = (status: string) =>
-    startTransition(() => updateAppointmentStatusAction(tenantSlug, apt.id, status))
+  async function update(status: string) {
+    setIsPending(true)
+    try {
+      await updateAppointmentStatusAction(tenantSlug, apt.id, status)
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   return (
     <div className={cn(

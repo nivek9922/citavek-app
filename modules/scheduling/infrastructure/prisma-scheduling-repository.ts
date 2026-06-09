@@ -1,7 +1,41 @@
 import 'server-only'
 import { db } from '@/server/db'
-import type { AppointmentStatusValue } from '../domain/appointment'
+import type { Prisma } from '@/generated/prisma/client'
+import { SlotConflictError, type AppointmentStatusValue } from '../domain/appointment'
 import type { NewAppointment, SchedulingRepository } from '../domain/ports/scheduling-repository'
+
+/**
+ * Serializa las escrituras del mismo barbero tomando un advisory lock de
+ * transacción (se libera al cerrar la tx). Cierra la ventana de carrera
+ * "verificar-luego-insertar" sin requerir la exclusion constraint de Postgres
+ * (que llegará por migración cuando el entorno corra en Node 20+).
+ */
+async function lockBarber(tx: Prisma.TransactionClient, organizationId: string, barberId: string) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${organizationId}), hashtext(${barberId}))`
+}
+
+/** Re-verifica el solape DENTRO de la transacción (autoridad final). */
+async function overlapsInTx(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  barberId: string,
+  startAt: Date,
+  endAt: Date,
+  excludeAppointmentId?: string,
+): Promise<boolean> {
+  const conflict = await tx.appointment.findFirst({
+    where: {
+      organizationId,
+      barberId,
+      status:  { in: ['pending', 'confirmed'] },
+      startAt: { lt: endAt },
+      endAt:   { gt: startAt },
+      ...(excludeAppointmentId && { id: { not: excludeAppointmentId } }),
+    },
+    select: { id: true },
+  })
+  return conflict !== null
+}
 
 // Adapter: implementación Prisma del Port SchedulingRepository.
 export const prismaSchedulingRepository: SchedulingRepository = {
@@ -45,24 +79,32 @@ export const prismaSchedulingRepository: SchedulingRepository = {
   },
 
   async createAppointment(data: NewAppointment) {
-    return db.appointment.create({
-      data: {
-        organizationId:  data.organizationId,
-        serviceId:       data.serviceId,
-        barberId:        data.barberId,
-        customerId:      data.customerId,
-        customerName:    data.customerName,
-        customerPhone:   data.customerPhone,
-        startAt:         data.startAt,
-        endAt:           data.endAt,
-        durationMin:     data.durationMin,
-        priceCop:        data.priceCop,
-        status:          data.status,
-        source:          data.source,
-        createdByUserId: data.createdByUserId ?? null,
-        notes:           data.notes ?? null,
-      },
-      select: { id: true },
+    // Lock + re-verificación + inserción en una sola transacción: dos reservas
+    // concurrentes para el mismo barbero/horario no pueden insertar ambas.
+    return db.$transaction(async (tx) => {
+      await lockBarber(tx, data.organizationId, data.barberId)
+      if (await overlapsInTx(tx, data.organizationId, data.barberId, data.startAt, data.endAt)) {
+        throw new SlotConflictError()
+      }
+      return tx.appointment.create({
+        data: {
+          organizationId:  data.organizationId,
+          serviceId:       data.serviceId,
+          barberId:        data.barberId,
+          customerId:      data.customerId,
+          customerName:    data.customerName,
+          customerPhone:   data.customerPhone,
+          startAt:         data.startAt,
+          endAt:           data.endAt,
+          durationMin:     data.durationMin,
+          priceCop:        data.priceCop,
+          status:          data.status,
+          source:          data.source,
+          createdByUserId: data.createdByUserId ?? null,
+          notes:           data.notes ?? null,
+        },
+        select: { id: true },
+      })
     })
   },
 
@@ -110,9 +152,21 @@ export const prismaSchedulingRepository: SchedulingRepository = {
   },
 
   async updateAppointmentTime(organizationId, appointmentId, newStartAt, newEndAt) {
-    await db.appointment.updateMany({
-      where: { id: appointmentId, organizationId },
-      data:  { startAt: newStartAt, endAt: newEndAt },
+    // Mismo blindaje que createAppointment para la reprogramación.
+    await db.$transaction(async (tx) => {
+      const apt = await tx.appointment.findFirst({
+        where:  { id: appointmentId, organizationId },
+        select: { barberId: true },
+      })
+      if (!apt) return
+      await lockBarber(tx, organizationId, apt.barberId)
+      if (await overlapsInTx(tx, organizationId, apt.barberId, newStartAt, newEndAt, appointmentId)) {
+        throw new SlotConflictError()
+      }
+      await tx.appointment.updateMany({
+        where: { id: appointmentId, organizationId },
+        data:  { startAt: newStartAt, endAt: newEndAt },
+      })
     })
   },
 
@@ -179,13 +233,23 @@ export const prismaSchedulingRepository: SchedulingRepository = {
   },
 
   async blockDate(organizationId, barberId, dateStr, reason) {
-    await db.scheduleException.upsert({
-      where: {
-        organizationId_barberId_date: { organizationId, barberId: barberId ?? '', date: dateStr },
-      },
-      update: { reason: reason ?? null },
-      create: { organizationId, barberId, date: dateStr, reason: reason ?? null },
+    // barberId null = bloqueo de toda la org. Postgres trata NULL como distinto en
+    // índices únicos, así que un upsert por la clave compuesta con null no encuentra
+    // la fila existente (y permitiría duplicados). Se busca explícitamente.
+    const existing = await db.scheduleException.findFirst({
+      where:  { organizationId, barberId: barberId ?? null, date: dateStr },
+      select: { id: true },
     })
+    if (existing) {
+      await db.scheduleException.update({
+        where: { id: existing.id },
+        data:  { reason: reason ?? null },
+      })
+    } else {
+      await db.scheduleException.create({
+        data: { organizationId, barberId, date: dateStr, reason: reason ?? null },
+      })
+    }
   },
 
   async unblockDate(organizationId, barberId, dateStr) {

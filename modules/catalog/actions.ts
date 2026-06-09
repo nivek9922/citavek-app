@@ -16,7 +16,7 @@ const serviceSchema = z.object({
 
 export async function upsertServiceAction(slug: string, id: string | null, formData: FormData) {
   const ctx   = await getTenantContext(slug)
-  await requirePermission(ctx.id, 'service:create')
+  await requirePermission(ctx.id, id ? 'service:update' : 'service:create')
   const input = serviceSchema.parse(Object.fromEntries(formData))
 
   if (id) {

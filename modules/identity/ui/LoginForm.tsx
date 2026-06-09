@@ -1,6 +1,5 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { Input }  from '@/shared/ui/input'
@@ -9,7 +8,6 @@ import { Button } from '@/shared/ui/button'
 import { cn }     from '@/shared/ui/utils'
 
 export function LoginForm() {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showPass, setShowPass] = useState(false)
   const [error,    setError]    = useState('')
@@ -32,8 +30,7 @@ export function LoginForm() {
         setError('Correo o contraseña incorrectos.')
         return
       }
-      router.push('/redirect')
-      router.refresh()
+      window.location.href = '/redirect'
     })
   }
 

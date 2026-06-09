@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getTenantContext } from '@/server/tenant'
@@ -30,7 +31,11 @@ export default async function ClientesPage({
         description={`${customers.length} ${customers.length === 1 ? 'cliente' : 'clientes'}`}
       />
 
-      <CustomerSearch slug={slug} initialQuery={q ?? ''} />
+      {/* CustomerSearch usa useSearchParams() → requiere un límite de Suspense
+          para no degradar toda la ruta a renderizado en cliente. */}
+      <Suspense fallback={<div className="h-10 rounded-xl border border-border bg-muted/40" />}>
+        <CustomerSearch slug={slug} initialQuery={q ?? ''} />
+      </Suspense>
 
       {customers.length === 0 ? (
         <EmptyState

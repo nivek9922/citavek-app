@@ -4,6 +4,10 @@ import { fromZonedTime } from 'date-fns-tz'
 import { z } from 'zod'
 import { getTenantContext } from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
+import { headers } from 'next/headers'
+import { rateLimit, clientIpFrom } from '@/server/rate-limit'
+import log from '@/server/logger'
+import { SlotConflictError } from './domain/appointment'
 import { prismaSchedulingRepository as repo } from './infrastructure/prisma-scheduling-repository'
 import { bookAppointment }          from './application/book-appointment'
 import { createManualAppointment }  from './application/create-manual-appointment'
@@ -58,6 +62,12 @@ export async function bookAppointmentAction(
   input: BookInput,
 ): Promise<{ ok: true; appointmentId: string } | { ok: false; error: string }> {
   try {
+    // Endpoint público: límite por IP para frenar spam de reservas.
+    const ip = clientIpFrom(await headers())
+    if (!await rateLimit(`book:${ip}`, 8, 60_000)) {
+      return { ok: false, error: 'Demasiados intentos. Espera un momento e inténtalo de nuevo.' }
+    }
+
     const ctx    = await getTenantContext(slug)
     const parsed = bookSchema.parse(input)
 
@@ -73,7 +83,10 @@ export async function bookAppointmentAction(
     if (result.ok) revalidatePath(`/${slug}`)
     return result
   } catch (err) {
-    console.error('[bookAppointmentAction]', err)
+    if (err instanceof SlotConflictError) {
+      return { ok: false, error: 'Este horario ya no está disponible.' }
+    }
+    log.error('bookAppointmentAction', { err: String(err) })
     return { ok: false, error: 'No se pudo crear la cita. Intenta de nuevo.' }
   }
 }
@@ -96,9 +109,12 @@ export async function createManualAppointmentAction(
   slug: string,
   input: ManualAppointmentInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Guards fuera del try: notFound()/redirect() lanzan errores de control de flujo
+  // de Next.js que un catch silenciaría (sesión expirada → "No se pudo crear" en
+  // vez de ir a login).
+  const ctx = await getTenantContext(slug)
+  const { session } = await requirePermission(ctx.id, 'appointment:create')
   try {
-    const ctx = await getTenantContext(slug)
-    const { session } = await requirePermission(ctx.id, 'appointment:create')
     const parsed = manualSchema.parse(input)
 
     // Combinar fecha + hora local del tenant → instante UTC (en el borde).
@@ -118,7 +134,10 @@ export async function createManualAppointmentAction(
     if (result.ok) revalidatePath(`/${slug}/panel`)
     return result.ok ? { ok: true } : result
   } catch (err) {
-    console.error('[createManualAppointmentAction]', err)
+    if (err instanceof SlotConflictError) {
+      return { ok: false, error: 'Ese barbero ya tiene una cita en ese horario.' }
+    }
+    log.error('createManualAppointmentAction', { err: String(err) })
     return { ok: false, error: 'No se pudo crear la cita.' }
   }
 }
@@ -137,9 +156,9 @@ export async function rescheduleAppointmentAction(
   slug: string,
   input: RescheduleInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getTenantContext(slug)
+  await requirePermission(ctx.id, 'appointment:update')
   try {
-    const ctx    = await getTenantContext(slug)
-    await requirePermission(ctx.id, 'appointment:update')
     const parsed = rescheduleSchema.parse(input)
 
     const newStartAt = fromZonedTime(`${parsed.dateStr}T${parsed.timeStr}:00`, ctx.timezone)
@@ -153,7 +172,10 @@ export async function rescheduleAppointmentAction(
     if (result.ok) revalidatePath(`/${slug}/panel`)
     return result.ok ? { ok: true } : result
   } catch (err) {
-    console.error('[rescheduleAppointmentAction]', err)
+    if (err instanceof SlotConflictError) {
+      return { ok: false, error: 'Ese barbero ya tiene una cita en el nuevo horario.' }
+    }
+    log.error('rescheduleAppointmentAction', { err: String(err) })
     return { ok: false, error: 'No se pudo reprogramar la cita.' }
   }
 }
@@ -170,9 +192,9 @@ export async function blockBarberDateAction(
   slug: string,
   input: z.infer<typeof blockDateSchema>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getTenantContext(slug)
+  await requirePermission(ctx.id, 'settings:update')
   try {
-    const ctx    = await getTenantContext(slug)
-    await requirePermission(ctx.id, 'settings:update')
     const parsed = blockDateSchema.parse(input)
 
     const result = await blockBarberDate(repo, {
@@ -185,7 +207,7 @@ export async function blockBarberDateAction(
     if (result.ok) revalidatePath(`/${slug}/panel`)
     return result
   } catch (err) {
-    console.error('[blockBarberDateAction]', err)
+    log.error('blockBarberDateAction', { err: String(err) })
     return { ok: false, error: 'No se pudo bloquear el día.' }
   }
 }
@@ -194,10 +216,9 @@ export async function unblockBarberDateAction(
   slug: string,
   input: { barberId: string | null; dateStr: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getTenantContext(slug)
+  await requirePermission(ctx.id, 'settings:update')
   try {
-    const ctx = await getTenantContext(slug)
-    await requirePermission(ctx.id, 'settings:update')
-
     const result = await unblockBarberDate(repo, {
       organizationId: ctx.id,
       barberId:       input.barberId,
@@ -207,7 +228,7 @@ export async function unblockBarberDateAction(
     if (result.ok) revalidatePath(`/${slug}/panel`)
     return result
   } catch (err) {
-    console.error('[unblockBarberDateAction]', err)
+    log.error('unblockBarberDateAction', { err: String(err) })
     return { ok: false, error: 'No se pudo desbloquear el día.' }
   }
 }

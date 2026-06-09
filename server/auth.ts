@@ -2,9 +2,10 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { organization } from 'better-auth/plugins'
 import { db } from '@/server/db'
+import { env } from '@/config/env'
 
 export const auth = betterAuth({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  baseURL: env.NEXT_PUBLIC_APP_URL,
 
   database: prismaAdapter(db, { provider: 'postgresql' }),
 

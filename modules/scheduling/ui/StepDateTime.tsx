@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { CalendarDays, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addDays, isSameDay, isSameMinute } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -28,20 +28,22 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
   // Días de la página actual: empezamos en mañana (+1 día desde hoy)
   const days = Array.from({ length: PAGE_SIZE }, (_, i) => addDays(new Date(), 1 + offset + i))
 
-  useEffect(() => {
-    if (!selectedDate) return
+  // Selección de día: actualiza estado y dispara el fetch en la misma acción.
+  // Sin useEffect: el flujo es siempre iniciado por el usuario, no por sincronización.
+  // El reset al cambiar barber/duration lo maneja el `key` en BookingFlow
+  // (este componente se desmonta y remonta limpio cuando cambia la key).
+  function selectDay(day: Date) {
+    setSelectedDate(day)
+    setSlots([])
     startTransition(async () => {
       const res = await getAvailableSlotsAction(tenantSlug, {
         barberId:  barber.id,
         serviceId,
-        dateISO:   selectedDate.toISOString(),
+        dateISO:   day.toISOString(),
       })
       setSlots(res.slots.map((s) => new Date(s)))
     })
-  }, [selectedDate, barber.id, serviceId, tenantSlug])
-
-  // Nota: el reset al cambiar barber/duration lo maneja el `key` en BookingFlow.
-  // Este componente se desmonta y remonta limpio cuando cambia la key.
+  }
 
   return (
     <div className="space-y-5">
@@ -55,7 +57,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
           {/* Navegación por páginas */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => { setOffset((o) => Math.max(0, o - PAGE_SIZE)); setSelectedDate(undefined) }}
+              onClick={() => { setOffset((o) => Math.max(0, o - PAGE_SIZE)); setSelectedDate(undefined); setSlots([]) }}
               disabled={offset === 0}
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 disabled:opacity-30"
             >
@@ -67,7 +69,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
                 : `+${offset} días`}
             </span>
             <button
-              onClick={() => { setOffset((o) => o + PAGE_SIZE); setSelectedDate(undefined) }}
+              onClick={() => { setOffset((o) => o + PAGE_SIZE); setSelectedDate(undefined); setSlots([]) }}
               disabled={offset >= 60} // máximo 60 días adelante
               className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 disabled:opacity-30"
             >
@@ -86,7 +88,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
             return (
               <button
                 key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
+                onClick={() => selectDay(day)}
                 className={cn(
                   'flex flex-col items-center rounded-xl border py-2 transition-smooth',
                   isSelected

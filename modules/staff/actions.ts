@@ -22,7 +22,7 @@ const barberSchema = z.object({
 
 export async function upsertBarberAction(slug: string, id: string | null, formData: FormData) {
   const ctx   = await getTenantContext(slug)
-  await requirePermission(ctx.id, 'barber:create')
+  await requirePermission(ctx.id, id ? 'barber:update' : 'barber:create')
 
   const raw = {
     displayName: formData.get('displayName'),
@@ -35,31 +35,37 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
   if (id) {
     const existing = await db.barber.findFirst({ where: { id, organizationId: ctx.id } })
     if (!existing) throw new Error('Barbero no encontrado')
-    await db.barber.update({
-      where: { id },
-      data: { displayName: input.displayName, nickname: input.nickname ?? null, specialties: input.specialties },
-    })
-    await db.workingHour.deleteMany({ where: { barberId: id } })
-    if (input.hoursJson.length > 0) {
-      await db.workingHour.createMany({
-        data: input.hoursJson.map((h) => ({ barberId: id, ...h })),
+    // Reemplazo de horarios atómico: si falla el createMany, el deleteMany se
+    // revierte y el barbero no queda sin horario (y por tanto no-reservable).
+    await db.$transaction(async (tx) => {
+      await tx.barber.update({
+        where: { id },
+        data: { displayName: input.displayName, nickname: input.nickname ?? null, specialties: input.specialties },
       })
-    }
+      await tx.workingHour.deleteMany({ where: { barberId: id } })
+      if (input.hoursJson.length > 0) {
+        await tx.workingHour.createMany({
+          data: input.hoursJson.map((h) => ({ barberId: id, ...h })),
+        })
+      }
+    })
   } else {
-    const barber = await db.barber.create({
-      data: {
-        organizationId: ctx.id,
-        displayName:    input.displayName,
-        nickname:       input.nickname ?? null,
-        specialties:    input.specialties,
-        active:         true,
-      },
-    })
-    if (input.hoursJson.length > 0) {
-      await db.workingHour.createMany({
-        data: input.hoursJson.map((h) => ({ barberId: barber.id, ...h })),
+    await db.$transaction(async (tx) => {
+      const barber = await tx.barber.create({
+        data: {
+          organizationId: ctx.id,
+          displayName:    input.displayName,
+          nickname:       input.nickname ?? null,
+          specialties:    input.specialties,
+          active:         true,
+        },
       })
-    }
+      if (input.hoursJson.length > 0) {
+        await tx.workingHour.createMany({
+          data: input.hoursJson.map((h) => ({ barberId: barber.id, ...h })),
+        })
+      }
+    })
   }
   revalidatePath(`/${slug}/panel/equipo`)
 }

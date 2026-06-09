@@ -1,6 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Plus, Loader2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -22,18 +21,18 @@ interface Props {
 }
 
 export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDate }: Props) {
-  const router = useRouter()
-  const [open, setOpen]     = useState(false)
-  const [isPending, start]  = useTransition()
-  const [error, setError]   = useState('')
+  const [open,      setOpen]      = useState(false)
+  const [isPending, setIsPending] = useState(false)
+  const [error,     setError]     = useState('')
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
+    setIsPending(true)
     const fd    = new FormData(e.currentTarget)
     const phone = `+57${String(fd.get('phone') ?? '').replace(/\D/g, '').slice(0, 10)}`
 
-    start(async () => {
+    try {
       const res = await createManualAppointmentAction(tenantSlug, {
         serviceId:     String(fd.get('serviceId')),
         barberId:      String(fd.get('barberId')),
@@ -45,11 +44,12 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
       })
       if (res.ok) {
         setOpen(false)
-        router.refresh()
       } else {
         setError(res.error)
       }
-    })
+    } finally {
+      setIsPending(false)
+    }
   }
 
   const disabled = services.length === 0 || barbers.length === 0

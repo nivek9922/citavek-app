@@ -1,5 +1,6 @@
 'use server'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { auth } from '@/server/auth'
@@ -33,7 +34,7 @@ export type SelfRegisterInput = z.infer<typeof selfRegisterSchema>
 
 export async function createBarberiaForSelfAction(
   input: SelfRegisterInput,
-): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; slug: string; id: string } | { ok: false; error: string }> {
   try {
     const data = selfRegisterSchema.parse(input)
 
@@ -91,14 +92,11 @@ export type CreateBarberiaInput = z.infer<typeof createBarberiaSchema>
 
 export async function createBarberiaAction(
   input: CreateBarberiaInput,
-): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; slug: string; id: string } | { ok: false; error: string }> {
+  await requireSuperAdmin()
   try {
-    await requireSuperAdmin()
     const data = createBarberiaSchema.parse(input)
 
-    // Crear usuario owner vía better-auth (o reutilizar si ya existe).
-    // Los headers se pasan para que better-auth procese el request inline,
-    // evitando un loop HTTP interno que causa memory pressure en dev.
     let ownerUser = await db.user.findUnique({ where: { email: data.ownerEmail } })
     if (!ownerUser) {
       const created = await auth.api.signUpEmail({
@@ -110,7 +108,7 @@ export async function createBarberiaAction(
       if (!ownerUser) return { ok: false, error: 'Error al recuperar el usuario creado.' }
     }
 
-    return createOrganization(repo, {
+    const result = await createOrganization(repo, {
       userId:       ownerUser.id,
       name:         data.name,
       slug:         data.slug,
@@ -118,6 +116,9 @@ export async function createBarberiaAction(
       phone:        data.phone,
       primaryColor: data.primaryColor,
     })
+
+    if (result.ok) revalidatePath('/admin')
+    return result
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'Error inesperado.' }
   }

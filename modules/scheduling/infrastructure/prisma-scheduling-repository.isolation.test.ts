@@ -10,6 +10,8 @@
  * tanto en la factory de vi.mock como en los propios tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { SlotConflictError } from '../domain/appointment'
+import type { NewAppointment } from '../domain/ports/scheduling-repository'
 
 // ── Mock de Prisma (vi.hoisted garantiza que mockDb existe cuando vi.mock se ejecuta) ──
 const mockDb = vi.hoisted(() => ({
@@ -20,7 +22,7 @@ const mockDb = vi.hoisted(() => ({
     findFirst: vi.fn(async () => null),
   },
   appointment: {
-    findFirst:  vi.fn(async () => null),
+    findFirst:  vi.fn(async (): Promise<Record<string, unknown> | null> => null),
     findMany:   vi.fn(async () => []),
     create:     vi.fn(async () => ({ id: 'apt-new' })),
     updateMany: vi.fn(async () => ({ count: 1 })),
@@ -37,8 +39,14 @@ const mockDb = vi.hoisted(() => ({
   scheduleException: {
     findFirst:   vi.fn(async () => null),
     upsert:      vi.fn(async () => ({ id: 'exc-1' })),
+    create:      vi.fn(async () => ({ id: 'exc-new' })),
+    update:      vi.fn(async () => ({ id: 'exc-1' })),
     deleteMany:  vi.fn(async () => ({ count: 0 })),
   },
+  // createAppointment / updateAppointmentTime corren en una transacción interactiva
+  // con advisory lock; el mock ejecuta el callback pasando el propio mockDb como tx.
+  $executeRaw:  vi.fn(async () => 0),
+  $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(mockDb)),
 }))
 
 vi.mock('@/server/db', () => ({ db: mockDb }))
@@ -129,6 +137,10 @@ describe('PrismaSchedulingRepository — tenant isolation', () => {
   })
 
   it('updateAppointmentTime filtra por organizationId', async () => {
+    // 1ª findFirst = lookup de la cita (devuelve barberId); 2ª = re-chequeo de solape (sin conflicto)
+    mockDb.appointment.findFirst
+      .mockResolvedValueOnce({ barberId: 'brb-1' })
+      .mockResolvedValueOnce(null)
     await repo.updateAppointmentTime(ORG_A, 'apt-1', new Date(), new Date())
     const where = lastCallWhere(mockDb.appointment.updateMany)
     expect(where).toMatchObject({ organizationId: ORG_A })
@@ -158,15 +170,59 @@ describe('PrismaSchedulingRepository — tenant isolation', () => {
     expect(where).toMatchObject({ organizationId: ORG_A })
   })
 
-  it('blockDate incluye organizationId en el upsert', async () => {
+  it('blockDate incluye organizationId al crear la excepción', async () => {
+    // findFirst (default null) → no existe → camino create
     await repo.blockDate(ORG_A, 'brb-1', '2025-12-25', null)
-    const call = (mockDb.scheduleException.upsert.mock.calls as unknown as [{ create: Record<string, unknown> }][]).at(-1)?.[0]
-    expect(call?.create).toMatchObject({ organizationId: ORG_A })
+    const call = (mockDb.scheduleException.create.mock.calls as unknown as [{ data: Record<string, unknown> }][]).at(-1)?.[0]
+    expect(call?.data).toMatchObject({ organizationId: ORG_A })
   })
 
   it('unblockDate filtra por organizationId', async () => {
     await repo.unblockDate(ORG_A, 'brb-1', '2025-12-25')
     const where = lastCallWhere(mockDb.scheduleException.deleteMany)
     expect(where).toMatchObject({ organizationId: ORG_A })
+  })
+})
+
+// ── Atomicidad anti doble-booking (C-1) ───────────────────────────────────────
+
+describe('PrismaSchedulingRepository — atomicidad de reservas', () => {
+  const baseAppointment: NewAppointment = {
+    organizationId: ORG_A,
+    serviceId:      'svc-1',
+    barberId:       'brb-1',
+    customerId:     'cust-1',
+    customerName:   'Ana',
+    customerPhone:  '+573001112233',
+    startAt:        new Date('2026-07-01T14:00:00Z'),
+    endAt:          new Date('2026-07-01T14:30:00Z'),
+    durationMin:    30,
+    priceCop:       25000,
+    status:         'confirmed',
+    source:         'online',
+  }
+
+  it('createAppointment corre dentro de una transacción con advisory lock', async () => {
+    mockDb.appointment.findFirst.mockResolvedValueOnce(null) // re-chequeo: sin solape
+    await repo.createAppointment(baseAppointment)
+    expect(mockDb.$transaction).toHaveBeenCalledOnce()
+    expect(mockDb.$executeRaw).toHaveBeenCalled() // pg_advisory_xact_lock
+    expect(mockDb.appointment.create).toHaveBeenCalledOnce()
+  })
+
+  it('createAppointment lanza SlotConflictError si la re-verificación detecta solape', async () => {
+    mockDb.appointment.findFirst.mockResolvedValueOnce({ id: 'apt-existing' }) // solape
+    await expect(repo.createAppointment(baseAppointment)).rejects.toBeInstanceOf(SlotConflictError)
+    expect(mockDb.appointment.create).not.toHaveBeenCalled() // no insertó la segunda cita
+  })
+
+  it('updateAppointmentTime lanza SlotConflictError si el nuevo horario se solapa', async () => {
+    mockDb.appointment.findFirst
+      .mockResolvedValueOnce({ barberId: 'brb-1' }) // lookup de la cita
+      .mockResolvedValueOnce({ id: 'apt-other' })   // re-chequeo: solape
+    await expect(
+      repo.updateAppointmentTime(ORG_A, 'apt-1', new Date(), new Date()),
+    ).rejects.toBeInstanceOf(SlotConflictError)
+    expect(mockDb.appointment.updateMany).not.toHaveBeenCalled()
   })
 })

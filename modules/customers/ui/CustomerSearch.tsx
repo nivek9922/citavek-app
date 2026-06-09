@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Search, X } from 'lucide-react'
 
@@ -16,10 +16,14 @@ export function CustomerSearch({ slug, initialQuery }: Props) {
   const [isPending, startTransition] = useTransition()
   const debounceRef                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Sincroniza si el usuario navega con back/forward
-  useEffect(() => {
-    setValue(searchParams.get('q') ?? '')
-  }, [searchParams])
+  // Sincroniza con navegación back/forward sin useEffect: patrón oficial de React
+  // de "ajustar estado durante el render" cuando un valor externo (la URL) cambia.
+  const urlQuery = searchParams.get('q') ?? ''
+  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery)
+  if (urlQuery !== prevUrlQuery) {
+    setPrevUrlQuery(urlQuery)
+    setValue(urlQuery)
+  }
 
   function handleChange(raw: string) {
     setValue(raw)

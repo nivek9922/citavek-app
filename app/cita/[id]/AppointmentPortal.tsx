@@ -33,10 +33,10 @@ function fmtTime(d: Date, tz: string) {
   }).format(new Date(d))
 }
 
-function fmtCop(cents: number) {
+function fmtCop(pesos: number) {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', maximumFractionDigits: 0,
-  }).format(cents / 100)
+  }).format(pesos)
 }
 
 // ── Componente ────────────────────────────────────────────────────────────────

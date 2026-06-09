@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star } from 'lucide-react'
 import { Button }   from '@/shared/ui/button'
 import { Input }    from '@/shared/ui/input'
@@ -64,10 +64,16 @@ export function BarbersManager({ barbers, tenantSlug }: Props) {
 function BarberRow({
   barber, tenantSlug, onEdit,
 }: { barber: BarberWithHours; tenantSlug: string; onEdit: () => void }) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
 
-  const toggle = () =>
-    startTransition(() => toggleBarberAction(tenantSlug, barber.id, !barber.active))
+  async function toggle() {
+    setIsPending(true)
+    try {
+      await toggleBarberAction(tenantSlug, barber.id, !barber.active)
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   const workDays = barber.workingHours
     .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
@@ -146,8 +152,8 @@ function buildInitialHours(wh: BarberWithHours['workingHours']): HoursState {
 function BarberForm({
   tenantSlug, barber, onDone,
 }: { tenantSlug: string; barber: BarberWithHours | null; onDone: () => void }) {
-  const [isPending, startTransition] = useTransition()
-  const [error, setError]   = useState('')
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError]         = useState('')
   const [hours, setHours]   = useState<HoursState>(() =>
     buildInitialHours(barber?.workingHours ?? []),
   )
@@ -163,9 +169,10 @@ function BarberForm({
     setHours((prev) => ({ ...prev, [day]: { ...prev[day]!, [field]: value } }))
   }
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
+    setIsPending(true)
 
     const hoursJson = JSON.stringify(
       DAYS
@@ -180,14 +187,14 @@ function BarberForm({
     const fd = new FormData(e.currentTarget)
     fd.set('hoursJson', hoursJson)
 
-    startTransition(async () => {
-      try {
-        await upsertBarberAction(tenantSlug, barber?.id ?? null, fd)
-        onDone()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al guardar')
-      }
-    })
+    try {
+      await upsertBarberAction(tenantSlug, barber?.id ?? null, fd)
+      onDone()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (

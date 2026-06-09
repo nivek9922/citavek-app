@@ -5,6 +5,7 @@ import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
 import { requireSuperAdmin, isSuperAdmin }  from '@/server/super-admin'
 import { db } from '@/server/db'
+import log from '@/server/logger'
 
 const brandingSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
@@ -37,7 +38,6 @@ export async function updateBrandingAction(slug: string, formData: FormData) {
     create: { organizationId: ctx.id, ...input },
   })
 
-  revalidatePath(`/${slug}`)
   revalidatePath(`/${slug}/panel/marca`)
 }
 
@@ -53,7 +53,6 @@ export async function updateOrgInfoAction(slug: string, formData: FormData) {
   })
 
   await db.organization.update({ where: { id: ctx.id }, data: input })
-  revalidatePath(`/${slug}`)
   revalidatePath(`/${slug}/panel/marca`)
 }
 
@@ -66,12 +65,20 @@ export async function setOrgStatusAction(
   orgId: string,
   status: 'active' | 'suspended',
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  // requireSuperAdmin fuera del try para que redirect() se propague correctamente.
+  // Next.js lanza un error interno NEXT_REDIRECT que el catch {} silenciaría.
+  const session = await requireSuperAdmin()
   try {
-    await requireSuperAdmin()
-    await db.organization.update({ where: { id: orgId }, data: { status } })
+    const org = await db.organization.update({
+      where:  { id: orgId },
+      data:   { status },
+      select: { slug: true, name: true },
+    })
+    log.audit('org.status_changed', { orgId, slug: org.slug, status, by: session.user.email })
     revalidatePath('/admin')
     return { ok: true }
-  } catch {
+  } catch (err) {
+    log.error('setOrgStatusAction', { orgId, status, err: String(err) })
     return { ok: false, error: 'No se pudo cambiar el estado.' }
   }
 }
@@ -86,21 +93,25 @@ export async function setOrgStatusAction(
 export async function deleteOrgAction(
   orgId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireSuperAdmin()
   try {
-    await requireSuperAdmin()
 
-    // Capturamos los usuarios miembros ANTES de que el borrado en cascada
-    // elimine las filas de `member`.
-    const members = await db.member.findMany({
-      where:  { organizationId: orgId },
-      select: { userId: true },
-    })
+    // Capturamos slug (para invalidar cache) y los usuarios miembros ANTES de que
+    // el borrado en cascada elimine la org y las filas de `member`.
+    const [org, members] = await Promise.all([
+      db.organization.findUnique({ where: { id: orgId }, select: { slug: true } }),
+      db.member.findMany({ where: { organizationId: orgId }, select: { userId: true } }),
+    ])
     const memberUserIds = members.map((m) => m.userId)
 
     await db.$transaction([
       db.appointment.deleteMany({ where: { organizationId: orgId } }),
       db.organization.delete({ where: { id: orgId } }),
     ])
+
+    if (org) {
+      log.audit('org.deleted', { orgId, slug: org.slug, by: session.user.email })
+    }
 
     // Limpieza de usuarios que quedaron huérfanos: sin ninguna otra membresía
     // ni rol de barbero en parte alguna. Así un correo de prueba puede volver a

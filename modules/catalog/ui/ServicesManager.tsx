@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react'
 import { Button }    from '@/shared/ui/button'
 import { Input }     from '@/shared/ui/input'
@@ -73,10 +73,16 @@ export function ServicesManager({ services, tenantSlug }: Props) {
 function ServiceRow({
   service, tenantSlug, onEdit,
 }: { service: ServiceDTO; tenantSlug: string; onEdit: () => void }) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
 
-  const toggle = () =>
-    startTransition(() => toggleServiceAction(tenantSlug, service.id, !service.active))
+  async function toggle() {
+    setIsPending(true)
+    try {
+      await toggleServiceAction(tenantSlug, service.id, !service.active)
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   return (
     <div className={cn(
@@ -118,21 +124,22 @@ function ServiceRow({
 function ServiceForm({
   tenantSlug, service, onDone,
 }: { tenantSlug: string; service: ServiceDTO | null; onDone: () => void }) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
+    setIsPending(true)
     const fd = new FormData(e.currentTarget)
-    startTransition(async () => {
-      try {
-        await upsertServiceAction(tenantSlug, service?.id ?? null, fd)
-        onDone()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al guardar')
-      }
-    })
+    try {
+      await upsertServiceAction(tenantSlug, service?.id ?? null, fd)
+      onDone()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (

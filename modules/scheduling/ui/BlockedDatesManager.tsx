@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { AlertCircle, CalendarOff, Trash2 } from 'lucide-react'
 import { Button }  from '@/shared/ui/button'
 import { Input }   from '@/shared/ui/input'
@@ -35,17 +35,17 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers }: Props) 
   const [scope, setScope]         = useState<string>('org')
   const [reason, setReason]       = useState('')
   const [error, setError]         = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
 
   const upcoming = list.filter((e) => e.date >= TODAY).sort((a, b) => a.date.localeCompare(b.date))
   const past     = list.filter((e) => e.date <  TODAY).sort((a, b) => b.date.localeCompare(a.date))
 
-  function handleAdd(e: React.SyntheticEvent) {
+  async function handleAdd(e: React.SyntheticEvent) {
     e.preventDefault()
     if (!date) return
     setError(null)
-
-    startTransition(async () => {
+    setIsPending(true)
+    try {
       const barberId = scope === 'org' ? null : scope
       const res = await blockBarberDateAction(tenantSlug, {
         barberId,
@@ -66,14 +66,19 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers }: Props) 
       setList((prev) => [...prev, newEntry])
       setDate('')
       setReason('')
-    })
+    } finally {
+      setIsPending(false)
+    }
   }
 
-  function handleDelete(id: string, barberId: string | null, dateStr: string) {
-    startTransition(async () => {
+  async function handleDelete(id: string, barberId: string | null, dateStr: string) {
+    setIsPending(true)
+    try {
       await unblockBarberDateAction(tenantSlug, { barberId, dateStr })
       setList((prev) => prev.filter((e) => e.id !== id))
-    })
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (

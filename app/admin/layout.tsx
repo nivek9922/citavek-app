@@ -1,11 +1,13 @@
+import { Suspense } from 'react'
 import { requireSuperAdmin } from '@/server/super-admin'
 import { signOutAction }     from '@/modules/identity/actions'
 
 export const metadata = { title: 'Super Admin — BookingFlow' }
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireSuperAdmin()
-
+// Layout NO async: el chrome es shell estático. La barra de usuario depende de la
+// sesión (headers) → se resuelve en streaming dentro de <Suspense>. El gate real
+// (requireSuperAdmin) vive además en la página, que es la que protege los datos.
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card px-6 py-3">
@@ -17,16 +19,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground">{session.user.email}</span>
-            <form action={signOutAction}>
-              <button type="submit" className="text-xs text-muted-foreground hover:text-foreground transition-smooth">
-                Cerrar sesión
-              </button>
-            </form>
+            <Suspense fallback={<span className="text-xs text-muted-foreground">…</span>}>
+              <AdminUserBar />
+            </Suspense>
           </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
     </div>
+  )
+}
+
+async function AdminUserBar() {
+  const session = await requireSuperAdmin()
+  return (
+    <>
+      <span className="text-xs text-muted-foreground">{session.user.email}</span>
+      <form action={signOutAction}>
+        <button type="submit" className="text-xs text-muted-foreground hover:text-foreground transition-smooth">
+          Cerrar sesión
+        </button>
+      </form>
+    </>
   )
 }

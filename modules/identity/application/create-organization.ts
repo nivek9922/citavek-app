@@ -12,7 +12,7 @@ export interface CreateOrganizationInput {
 }
 
 export type CreateOrganizationResult =
-  | { ok: true;  slug: string }
+  | { ok: true;  slug: string; id: string }
   | { ok: false; error: string }
 
 /**
@@ -43,5 +43,5 @@ export async function createOrganization(
   await repo.createBranding(org.id, input.primaryColor)
   await repo.createOwnerMembership(org.id, input.userId)
 
-  return { ok: true, slug: org.slug }
+  return { ok: true, slug: org.slug, id: org.id }
 }
