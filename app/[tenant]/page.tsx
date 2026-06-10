@@ -3,6 +3,8 @@ import { MapPin, Phone, Star, Clock, Scissors } from 'lucide-react'
 import { getTenantContext } from '@/server/tenant'
 import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers }  from '@/modules/staff/queries'
+import { getTopReviews }      from '@/modules/reviews/queries'
+import { ReviewsSection }     from '@/modules/reviews/ui/ReviewsSection'
 import { formatCop, formatDuration } from '@/shared/format'
 import { Badge }             from '@/shared/ui/badge'
 import { Card, CardContent } from '@/shared/ui/card'
@@ -24,9 +26,10 @@ export default async function TenantPage({
   const { tenant: slug } = await params
   const { embed }        = await searchParams
   const ctx = await getTenantContext(slug)
-  const [services, barbers] = await Promise.all([
+  const [services, barbers, reviews] = await Promise.all([
     listActiveServices(ctx.id),
     listActiveBarbers(ctx.id),
+    getTopReviews(ctx.id),
   ])
 
   if (embed === '1') {
@@ -190,7 +193,7 @@ export default async function TenantPage({
         <SectionHeader icon={<Star className="h-5 w-5 text-primary" />} title="Nuestro equipo" />
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {barbers.map((b) => (
+          {barbers.map((b, i) => (
             <Card
               key={b.id}
               className="hover:border-primary/40 hover:shadow-elegant transition-smooth"
@@ -199,7 +202,11 @@ export default async function TenantPage({
                 {/* Avatar */}
                 <Avatar className="h-14 w-14 shrink-0">
                   {b.avatarUrl && (
-                    <AvatarImage src={b.avatarUrl} alt={b.displayName} />
+                    <AvatarImage
+                      src={b.avatarUrl}
+                      alt={b.displayName}
+                      loading={i === 0 ? 'eager' : undefined}
+                    />
                   )}
                   <AvatarFallback className="text-xl font-bold">
                     {b.displayName.charAt(0).toUpperCase()}
@@ -232,6 +239,9 @@ export default async function TenantPage({
           ))}
         </div>
       </section>
+
+      {/* ─── TESTIMONIOS ─────────────────────────────────────── */}
+      <ReviewsSection reviews={reviews} />
 
       {/* ─── CTA bottom ───────────────────────────────────────── */}
       <div className="border-t border-border bg-card/40 py-8 text-center">

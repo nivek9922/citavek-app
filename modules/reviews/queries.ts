@@ -16,6 +16,45 @@ export async function getReviewPageData(appointmentId: string) {
 }
 export type ReviewPageData = NonNullable<Awaited<ReturnType<typeof getReviewPageData>>>
 
+export type TopReviewDTO = {
+  id: string
+  comment: string
+  customerName: string
+}
+
+export async function getTopReviews(
+  organizationId: string,
+  limit = 4,
+): Promise<TopReviewDTO[]> {
+  const rows = await db.review.findMany({
+    where: {
+      organizationId,
+      rating: 5,
+      comment: { not: null },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      comment: true,
+      appointment: { select: { customerName: true } },
+    },
+  })
+
+  return rows.map(r => ({
+    id: r.id,
+    comment: r.comment!,
+    customerName: maskName(r.appointment.customerName),
+  }))
+}
+
+function maskName(full: string): string {
+  const parts = full.trim().split(/\s+/)
+  if (parts.length < 2) return parts[0] ?? full
+  const last = parts[parts.length - 1][0]?.toUpperCase() ?? ''
+  return `${parts[0]} ${last}.`
+}
+
 export interface ReviewDTO {
   rating:       number
   comment:      string | null
