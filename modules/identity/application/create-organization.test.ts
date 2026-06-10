@@ -28,6 +28,10 @@ function createFakeRepo(opts: FakeOptions = {}) {
     createOwnerMembership: vi.fn(async (organizationId, userId) => {
       created.membership = { organizationId, userId }
     }),
+    findAccessCode:   vi.fn(async () => null),
+    consumeAccessCode: vi.fn(async () => {}),
+    createAccessCode:  vi.fn(async () => ({ id: 'code-1', code: 'BOKR-TEST-TEST', isUsed: false, usedBy: null, usedAt: null, expiresAt: new Date(), createdAt: new Date(), createdBy: 'test' })),
+    listAccessCodes:   vi.fn(async () => []),
   }
 
   return { repo, created }

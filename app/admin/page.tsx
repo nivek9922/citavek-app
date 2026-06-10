@@ -6,8 +6,10 @@ import {
   listOrganizationsForAdmin,
   getPlatformKPIs,
 } from '@/modules/tenancy/queries'
-import { AdminOrgsSection } from './AdminOrgsSection'
-import { AdminFilters }     from './AdminFilters'
+import { listAccessCodesAction } from '@/modules/identity/actions'
+import { AdminOrgsSection }       from './AdminOrgsSection'
+import { AdminFilters }           from './AdminFilters'
+import { AdminAccessCodesSection } from './AdminAccessCodesSection'
 
 const CHURN_DAYS = 30
 
@@ -22,9 +24,10 @@ export default async function AdminPage({
 }) {
   await requireSuperAdmin()
 
-  const [orgs, kpis, { q, status, city }] = await Promise.all([
+  const [orgs, kpis, codes, { q, status, city }] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
+    listAccessCodesAction(),
     searchParams,
   ])
 
@@ -77,6 +80,11 @@ export default async function AdminPage({
           </div>
         </section>
       )}
+
+      {/* ── Códigos de acceso ── */}
+      <div className="rounded-2xl border border-border bg-card/40 p-6">
+        <AdminAccessCodesSection initialCodes={codes} />
+      </div>
 
       {/* ── Filtros + lista ── */}
       <div className="space-y-4">

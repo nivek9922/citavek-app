@@ -43,4 +43,25 @@ export const prismaIdentityRepository: IdentityRepository = {
       },
     })
   },
+
+  async findAccessCode(code) {
+    return db.accessCode.findUnique({ where: { code } })
+  },
+
+  async consumeAccessCode(code, usedBy) {
+    await db.accessCode.update({
+      where: { code },
+      data:  { isUsed: true, usedBy, usedAt: new Date() },
+    })
+  },
+
+  async createAccessCode(code, expiresAt, createdBy) {
+    return db.accessCode.create({
+      data: { code, expiresAt, createdBy },
+    })
+  },
+
+  async listAccessCodes() {
+    return db.accessCode.findMany({ orderBy: { createdAt: 'desc' } })
+  },
 }

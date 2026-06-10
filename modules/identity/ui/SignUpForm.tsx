@@ -11,7 +11,7 @@ import {
 } from '@/shared/ui/select'
 import { cn }           from '@/shared/ui/utils'
 import { COLOMBIA_CITIES, type ColombiaCity } from '@/shared/constants/colombia-cities'
-import { createBarberiaForSelfAction } from '@/modules/identity/actions'
+import { checkAccessCodeAction, createBarberiaForSelfAction } from '@/modules/identity/actions'
 
 const PALETTE = ['#E0A300', '#22C55E', '#F43F5E', '#3B82F6', '#A855F7', '#06B6D4', '#F97316', '#1A1A1A']
 
@@ -38,18 +38,28 @@ export function SignUpForm() {
     setError('')
     const fd = new FormData(e.currentTarget)
 
-    const ownerName  = fd.get('ownerName')  as string
-    const email      = fd.get('email')      as string
-    const password   = fd.get('password')   as string
-    const shopName   = fd.get('shopName')   as string
-    const slug       = fd.get('slug')       as string
-    const phone      = fd.get('phone')      as string
+    const ownerName   = fd.get('ownerName')   as string
+    const email       = fd.get('email')       as string
+    const password    = fd.get('password')    as string
+    const shopName    = fd.get('shopName')    as string
+    const slug        = fd.get('slug')        as string
+    const phone       = fd.get('phone')       as string
+    const accessCode  = fd.get('accessCode')  as string
 
     if (!city) { setError('Selecciona tu ciudad.'); return }
 
     startTransition(async () => {
       try {
         setStep('creating')
+
+        // Paso 0: validar el código de acceso ANTES de crear el usuario.
+        // Así evitamos registros huérfanos si el código es inválido.
+        const codeCheck = await checkAccessCodeAction(accessCode)
+        if (!codeCheck.ok) {
+          setError(codeCheck.error)
+          setStep('form')
+          return
+        }
 
         // Paso 1: crear cuenta (better-auth setea la cookie de sesión).
         // Sin callbackURL para evitar que el cliente navegue automáticamente.
@@ -75,6 +85,7 @@ export function SignUpForm() {
           city,
           phone,
           primaryColor: color,
+          accessCode,
           _userId:      authData?.user.id,
         })
 
@@ -190,6 +201,32 @@ export function SignUpForm() {
               aria-label="Color personalizado"
             />
           </div>
+        </div>
+      </fieldset>
+
+      <div className="border-t border-border" />
+
+      {/* ── Código de acceso ──────────────────────────────── */}
+      <fieldset className="space-y-4">
+        <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Código de acceso
+        </legend>
+        <div className="space-y-1.5">
+          <Label htmlFor="accessCode">Código de activación</Label>
+          <Input
+            id="accessCode"
+            name="accessCode"
+            type="text"
+            placeholder="BOKR-XXXX-XXXX"
+            required
+            disabled={isPending}
+            autoComplete="off"
+            className="font-mono tracking-widest uppercase"
+            onChange={(e) => { e.target.value = e.target.value.toUpperCase() }}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Recibiste este código al adquirir tu plan.
+          </p>
         </div>
       </fieldset>
 

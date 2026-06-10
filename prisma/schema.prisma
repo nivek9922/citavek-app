@@ -400,3 +400,20 @@ model Review {
   @@index([organizationId, barberId, createdAt])
   @@map("review")
 }
+
+// ──────────────────── Códigos de acceso (registro controlado) ────────────────
+
+model AccessCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  isUsed    Boolean   @default(false)
+  usedBy    String?
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  createdBy String
+
+  @@index([code])
+  @@index([isUsed, expiresAt])
+  @@map("access_code")
+}

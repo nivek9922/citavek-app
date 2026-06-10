@@ -11,6 +11,7 @@ import { COLOMBIA_CITIES } from '@/shared/constants/colombia-cities'
 import { handlePrismaError } from '@/server/prisma-errors'
 import { prismaIdentityRepository as repo } from './infrastructure/prisma-identity-repository'
 import { createOrganization } from './application/create-organization'
+import { validateAccessCode } from './application/validate-access-code'
 import { getPrimaryMembership } from './queries'
 
 // ── Sign out ──────────────────────────────────────────────────────────────
@@ -18,6 +19,16 @@ import { getPrimaryMembership } from './queries'
 export async function signOutAction() {
   await auth.api.signOut({ headers: await headers() })
   redirect('/login')
+}
+
+// ── Pre-validación del código de acceso (sin consumirlo) ─────────────────
+// Se llama ANTES de crear el usuario para evitar registros huérfanos.
+
+export async function checkAccessCodeAction(
+  code: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!code || !code.trim()) return { ok: false, error: 'El código de acceso es obligatorio.' }
+  return validateAccessCode(repo, code)
 }
 
 // ── Registro self-service: owner crea su propia barbería ─────────────────
@@ -28,6 +39,7 @@ const selfRegisterSchema = z.object({
   city:         z.enum(COLOMBIA_CITIES),
   phone:        z.string().min(7).max(20),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#E0A300'),
+  accessCode:   z.string().min(1, 'El código de acceso es obligatorio'),
   // userId enviado por el cliente como fallback si la cookie aún no propagó al SA.
   _userId:      z.string().optional(),
 })
@@ -39,6 +51,10 @@ export async function createBarberiaForSelfAction(
 ): Promise<{ ok: true; slug: string; id: string } | { ok: false; error: string }> {
   try {
     const data = selfRegisterSchema.parse(input)
+
+    // Validar código de acceso antes de crear cualquier recurso.
+    const codeCheck = await validateAccessCode(repo, data.accessCode)
+    if (!codeCheck.ok) return codeCheck
 
     // Resolver userId: primero desde la sesión del servidor, luego desde el cliente.
     let userId: string | null = null
@@ -63,7 +79,7 @@ export async function createBarberiaForSelfAction(
     const existing = await getPrimaryMembership(userId)
     if (existing) return { ok: false, error: 'Ya tienes una barbería registrada.' }
 
-    return createOrganization(repo, {
+    const result = await createOrganization(repo, {
       userId,
       name:         data.name,
       slug:         data.slug,
@@ -71,6 +87,14 @@ export async function createBarberiaForSelfAction(
       phone:        data.phone,
       primaryColor: data.primaryColor,
     })
+
+    // Consumir el código solo si la org se creó con éxito.
+    if (result.ok) {
+      const email = session?.user.email ?? data._userId ?? 'unknown'
+      await repo.consumeAccessCode(data.accessCode.trim().toUpperCase(), email)
+    }
+
+    return result
   } catch (err) {
     return { ok: false, error: handlePrismaError(err) }
   }
@@ -123,5 +147,68 @@ export async function createBarberiaAction(
     return result
   } catch (err) {
     return { ok: false, error: handlePrismaError(err) }
+  }
+}
+
+// ── Generar código de acceso (solo super-admin) ───────────────────────────
+
+function generateCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let part1 = ''
+  let part2 = ''
+  for (let i = 0; i < 4; i++) part1 += chars[Math.floor(Math.random() * chars.length)]
+  for (let i = 0; i < 4; i++) part2 += chars[Math.floor(Math.random() * chars.length)]
+  return `BOKR-${part1}-${part2}`
+}
+
+const generateCodeSchema = z.object({
+  expiryDays: z.coerce.number().int().min(1).max(365).default(30),
+})
+
+export async function generateAccessCodeAction(
+  input: { expiryDays?: number },
+): Promise<{ ok: true; code: string } | { ok: false; error: string }> {
+  const session = await requireSuperAdmin()
+  try {
+    const { expiryDays } = generateCodeSchema.parse(input)
+    const expiresAt = new Date(Date.now() + expiryDays * 86_400_000)
+    const code = generateCode()
+    await repo.createAccessCode(code, expiresAt, session.user.email)
+    revalidatePath('/admin')
+    return { ok: true, code }
+  } catch (err) {
+    return { ok: false, error: handlePrismaError(err) }
+  }
+}
+
+export async function listAccessCodesAction() {
+  await requireSuperAdmin()
+  return repo.listAccessCodes()
+}
+
+// ── Cambiar contraseña (usuario logueado) ─────────────────────────────────
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword:     z.string().min(8, 'La nueva contraseña debe tener al menos 8 caracteres'),
+})
+
+export async function changePasswordAction(
+  input: { currentPassword: string; newPassword: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const data = changePasswordSchema.parse(input)
+    const res = await auth.api.changePassword({
+      body:    { currentPassword: data.currentPassword, newPassword: data.newPassword, revokeOtherSessions: false },
+      headers: await headers(),
+    })
+    if (!res) return { ok: false, error: 'No se pudo cambiar la contraseña.' }
+    return { ok: true }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error al cambiar la contraseña.'
+    if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('incorrect')) {
+      return { ok: false, error: 'La contraseña actual es incorrecta.' }
+    }
+    return { ok: false, error: msg }
   }
 }
