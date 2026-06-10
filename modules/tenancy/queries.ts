@@ -58,7 +58,11 @@ export async function listOrganizationsForAdmin() {
 
   return orgs.map((org) => ({
     ...org,
-    health: computeHealthScore(createdBy.get(org.id) ?? 0, cancelledBy.get(org.id) ?? 0),
+    health: computeHealthScore(
+      createdBy.get(org.id) ?? 0,
+      cancelledBy.get(org.id) ?? 0,
+      Math.floor((Date.now() - org.createdAt.getTime()) / 86_400_000),
+    ),
   }))
 }
 
