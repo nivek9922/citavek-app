@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { formatInTimeZone } from 'date-fns-tz'
-import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone, Star } from 'lucide-react'
+import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone, Star, BellRing, CheckCheck } from 'lucide-react'
+import { buildReminderMessage, sanitizePhoneForWa } from '@/modules/scheduling/domain/whatsapp-reminder'
 import { cn } from '@/shared/ui/utils'
 import { formatCop } from '@/shared/format'
 import { EmptyState } from '@/shared/ui/empty-state'
@@ -27,13 +28,14 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 interface Props {
-  appointments: AppointmentRow[]
-  tenantSlug:   string
-  timezone:     string
-  now:          number
+  appointments:     AppointmentRow[]
+  tenantSlug:       string
+  timezone:         string
+  now:              number
+  organizationName: string
 }
 
-export function AgendaBoard({ appointments, tenantSlug, timezone, now }: Props) {
+export function AgendaBoard({ appointments, tenantSlug, timezone, now, organizationName }: Props) {
   if (appointments.length === 0) {
     return (
       <EmptyState
@@ -47,14 +49,15 @@ export function AgendaBoard({ appointments, tenantSlug, timezone, now }: Props) 
   return (
     <div className="space-y-2">
       {appointments.map((apt) => (
-        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} now={now} />
+        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} now={now} organizationName={organizationName} />
       ))}
     </div>
   )
 }
 
-function AppointmentCard({ apt, tenantSlug, timezone, now }: { apt: AppointmentRow; tenantSlug: string; timezone: string; now: number }) {
+function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: { apt: AppointmentRow; tenantSlug: string; timezone: string; now: number; organizationName: string }) {
   const [isPending, setIsPending] = useState(false)
+  const [reminded, setReminded]   = useState(false)
   const isFuture = new Date(apt.startAt).getTime() > now
 
   async function update(status: string) {
@@ -80,6 +83,23 @@ function AppointmentCard({ apt, tenantSlug, timezone, now }: { apt: AppointmentR
     } finally {
       setIsPending(false)
     }
+  }
+
+  function sendReminder() {
+    const formattedTime = formatInTimeZone(new Date(apt.startAt), timezone, 'HH:mm')
+    const barberName    = apt.barber.nickname ?? apt.barber.displayName.split(' ')[0] ?? apt.barber.displayName
+    const msg = buildReminderMessage({
+      customerName:  apt.customerName,
+      formattedTime,
+      barberName,
+      shopName: organizationName,
+    })
+    window.open(
+      `https://wa.me/${sanitizePhoneForWa(apt.customerPhone)}?text=${encodeURIComponent(msg)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+    setReminded(true)
   }
 
   return (
@@ -141,6 +161,18 @@ function AppointmentCard({ apt, tenantSlug, timezone, now }: { apt: AppointmentR
       {/* Acciones */}
       {apt.status === 'confirmed' && (
         <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
+          {apt.customerPhone && (
+            <ActionBtn
+              onClick={sendReminder}
+              icon={reminded ? <CheckCheck className="h-3.5 w-3.5" /> : <BellRing className="h-3.5 w-3.5" />}
+              label={reminded ? 'Enviado' : 'Recordatorio'}
+              className={reminded
+                ? 'text-[#25D366]/50 hover:bg-[#25D366]/5'
+                : 'text-[#25D366] hover:bg-[#25D366]/10'
+              }
+              title={reminded ? 'Recordatorio ya enviado' : 'Enviar recordatorio por WhatsApp'}
+            />
+          )}
           <ActionBtn
             onClick={() => update('completed')}
             icon={<CheckCircle2 className="h-3.5 w-3.5" />}

@@ -165,7 +165,7 @@ export default async function PanelPage({
               isToday={selectedDate === today}
               count={appointments.length}
             />
-            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} now={Date.now()} />
+            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} now={Date.now()} organizationName={ctx.name} />
           </>
         )}
       </section>
