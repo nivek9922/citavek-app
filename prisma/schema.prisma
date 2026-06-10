@@ -73,6 +73,7 @@ model Organization {
 
   members     Member[]
   invitations Invitation[]
+  reviews     Review[]
 
   @@index([status])
   @@map("organization")
@@ -145,6 +146,7 @@ model Barber {
   workingHours       WorkingHour[]
   appointments       Appointment[]
   scheduleExceptions ScheduleException[]
+  reviews            Review[]
 
   @@index([organizationId, active, sortOrder])
   @@index([userId])
@@ -242,6 +244,8 @@ model Appointment {
   createdAt   DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
   cancelledAt DateTime? @db.Timestamptz(6)
+
+  review Review?
 
   @@index([organizationId, startAt])
   @@index([organizationId, barberId, startAt])
@@ -345,4 +349,23 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+// ──────────────────── Reseñas ────────────────────
+
+model Review {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  barberId       String
+  barber         Barber       @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointmentId  String       @unique
+  appointment    Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([organizationId, barberId, createdAt])
+  @@map("review")
 }

@@ -28,7 +28,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
   const [isPending,    startTransition] = useTransition()
 
   // Días de la página actual: empezamos en mañana (+1 día desde hoy)
-  const days = Array.from({ length: PAGE_SIZE }, (_, i) => addDays(new Date(), 1 + offset + i))
+  const days = Array.from({ length: PAGE_SIZE }, (_, i) => addDays(new Date(), offset + i))
 
   // Selección de día: actualiza estado y dispara el fetch en la misma acción.
   // Sin useEffect: el flujo es siempre iniciado por el usuario, no por sincronización.

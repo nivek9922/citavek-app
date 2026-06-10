@@ -2,11 +2,12 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { formatInTimeZone } from 'date-fns-tz'
-import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone } from 'lucide-react'
+import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone, Star } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 import { formatCop } from '@/shared/format'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { updateAppointmentStatusAction } from '@/modules/scheduling/actions'
+import { generateReviewLinkAction } from '@/modules/reviews/actions'
 import type { AppointmentRow } from '@/modules/analytics/queries'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -29,9 +30,10 @@ interface Props {
   appointments: AppointmentRow[]
   tenantSlug:   string
   timezone:     string
+  now:          number
 }
 
-export function AgendaBoard({ appointments, tenantSlug, timezone }: Props) {
+export function AgendaBoard({ appointments, tenantSlug, timezone, now }: Props) {
   if (appointments.length === 0) {
     return (
       <EmptyState
@@ -45,21 +47,36 @@ export function AgendaBoard({ appointments, tenantSlug, timezone }: Props) {
   return (
     <div className="space-y-2">
       {appointments.map((apt) => (
-        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} />
+        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} now={now} />
       ))}
     </div>
   )
 }
 
-function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; tenantSlug: string; timezone: string }) {
+function AppointmentCard({ apt, tenantSlug, timezone, now }: { apt: AppointmentRow; tenantSlug: string; timezone: string; now: number }) {
   const [isPending, setIsPending] = useState(false)
-  const isFuture = new Date(apt.startAt).getTime() > Date.now()
+  const isFuture = new Date(apt.startAt).getTime() > now
 
   async function update(status: string) {
     setIsPending(true)
     try {
       const res = await updateAppointmentStatusAction(tenantSlug, apt.id, status)
       if (!res.ok) toast.error(res.error)
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  async function sendReviewInvite() {
+    const win = window.open('', '_blank')
+    setIsPending(true)
+    try {
+      const res = await generateReviewLinkAction(tenantSlug, apt.id)
+      if (!res.ok) { win?.close(); toast.error(res.error); return }
+      const msg = encodeURIComponent(
+        `Hola ${apt.customerName}, ¿cómo estuvo tu experiencia? Déjanos tu opinión aquí: ${res.url}`,
+      )
+      win!.location.href = `https://wa.me/${apt.customerPhone.replace(/\D/g, '')}?text=${msg}`
     } finally {
       setIsPending(false)
     }
@@ -96,7 +113,7 @@ function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; t
             <p className="text-xs text-muted-foreground">{apt.customerPhone}</p>
             {apt.customerPhone && (
               <a
-                href={`https://wa.me/57${apt.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${apt.customerName}, tu cita con ${apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]} el ${formatInTimeZone(new Date(apt.startAt), timezone, 'dd/MM')} a las ${formatInTimeZone(new Date(apt.startAt), timezone, 'HH:mm')} está confirmada 💈`)}`}
+                href={`https://wa.me/${apt.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${apt.customerName}, tu cita con ${apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]} el ${formatInTimeZone(new Date(apt.startAt), timezone, 'dd/MM')} a las ${formatInTimeZone(new Date(apt.startAt), timezone, 'HH:mm')} está confirmada 💈`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Enviar WhatsApp"
@@ -159,6 +176,17 @@ function AppointmentCard({ apt, tenantSlug, timezone }: { apt: AppointmentRow; t
             icon={<XCircle className="h-3.5 w-3.5" />}
             label="Cancelar"
             className="text-destructive hover:bg-destructive/10"
+          />
+        </div>
+      )}
+      {apt.status === 'completed' && apt.customerPhone && (
+        <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
+          <ActionBtn
+            onClick={sendReviewInvite}
+            icon={<Star className="h-3.5 w-3.5" />}
+            label="Enviar invitación"
+            className="text-yellow-400 hover:bg-yellow-500/10"
+            disabled={isPending}
           />
         </div>
       )}

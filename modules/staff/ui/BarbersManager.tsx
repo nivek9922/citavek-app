@@ -2,14 +2,21 @@
 import Image from 'next/image'
 import { useState, useTransition, useRef } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star } from 'lucide-react'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star, MessageCircle } from 'lucide-react'
 import { Button }   from '@/shared/ui/button'
 import { Input }    from '@/shared/ui/input'
 import { Label }    from '@/shared/ui/label'
 import { Badge }    from '@/shared/ui/badge'
 import { cn }       from '@/shared/ui/utils'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/shared/ui/dialog'
+import { StarRating } from '@/modules/reviews/ui/StarRating'
 import { upsertBarberAction, toggleBarberAction, uploadBarberAvatarAction } from '../actions'
 import type { BarberWithHours } from '../queries'
+import type { ReviewDTO } from '@/modules/reviews/queries'
 
 const DAYS = [
   { value: 1, label: 'Lun' }, { value: 2, label: 'Mar' }, { value: 3, label: 'Mié' },
@@ -28,9 +35,13 @@ function timeToMin(time: string) {
   return (h ?? 0) * 60 + (m ?? 0)
 }
 
-interface Props { barbers: BarberWithHours[]; tenantSlug: string }
+interface Props {
+  barbers:          BarberWithHours[]
+  tenantSlug:       string
+  reviewsByBarber?: Record<string, ReviewDTO[]>
+}
 
-export function BarbersManager({ barbers, tenantSlug }: Props) {
+export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editing,  setEditing]  = useState<BarberWithHours | null>(null)
 
@@ -56,7 +67,13 @@ export function BarbersManager({ barbers, tenantSlug }: Props) {
           <p className="py-8 text-center text-sm text-muted-foreground">Sin barberos. Añade el primero.</p>
         )}
         {barbers.map((b) => (
-          <BarberRow key={b.id} barber={b} tenantSlug={tenantSlug} onEdit={() => openEdit(b)} />
+          <BarberRow
+            key={b.id}
+            barber={b}
+            tenantSlug={tenantSlug}
+            onEdit={() => openEdit(b)}
+            reviews={reviewsByBarber[b.id] ?? []}
+          />
         ))}
       </div>
     </div>
@@ -64,8 +81,8 @@ export function BarbersManager({ barbers, tenantSlug }: Props) {
 }
 
 function BarberRow({
-  barber, tenantSlug, onEdit,
-}: { barber: BarberWithHours; tenantSlug: string; onEdit: () => void }) {
+  barber, tenantSlug, onEdit, reviews,
+}: { barber: BarberWithHours; tenantSlug: string; onEdit: () => void; reviews: ReviewDTO[] }) {
   const [isPending, setIsPending] = useState(false)
 
   async function toggle() {
@@ -122,6 +139,39 @@ function BarberRow({
         </div>
       </div>
       <div className="flex items-center gap-1">
+        {reviews.length > 0 && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <button title="Ver reseñas"
+                className="rounded-lg p-1.5 text-yellow-400 hover:bg-yellow-500/10 transition-smooth">
+                <MessageCircle className="h-4 w-4" />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  Reseñas de {barber.nickname ?? barber.displayName.split(' ')[0]}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-2">
+                {reviews.map((r, i) => (
+                  <div key={i} className="rounded-xl border border-border bg-card p-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <StarRating value={r.rating} readonly size="sm" />
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(new Date(r.createdAt), "d MMM yyyy", { locale: es })}
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium">{r.customerName} · {r.serviceName}</p>
+                    {r.comment && (
+                      <p className="text-xs text-muted-foreground italic">&ldquo;{r.comment}&rdquo;</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
         <button onClick={onEdit} title="Editar"
           className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
           <Pencil className="h-4 w-4" />
