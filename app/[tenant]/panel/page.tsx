@@ -22,6 +22,7 @@ import { AgendaDateNav }  from '@/modules/scheduling/ui/AgendaDateNav'
 import { AgendaWeekView } from '@/modules/scheduling/ui/AgendaWeekView'
 import { NewAppointmentDialog } from '@/modules/scheduling/ui/NewAppointmentDialog'
 import { OnboardingWidget, OnboardingSuccessStrip } from '@/modules/onboarding/ui/OnboardingWidget'
+import { OnboardingWizard } from '@/modules/onboarding/ui/OnboardingWizardClient'
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -52,7 +53,8 @@ export default async function PanelPage({
   await requireMembership(ctx.id)
 
   const jar = await cookies()
-  const dismissed = jar.get(`ob-dismissed-${ctx.id}`)?.value === '1'
+  const dismissed    = jar.get(`ob-dismissed-${ctx.id}`)?.value === '1'
+  const wizardSeen   = jar.get(`ob-wizard-${ctx.id}`)?.value === '1'
 
   const today      = tenantToday(ctx.timezone)
   const isWeekView = view === 'week'
@@ -105,6 +107,15 @@ export default async function PanelPage({
 
   return (
     <div className="space-y-8">
+      {!wizardSeen && !allDone && (
+        <OnboardingWizard
+          slug={slug}
+          initialColor={ctx.branding.primaryColor}
+          initialLogoUrl={ctx.branding.logoUrl}
+          initialCoverUrl={ctx.branding.coverUrl}
+        />
+      )}
+
       {allDone ? (
         <OnboardingSuccessStrip slug={slug} />
       ) : !dismissed ? (

@@ -26,8 +26,8 @@ export function OnboardingWidget({ steps, slug }: { steps: OnboardingStep[]; slu
   const nextStepIdx    = steps.findIndex((s) => !s.completed)
 
   function handleDismiss() {
-    startTransition(() => {
-      dismissOnboardingAction(slug)
+    startTransition(async () => {
+      await dismissOnboardingAction(slug)
     })
   }
 

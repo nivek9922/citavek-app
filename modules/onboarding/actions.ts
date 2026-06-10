@@ -18,3 +18,18 @@ export async function dismissOnboardingAction(slug: string) {
 
   revalidatePath(`/${slug}/panel`)
 }
+
+export async function markWizardSeenAction(slug: string) {
+  const ctx = await getTenantContext(slug)
+  await requireMembership(ctx.id)
+
+  const jar = await cookies()
+  jar.set(`ob-wizard-${ctx.id}`, '1', {
+    maxAge: 60 * 60 * 24 * 365 * 5,
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+  })
+
+  revalidatePath(`/${slug}/panel`)
+}
