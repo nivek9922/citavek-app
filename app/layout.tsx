@@ -7,6 +7,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'BookingFlow — Software para barberías',
   description: 'Reservas online y gestión para barberías en Colombia.',
+  // Desactiva la auto-detección de teléfonos de iOS/Brave móvil. Sin esto, el
+  // navegador transforma el texto del teléfono en <a href="tel:"> antes de que
+  // React hidrate, causando un hydration mismatch inevitable.
+  formatDetection: { telephone: false },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -38,6 +38,9 @@ export async function updateBrandingAction(slug: string, formData: FormData) {
 
   await updateBranding(repo, ctx.id, input)
   revalidatePath(`/${slug}/panel/marca`)
+  // El color de marca alimenta el theme_color del manifiesto y el avatar fallback.
+  revalidatePath(`/${slug}/manifest.webmanifest`)
+  revalidatePath(`/${slug}/icon`)
 }
 
 async function extractImageBuffer(formData: FormData): Promise<Buffer | { error: string }> {
@@ -60,6 +63,9 @@ export async function uploadTenantLogoAction(
     const url = await uploadBrandImage(repo, cloudinaryAdapter, ctx.id, slug, 'logo', result, ctx.branding.logoUrl)
     revalidatePath(`/${slug}`)
     revalidatePath(`/${slug}/panel/marca`)
+    // El logo es el icono del manifiesto; si antes no había, deja de usarse el avatar fallback.
+    revalidatePath(`/${slug}/manifest.webmanifest`)
+    revalidatePath(`/${slug}/icon`)
     return { ok: true, url }
   } catch {
     return { ok: false, error: 'No se pudo subir el logo. Intenta de nuevo.' }
@@ -97,6 +103,9 @@ export async function updateOrgInfoAction(slug: string, formData: FormData) {
 
   await updateOrgInfo(repo, ctx.id, input)
   revalidatePath(`/${slug}/panel/marca`)
+  // El nombre alimenta name/short_name del manifiesto y la inicial del avatar fallback.
+  revalidatePath(`/${slug}/manifest.webmanifest`)
+  revalidatePath(`/${slug}/icon`)
 }
 
 export async function deleteTenantBrandAssetAction(
@@ -111,6 +120,11 @@ export async function deleteTenantBrandAssetAction(
     revalidatePath(`/${slug}`)
     revalidatePath(`/${slug}/panel/marca`)
     revalidatePath(`/${slug}/panel`)
+    // Solo el logo es icono del manifiesto; al quitarlo se vuelve al avatar fallback.
+    if (field === 'logo') {
+      revalidatePath(`/${slug}/manifest.webmanifest`)
+      revalidatePath(`/${slug}/icon`)
+    }
     return { ok: true }
   } catch {
     return { ok: false, error: 'No se pudo eliminar la imagen. Intenta de nuevo.' }

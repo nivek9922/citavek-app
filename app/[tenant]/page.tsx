@@ -102,9 +102,12 @@ export default async function TenantPage({
               {ctx.address ? `${ctx.address}${ctx.city ? `, ${ctx.city}` : ''}` : (ctx.city ?? 'Colombia')}
             </span>
             {ctx.phone && (
-              <span className="flex items-center gap-1.5">
+              <a
+                href={`tel:${ctx.phone}`}
+                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+              >
                 <Phone className="h-4 w-4 shrink-0" /> {ctx.phone}
-              </span>
+              </a>
             )}
           </div>
 
