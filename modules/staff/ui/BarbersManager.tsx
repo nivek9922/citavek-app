@@ -5,11 +5,12 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star, MessageCircle } from 'lucide-react'
-import { Button }   from '@/shared/ui/button'
-import { Input }    from '@/shared/ui/input'
-import { Label }    from '@/shared/ui/label'
-import { Badge }    from '@/shared/ui/badge'
-import { cn }       from '@/shared/ui/utils'
+import { Button }      from '@/shared/ui/button'
+import { Input }       from '@/shared/ui/input'
+import { Label }       from '@/shared/ui/label'
+import { Badge }       from '@/shared/ui/badge'
+import { cn }          from '@/shared/ui/utils'
+import { EmptyState }  from '@/shared/ui/empty-state'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/shared/ui/dialog'
@@ -62,10 +63,15 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Pr
         <BarberForm tenantSlug={tenantSlug} barber={editing} onDone={close} />
       )}
 
+      {barbers.length === 0 ? (
+        <EmptyState
+          icon="✂️"
+          title="Aún no tienes barberos registrados"
+          description="Tus clientes podrán elegir con quién cortarse. Añade a tu equipo con sus horarios y especialidades para que aparezcan en la página de reservas."
+          action={<Button size="sm" onClick={openCreate}>Añadir primer barbero</Button>}
+        />
+      ) : (
       <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
-        {barbers.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">Sin barberos. Añade el primero.</p>
-        )}
         {barbers.map((b) => (
           <BarberRow
             key={b.id}
@@ -76,6 +82,7 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Pr
           />
         ))}
       </div>
+      )}
     </div>
   )
 }

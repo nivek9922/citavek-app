@@ -3,12 +3,13 @@ import Image from 'next/image'
 import { useOptimistic, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
-import { Button }    from '@/shared/ui/button'
-import { Input }     from '@/shared/ui/input'
-import { Label }     from '@/shared/ui/label'
-import { Textarea }  from '@/shared/ui/textarea'
-import { Badge }     from '@/shared/ui/badge'
-import { cn }        from '@/shared/ui/utils'
+import { Button }     from '@/shared/ui/button'
+import { Input }      from '@/shared/ui/input'
+import { Label }      from '@/shared/ui/label'
+import { Textarea }   from '@/shared/ui/textarea'
+import { Badge }      from '@/shared/ui/badge'
+import { cn }         from '@/shared/ui/utils'
+import { EmptyState } from '@/shared/ui/empty-state'
 import { formatCop, formatDuration } from '@/shared/format'
 import { upsertServiceAction, toggleServiceAction, reorderServiceAction } from '../actions'
 import type { ServiceDTO } from '../queries'
@@ -96,12 +97,15 @@ export function ServicesManager({ services: initial, tenantSlug }: Props) {
         />
       )}
 
+      {optimistic.length === 0 ? (
+        <EmptyState
+          icon="🗂️"
+          title="Tu catálogo de servicios está vacío"
+          description="Crea tu carta con precios y duración real. Tus clientes la ven al reservar — sin servicios, la agenda no puede abrirse."
+          action={<Button size="sm" onClick={openCreate}>Crear primer servicio</Button>}
+        />
+      ) : (
       <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
-        {optimistic.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Sin servicios. Añade el primero.
-          </p>
-        )}
         {optimistic.map((svc, idx) => (
           <ServiceRow
             key={svc.id}
@@ -115,6 +119,7 @@ export function ServicesManager({ services: initial, tenantSlug }: Props) {
           />
         ))}
       </div>
+      )}
     </div>
   )
 }

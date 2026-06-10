@@ -2,6 +2,7 @@ import { DollarSign, CalendarDays, Scissors, TrendingUp } from 'lucide-react'
 import { format, addDays, parseISO, differenceInCalendarDays, isValid, startOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { getTenantContext } from '@/server/tenant'
 import { requireMembership } from '@/server/auth-guards'
 import {
@@ -20,6 +21,7 @@ import { AgendaBoard }    from '@/modules/scheduling/ui/AgendaBoard'
 import { AgendaDateNav }  from '@/modules/scheduling/ui/AgendaDateNav'
 import { AgendaWeekView } from '@/modules/scheduling/ui/AgendaWeekView'
 import { NewAppointmentDialog } from '@/modules/scheduling/ui/NewAppointmentDialog'
+import { OnboardingWidget, OnboardingSuccessStrip } from '@/modules/onboarding/ui/OnboardingWidget'
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -49,6 +51,9 @@ export default async function PanelPage({
   const ctx = await getTenantContext(slug)
   await requireMembership(ctx.id)
 
+  const jar = await cookies()
+  const dismissed = jar.get(`ob-dismissed-${ctx.id}`)?.value === '1'
+
   const today      = tenantToday(ctx.timezone)
   const isWeekView = view === 'week'
   const base       = `/${slug}/panel`
@@ -76,8 +81,36 @@ export default async function PanelPage({
     listActiveBarbers(ctx.id),
   ])
 
+  const onboardingSteps = [
+    {
+      label: 'Personaliza tu marca',
+      description: 'Tu logo y portada son lo primero que ven tus clientes al entrar a reservar.',
+      completed: ctx.branding.logoUrl !== null || ctx.branding.coverUrl !== null,
+      href: 'marca', linkText: 'Ir a Marca',
+    },
+    {
+      label: 'Registra tu primer barbero',
+      description: 'Tus clientes eligen con quién se van a cortar. Sin barberos, no hay a quién asignar.',
+      completed: barbers.length > 0,
+      href: 'equipo', linkText: 'Ir a Equipo',
+    },
+    {
+      label: 'Crea tu primer servicio',
+      description: 'Sin servicios en tu carta, tu agenda no puede abrirse. Añade precios y duraciones reales.',
+      completed: services.length > 0,
+      href: 'servicios', linkText: 'Ir a Servicios',
+    },
+  ]
+  const allDone = onboardingSteps.every((s) => s.completed)
+
   return (
     <div className="space-y-8">
+      {allDone ? (
+        <OnboardingSuccessStrip slug={slug} />
+      ) : !dismissed ? (
+        <OnboardingWidget steps={onboardingSteps} slug={slug} />
+      ) : null}
+
       <PageHeader
         title="Agenda"
         description={capitalize(format(parseISO(today), "EEEE d 'de' MMMM", { locale: es }))}

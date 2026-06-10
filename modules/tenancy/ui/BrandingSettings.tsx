@@ -43,6 +43,21 @@ export function BrandingSettings({ tenantSlug, org, branding }: Props) {
 
       {/* Imágenes */}
       <Section icon={<ImageIcon className="h-5 w-5 text-primary" />} title="Imágenes">
+        {!branding?.logoUrl && !branding?.coverUrl && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm space-y-2">
+            <p className="font-medium">¿Para qué sirve cada imagen?</p>
+            <div className="space-y-1.5 text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">Logo —</span>{' '}
+                Aparece en el encabezado de tu panel y en la página de reservas que tus clientes visitan.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Portada —</span>{' '}
+                Es la imagen de fondo que ven tus clientes al abrir tu link. Una portada atractiva convierte más visitas en citas.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="grid gap-6 sm:grid-cols-2">
           <ImageUploader
             label="Logo"
