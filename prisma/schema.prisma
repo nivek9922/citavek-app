@@ -65,6 +65,7 @@ model Organization {
   status   OrganizationStatus @default(active)
 
   branding           Branding?
+  branches           Branch[]
   services           Service[]
   barbers            Barber[]
   customers          Customer[]
@@ -77,6 +78,28 @@ model Organization {
 
   @@index([status])
   @@map("organization")
+}
+
+// ──────────────────── Sucursales ────────────────────
+
+model Branch {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name      String
+  address   String?
+  phone     String?
+  isDefault Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  barbers      Barber[]
+  appointments Appointment[]
+
+  @@index([organizationId])
+  @@map("branch")
 }
 
 // ──────────────────── Marca blanca (1:1) ────────────────────
@@ -128,6 +151,9 @@ model Barber {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -149,6 +175,7 @@ model Barber {
   reviews            Review[]
 
   @@index([organizationId, active, sortOrder])
+  @@index([branchId])
   @@index([userId])
   @@map("barber")
 }
@@ -216,6 +243,9 @@ model Appointment {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
   serviceId  String
   service    Service   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   barberId   String
@@ -250,6 +280,7 @@ model Appointment {
   @@index([organizationId, startAt])
   @@index([organizationId, barberId, startAt])
   @@index([organizationId, status, startAt])
+  @@index([branchId, startAt])
   @@map("appointment")
 }
 
