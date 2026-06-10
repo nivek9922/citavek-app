@@ -102,7 +102,6 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
           tenantSlug={tenantSlug}
           barber={flow.draft.barber}
           serviceId={flow.draft.service.id}
-          durationMin={flow.draft.service.durationMin}
           selectedAt={flow.draft.startAt}
           onSelect={flow.setStartAt}
           timezone={timezone}

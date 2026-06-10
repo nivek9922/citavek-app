@@ -12,19 +12,19 @@ import type { BarberDTO } from '@/modules/staff/queries'
 const PAGE_SIZE = 7
 
 interface Props {
-  tenantSlug:  string
-  barber:      BarberDTO
-  serviceId:   string
-  durationMin: number  // solo para el indicador visual de ocupación (OccupancyBar)
-  selectedAt:  Date | undefined
-  onSelect:    (startAt: Date) => void
-  timezone:    string
+  tenantSlug: string
+  barber:     BarberDTO
+  serviceId:  string
+  selectedAt: Date | undefined
+  onSelect:   (startAt: Date) => void
+  timezone:   string
 }
 
-export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selectedAt, onSelect, timezone }: Props) {
+export function StepDateTime({ tenantSlug, barber, serviceId, selectedAt, onSelect, timezone }: Props) {
   const [offset,       setOffset]       = useState(0)  // cuántos días desde hoy empieza la página
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [slots,        setSlots]        = useState<Date[]>([])
+  const [busyCount,    setBusyCount]    = useState(0)
   const [isPending,    startTransition] = useTransition()
 
   // Días de la página actual: empezamos en mañana (+1 día desde hoy)
@@ -37,6 +37,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
   function selectDay(day: Date) {
     setSelectedDate(day)
     setSlots([])
+    setBusyCount(0)
     startTransition(async () => {
       const res = await getAvailableSlotsAction(tenantSlug, {
         barberId:  barber.id,
@@ -44,6 +45,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
         dateISO:   day.toISOString(),
       })
       setSlots(res.slots.map((s) => new Date(s)))
+      setBusyCount(res.busyCount)
     })
   }
 
@@ -139,7 +141,7 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
           ) : (
             <>
               {/* Indicador de ocupación */}
-              <OccupancyBar slots={slots} durationMin={durationMin} />
+              <OccupancyBar slots={slots} busyCount={busyCount} />
 
               <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
                 {slots.map((slot) => {
@@ -168,13 +170,13 @@ export function StepDateTime({ tenantSlug, barber, serviceId, durationMin, selec
   )
 }
 
-// Muestra qué tan ocupada está la agenda ese día
-function OccupancyBar({ slots, durationMin }: { slots: Date[]; durationMin: number }) {
-  // Estimamos la capacidad máxima del día: 11h de trabajo / duración del servicio
-  const maxSlots    = Math.floor((11 * 60) / durationMin)
-  const available   = slots.length
-  const occupancy   = Math.max(0, 1 - available / maxSlots)
-  const pct         = Math.round(occupancy * 100)
+// Muestra qué tan ocupada está la agenda ese día según citas reales agendadas.
+function OccupancyBar({ slots, busyCount }: { slots: Date[]; busyCount: number }) {
+  const available = slots.length
+  const total     = available + busyCount
+  // Sin citas reales → 0 % ocupación, independientemente de la hora del día.
+  const occupancy = total > 0 ? busyCount / total : 0
+  const pct       = Math.round(occupancy * 100)
 
   const label =
     pct >= 80 ? '🔥 Muy solicitado' :

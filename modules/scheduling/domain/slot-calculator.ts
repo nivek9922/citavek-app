@@ -22,7 +22,12 @@ export interface ComputeSlotsParams {
   stepMin?:      number // paso entre slots, default 30
 }
 
-/** Retorna array de fechas UTC (inicio de cada slot libre). */
+export interface ComputeSlotsResult {
+  slots:     Date[]
+  busyCount: number  // slots futuros (no en el pasado) ocupados por citas existentes
+}
+
+/** Retorna slots libres y el número de slots futuros ya ocupados por citas. */
 export function computeAvailableSlots({
   date,
   timezone,
@@ -30,13 +35,13 @@ export function computeAvailableSlots({
   existingSlots,
   durationMin,
   stepMin = 30,
-}: ComputeSlotsParams): Date[] {
+}: ComputeSlotsParams): ComputeSlotsResult {
   // Medianoche del día seleccionado en la TZ del tenant
   const localMidnight = startOfDay(toZonedTime(date, timezone))
   const dow = getDay(localMidnight) // 0=dom…6=sáb
 
   const wh = workingHours.find((w) => w.dayOfWeek === dow)
-  if (!wh) return []
+  if (!wh) return { slots: [], busyCount: 0 }
 
   // Convertir horario local → UTC
   const dayStartUTC = fromZonedTime(addMinutes(localMidnight, wh.startMin), timezone)
@@ -47,6 +52,7 @@ export function computeAvailableSlots({
   const durMs   = durationMin * 60_000
 
   const slots: Date[] = []
+  let busyCount = 0
   let cursor = dayStartUTC.getTime()
 
   while (cursor + durMs <= dayEndUTC.getTime()) {
@@ -56,8 +62,9 @@ export function computeAvailableSlots({
       (b) => cursor < b.endAt.getTime() && slotEnd > b.startAt.getTime(),
     )
     if (!inPast && !overlaps) slots.push(new Date(cursor))
+    else if (!inPast && overlaps) busyCount++
     cursor += stepMs
   }
 
-  return slots
+  return { slots, busyCount }
 }

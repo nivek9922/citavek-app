@@ -31,7 +31,7 @@ const getSlotsSchema = z.object({
 export async function getAvailableSlotsAction(
   slug: string,
   input: z.infer<typeof getSlotsSchema>,
-): Promise<{ slots: string[] }> {
+): Promise<{ slots: string[]; busyCount: number }> {
   const ctx    = await getTenantContext(slug)
   const parsed = getSlotsSchema.parse(input)
   const date   = new Date(parsed.dateISO)
@@ -58,7 +58,8 @@ export async function getAvailableSlotsAction(
       }
     }
     slots.sort()
-    return { slots }
+    // Para "cualquier barbero" no hay una métrica de demanda por barbero único; se asume disponibilidad alta.
+    return { slots, busyCount: 0 }
   }
 
   const result = await getAvailableSlots(repo, {
@@ -68,8 +69,8 @@ export async function getAvailableSlotsAction(
     date,
   })
 
-  if (!result.ok) return { slots: [] }
-  return { slots: result.slots.map((d) => d.toISOString()) }
+  if (!result.ok) return { slots: [], busyCount: 0 }
+  return { slots: result.slots.map((d) => d.toISOString()), busyCount: result.busyCount }
 }
 
 // ── Reservar cita (pública) ─────────────────────────────────────────────────

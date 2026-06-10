@@ -77,6 +77,7 @@ describe('getAvailableSlots', () => {
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.slots).toHaveLength(22)
+    expect(res.busyCount).toBe(0)
     // cada slot separado exactamente 30 minutos del siguiente
     for (let i = 1; i < res.slots.length; i++) {
       expect(res.slots[i]!.getTime() - res.slots[i - 1]!.getTime()).toBe(30 * 60_000)
@@ -91,6 +92,7 @@ describe('getAvailableSlots', () => {
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.slots).toHaveLength(21)
+    expect(res.busyCount).toBe(0)
   })
 
   it('servicio no disponible → ok: false', async () => {
@@ -109,16 +111,17 @@ describe('getAvailableSlots', () => {
     expect((res as { ok: false; error: string }).error).toContain('barbero')
   })
 
-  it('sin horario laboral ese día → ok: true con slots vacíos', async () => {
+  it('sin horario laboral ese día → ok: true con slots vacíos y busyCount 0', async () => {
     const repo = createFakeRepo({ workingHours: [] })
     const res  = await getAvailableSlots(repo, baseInput)
 
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.slots).toHaveLength(0)
+    expect(res.busyCount).toBe(0)
   })
 
-  it('cita existente bloquea exactamente su slot', async () => {
+  it('cita existente bloquea exactamente su slot y sube busyCount a 1', async () => {
     const repo = createFakeRepo()
     // obtenemos primero los slots limpios para sacar la fecha exacta del slot 5
     const clean = await getAvailableSlots(repo, baseInput)
@@ -135,6 +138,7 @@ describe('getAvailableSlots', () => {
     if (!res.ok) return
     expect(res.slots).toHaveLength(21)
     expect(res.slots.some((s) => s.getTime() === target.getTime())).toBe(false)
+    expect(res.busyCount).toBe(1)
   })
 
   it('lanza todas las consultas al repo en paralelo (un solo batch de promesas)', async () => {
@@ -152,13 +156,14 @@ describe('getAvailableSlots', () => {
     expect(repo.createAppointment).not.toHaveBeenCalled()
   })
 
-  it('día bloqueado → ok: true con slots vacíos (no es un error de negocio)', async () => {
+  it('día bloqueado → ok: true con slots vacíos y busyCount 0 (no es un error de negocio)', async () => {
     const repo = createFakeRepo({ dateBlocked: true })
     const res  = await getAvailableSlots(repo, baseInput)
 
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.slots).toHaveLength(0)
+    expect(res.busyCount).toBe(0)
   })
 
   it('día bloqueado → no se llama a computeAvailableSlots (no lee working hours)', async () => {

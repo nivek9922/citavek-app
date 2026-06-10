@@ -14,20 +14,22 @@ const fullWeek: WorkingHourInput[] = [0, 1, 2, 3, 4, 5, 6].map((d) => ({
 const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60_000)
 
 describe('computeAvailableSlots', () => {
-  it('devuelve [] si el barbero no trabaja ese día', () => {
-    const slots = computeAvailableSlots({
+  it('devuelve slots vacíos y busyCount 0 si el barbero no trabaja ese día', () => {
+    const { slots, busyCount } = computeAvailableSlots({
       date: futureDate, timezone: TZ, workingHours: [], existingSlots: [], durationMin: 30,
     })
     expect(slots).toEqual([])
+    expect(busyCount).toBe(0)
   })
 
   it('genera slots de 30 min en jornada 9:00–20:00 (servicio 30 min)', () => {
-    const slots = computeAvailableSlots({
+    const { slots, busyCount } = computeAvailableSlots({
       date: futureDate, timezone: TZ, workingHours: fullWeek, existingSlots: [],
       durationMin: 30, stepMin: 30,
     })
-    // 09:00 … 19:30 → 22 slots
+    // 09:00 … 19:30 → 22 slots; sin citas → busyCount = 0
     expect(slots).toHaveLength(22)
+    expect(busyCount).toBe(0)
     // ordenados y separados exactamente 30 minutos
     for (let i = 1; i < slots.length; i++) {
       expect(slots[i]!.getTime() - slots[i - 1]!.getTime()).toBe(30 * 60_000)
@@ -35,28 +37,30 @@ describe('computeAvailableSlots', () => {
   })
 
   it('un servicio de 60 min cabe menos veces', () => {
-    const slots = computeAvailableSlots({
+    const { slots, busyCount } = computeAvailableSlots({
       date: futureDate, timezone: TZ, workingHours: fullWeek, existingSlots: [],
       durationMin: 60, stepMin: 30,
     })
     // 09:00 … 19:00 → 21 slots
     expect(slots).toHaveLength(21)
+    expect(busyCount).toBe(0)
   })
 
-  it('excluye un slot que solapa con una cita existente', () => {
-    const free = computeAvailableSlots({
+  it('excluye un slot ocupado y lo cuenta en busyCount', () => {
+    const { slots: free } = computeAvailableSlots({
       date: futureDate, timezone: TZ, workingHours: fullWeek, existingSlots: [],
       durationMin: 30, stepMin: 30,
     })
     const target = free[5]!
     const busy: BusySlot[] = [{ startAt: target, endAt: new Date(target.getTime() + 30 * 60_000) }]
 
-    const withBusy = computeAvailableSlots({
+    const { slots: withBusy, busyCount } = computeAvailableSlots({
       date: futureDate, timezone: TZ, workingHours: fullWeek, existingSlots: busy,
       durationMin: 30, stepMin: 30,
     })
 
     expect(withBusy).toHaveLength(free.length - 1)
     expect(withBusy.some((s) => s.getTime() === target.getTime())).toBe(false)
+    expect(busyCount).toBe(1)
   })
 })

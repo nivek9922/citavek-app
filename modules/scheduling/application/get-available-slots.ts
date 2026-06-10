@@ -12,7 +12,7 @@ export interface GetAvailableSlotsInput {
 }
 
 export type GetAvailableSlotsResult =
-  | { ok: true;  slots: Date[] }
+  | { ok: true;  slots: Date[]; busyCount: number }
   | { ok: false; error: string }
 
 /**
@@ -44,9 +44,9 @@ export async function getAvailableSlots(
     repo.isDateBlocked(input.organizationId, input.barberId, dateStr),
   ])
 
-  if (isBlocked) return { ok: true, slots: [] }
+  if (isBlocked) return { ok: true, slots: [], busyCount: 0 }
 
-  const slots = computeAvailableSlots({
+  const { slots, busyCount } = computeAvailableSlots({
     date:          input.date,
     timezone,
     workingHours,
@@ -54,5 +54,5 @@ export async function getAvailableSlots(
     durationMin:   service.durationMin,
   })
 
-  return { ok: true, slots }
+  return { ok: true, slots, busyCount }
 }
