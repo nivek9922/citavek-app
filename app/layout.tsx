@@ -5,6 +5,7 @@ import { Toaster }       from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://bookingflow.app'),
   title: 'BookingFlow — Software para barberías',
   description: 'Reservas online y gestión para barberías en Colombia.',
   // Desactiva la auto-detección de teléfonos de iOS/Brave móvil. Sin esto, el

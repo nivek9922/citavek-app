@@ -31,6 +31,9 @@ export async function generateMetadata({
   const appleIcon = (ctx.branding.logoUrl && buildCloudinaryIconUrl(ctx.branding.logoUrl, 180, color))
     ?? `/${slug}/icon?size=180`
 
+  const ogTitle = `${ctx.name} — Reserva tu cita en línea`
+  const ogDescription = `Agenda tu cita en ${ctx.name} fácil y rápido. Elige servicio, barbero y horario en segundos. Sin llamadas, sin filas.`
+
   return {
     title: `${ctx.name} — Reserva tu cita`,
     description: ctx.branding.tagline ?? `Agenda tu cita en ${ctx.name}.`,
@@ -40,6 +43,17 @@ export async function generateMetadata({
       apple: [{ url: appleIcon, sizes: '180x180' }],
     },
     appleWebApp: { capable: true, statusBarStyle: 'default', title: ctx.name },
+    openGraph: {
+      type: 'website',
+      title: ogTitle,
+      description: ogDescription,
+      siteName: 'BookingFlow',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: `Agenda tu cita en ${ctx.name} fácil y rápido. Sin llamadas, sin filas.`,
+    },
   }
 }
 
