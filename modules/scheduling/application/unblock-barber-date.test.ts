@@ -9,6 +9,7 @@ function createFakeRepo() {
     unblockDate: vi.fn(async (orgId, barberId, dateStr) => { unblocked.push({ orgId, barberId, dateStr }) }),
     // stubs
     isActiveBarber:              vi.fn(async () => true),
+    listActiveBarberIds:         vi.fn(async () => []),
     getBookableService:          vi.fn(async () => null),
     hasConflict:                 vi.fn(async () => false),
     upsertCustomer:              vi.fn(async () => ({ id: 'c' })),

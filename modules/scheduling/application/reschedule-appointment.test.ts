@@ -28,6 +28,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
     getAppointmentForReschedule: vi.fn(async () => appointment),
     getBookableService:          vi.fn(async () => serviceExists ? { priceCop: 30000, durationMin: 45 } : null),
     isActiveBarber:              vi.fn(async () => barberActive),
+    listActiveBarberIds:         vi.fn(async () => []),
     hasConflict:                 vi.fn(async () => conflict),
     updateAppointmentTime:       vi.fn(async (_org, id, startAt, endAt) => {
       updates.push({ id, startAt, endAt })

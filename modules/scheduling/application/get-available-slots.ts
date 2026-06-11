@@ -36,23 +36,47 @@ export async function getAvailableSlots(
   if (!service)        return { ok: false, error: 'El servicio no está disponible.' }
   if (!isBarberActive) return { ok: false, error: 'El barbero no está disponible.' }
 
-  const dateStr = format(toZonedTime(input.date, timezone), 'yyyy-MM-dd')
-
-  const [workingHours, busySlots, isBlocked] = await Promise.all([
-    repo.getBarberWorkingHours(input.organizationId, input.barberId),
-    repo.getBarberBusySlots(input.organizationId, input.barberId, input.date),
-    repo.isDateBlocked(input.organizationId, input.barberId, dateStr),
-  ])
-
-  if (isBlocked) return { ok: true, slots: [], busyCount: 0 }
-
-  const { slots, busyCount } = computeAvailableSlots({
-    date:          input.date,
+  const { slots, busyCount } = await computeSlotsForBarber(repo, {
+    organizationId: input.organizationId,
+    barberId:       input.barberId,
+    date:           input.date,
     timezone,
-    workingHours,
-    existingSlots: busySlots,
-    durationMin:   service.durationMin,
+    durationMin:    service.durationMin,
   })
 
   return { ok: true, slots, busyCount }
+}
+
+/**
+ * Round 2 reutilizable: dado servicio y timezone ya resueltos, computa los
+ * slots de UN barbero. Lo comparte el flujo "cualquier barbero" para no
+ * re-consultar servicio/timezone por cada barbero (evita N+1).
+ */
+export async function computeSlotsForBarber(
+  repo: SchedulingRepository,
+  ctx: {
+    organizationId: string
+    barberId:       string
+    date:           Date
+    timezone:       string
+    durationMin:    number
+  },
+): Promise<{ slots: Date[]; busyCount: number }> {
+  const dateStr = format(toZonedTime(ctx.date, ctx.timezone), 'yyyy-MM-dd')
+
+  const [workingHours, busySlots, isBlocked] = await Promise.all([
+    repo.getBarberWorkingHours(ctx.organizationId, ctx.barberId),
+    repo.getBarberBusySlots(ctx.organizationId, ctx.barberId, ctx.date),
+    repo.isDateBlocked(ctx.organizationId, ctx.barberId, dateStr),
+  ])
+
+  if (isBlocked) return { slots: [], busyCount: 0 }
+
+  return computeAvailableSlots({
+    date:          ctx.date,
+    timezone:      ctx.timezone,
+    workingHours,
+    existingSlots: busySlots,
+    durationMin:   ctx.durationMin,
+  })
 }

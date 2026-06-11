@@ -15,6 +15,7 @@ import { createManualAppointment }  from './application/create-manual-appointmen
 import { changeAppointmentStatus }  from './application/change-appointment-status'
 import { rescheduleAppointment }    from './application/reschedule-appointment'
 import { getAvailableSlots }         from './application/get-available-slots'
+import { getAnyBarberSlots, pickBarberForSlot } from './application/get-any-barber-slots'
 import { blockBarberDate }           from './application/block-barber-date'
 import { unblockBarberDate }         from './application/unblock-barber-date'
 
@@ -37,29 +38,14 @@ export async function getAvailableSlotsAction(
   const date   = new Date(parsed.dateISO)
 
   if (isAnyBarber(parsed.barberId)) {
-    const { db } = await import('@/server/db')
-    const activeBarbers = await db.barber.findMany({
-      where: { organizationId: ctx.id, active: true },
-      select: { id: true },
+    const result = await getAnyBarberSlots(repo, {
+      organizationId: ctx.id,
+      serviceId:      parsed.serviceId,
+      date,
     })
-    const results = await Promise.all(
-      activeBarbers.map((b) =>
-        getAvailableSlots(repo, { organizationId: ctx.id, barberId: b.id, serviceId: parsed.serviceId, date }),
-      ),
-    )
-    const seen = new Set<string>()
-    const slots: string[] = []
-    for (const r of results) {
-      if (r.ok) {
-        for (const d of r.slots) {
-          const iso = d.toISOString()
-          if (!seen.has(iso)) { seen.add(iso); slots.push(iso) }
-        }
-      }
-    }
-    slots.sort()
+    if (!result.ok) return { slots: [], busyCount: 0 }
     // Para "cualquier barbero" no hay una métrica de demanda por barbero único; se asume disponibilidad alta.
-    return { slots, busyCount: 0 }
+    return { slots: result.slots.map((d) => d.toISOString()), busyCount: 0 }
   }
 
   const result = await getAvailableSlots(repo, {
@@ -101,24 +87,13 @@ export async function bookAppointmentAction(
 
     let barberId = parsed.barberId
     if (isAnyBarber(barberId)) {
-      const { db } = await import('@/server/db')
-      const activeBarbers = await db.barber.findMany({
-        where: { organizationId: ctx.id, active: true },
-        select: { id: true },
-        orderBy: { sortOrder: 'asc' },
+      const assigned = await pickBarberForSlot(repo, {
+        organizationId: ctx.id,
+        serviceId:      parsed.serviceId,
+        startAt:        new Date(parsed.startAtISO),
       })
-      const startAt = new Date(parsed.startAtISO)
-      for (const b of activeBarbers) {
-        const r = await getAvailableSlots(repo, {
-          organizationId: ctx.id, barberId: b.id,
-          serviceId: parsed.serviceId, date: startAt,
-        })
-        if (r.ok && r.slots.some((s) => s.toISOString() === startAt.toISOString())) {
-          barberId = b.id
-          break
-        }
-      }
-      if (isAnyBarber(barberId)) return { ok: false, error: 'No hay barberos disponibles en ese horario.' }
+      if (!assigned) return { ok: false, error: 'No hay barberos disponibles en ese horario.' }
+      barberId = assigned
     }
 
     const result = await bookAppointment(repo, {

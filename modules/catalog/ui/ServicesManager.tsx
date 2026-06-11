@@ -34,11 +34,11 @@ function applyOptimistic(state: ServiceDTO[], action: OptAction): ServiceDTO[] {
     const idx     = state.findIndex((s) => s.id === action.id)
     const swapIdx = action.direction === 'up' ? idx - 1 : idx + 1
     if (idx === -1 || swapIdx < 0 || swapIdx >= state.length) return state
+    // Intercambiar POSICIONES, no valores de sortOrder: con sortOrders
+    // duplicados (datos legados) el swap de valores era un no-op visual.
     const next = [...state]
-    const temp = next[idx]!.sortOrder
-    next[idx]     = { ...next[idx]!,     sortOrder: next[swapIdx]!.sortOrder }
-    next[swapIdx] = { ...next[swapIdx]!, sortOrder: temp }
-    return [...next].sort((a, b) => a.sortOrder - b.sortOrder)
+    ;[next[idx], next[swapIdx]] = [next[swapIdx]!, next[idx]!]
+    return next
   }
   return state
 }

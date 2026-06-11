@@ -13,7 +13,8 @@ const mockDb = vi.hoisted(() => ({
       id: 'brb-1', organizationId: 'org-a', displayName: 'Carlos',
       nickname: null, specialties: [], active: true, rating: 0, reviewsCount: 0,
     })),
-    update: vi.fn(async () => ({
+    updateMany: vi.fn(async () => ({ count: 1 })),
+    findFirstOrThrow: vi.fn(async () => ({
       id: 'brb-1', organizationId: 'org-a', displayName: 'Carlos',
       nickname: null, specialties: [], active: true, rating: 0, reviewsCount: 0,
     })),
@@ -62,12 +63,35 @@ describe('PrismaStaffRepository — tenant isolation', () => {
     expect(data?.[0]).toMatchObject({ barberId: 'brb-1' })
   })
 
-  it('update: deleteMany + barber.update corren dentro de $transaction', async () => {
+  it('update: deleteMany + barber.updateMany corren dentro de $transaction', async () => {
     await repo.update('brb-1', 'org-a', {
       displayName: 'Carlos',
       hours: [{ dayOfWeek: 1, startMin: 480, endMin: 720 }],
     })
     expect(mockDb.$transaction).toHaveBeenCalledOnce()
+  })
+
+  it('update incluye organizationId en el WHERE', async () => {
+    await repo.update('brb-1', 'org-a', { displayName: 'Carlos' })
+    const arg = lastArg(mockDb.barber.updateMany)
+    expect(arg?.where).toMatchObject({ id: 'brb-1', organizationId: 'org-a' })
+  })
+
+  it('update lanza si el barbero no pertenece al tenant (count 0)', async () => {
+    mockDb.barber.updateMany.mockResolvedValueOnce({ count: 0 })
+    await expect(repo.update('brb-ajeno', 'org-a', { displayName: 'X' })).rejects.toThrow()
+    expect(mockDb.workingHour.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('toggle incluye organizationId en el WHERE', async () => {
+    await repo.toggle('brb-1', 'org-a', false)
+    const arg = lastArg(mockDb.barber.updateMany)
+    expect(arg?.where).toMatchObject({ id: 'brb-1', organizationId: 'org-a' })
+  })
+
+  it('toggle lanza si el barbero no pertenece al tenant (count 0)', async () => {
+    mockDb.barber.updateMany.mockResolvedValueOnce({ count: 0 })
+    await expect(repo.toggle('brb-ajeno', 'org-a', false)).rejects.toThrow()
   })
 
   it('update: deleteMany filtra por barberId (no borra horarios de otro barbero)', async () => {

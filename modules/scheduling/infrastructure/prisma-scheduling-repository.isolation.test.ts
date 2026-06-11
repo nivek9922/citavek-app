@@ -20,6 +20,7 @@ const mockDb = vi.hoisted(() => ({
   },
   barber: {
     findFirst: vi.fn(async () => null),
+    findMany:  vi.fn(async () => []),
   },
   appointment: {
     findFirst:  vi.fn(async (): Promise<Record<string, unknown> | null> => null),
@@ -87,6 +88,12 @@ describe('PrismaSchedulingRepository — tenant isolation', () => {
     await repo.isActiveBarber(ORG_A, 'brb-1')
     const where = lastWhere(mockDb.barber.findFirst)
     expect(where).toMatchObject({ organizationId: ORG_A })
+  })
+
+  it('listActiveBarberIds filtra por organizationId', async () => {
+    await repo.listActiveBarberIds(ORG_A)
+    const where = lastWhere(mockDb.barber.findMany)
+    expect(where).toMatchObject({ organizationId: ORG_A, active: true })
   })
 
   it('hasConflict filtra por organizationId', async () => {

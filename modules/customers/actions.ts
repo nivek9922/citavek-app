@@ -3,6 +3,8 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
+import { updateCustomerNotes } from './application/update-customer-notes'
+import { prismaCustomerRepository as repo } from './infrastructure/prisma-customer-repository'
 
 const notesSchema = z.string().trim().max(500)
 
@@ -15,11 +17,7 @@ export async function updateCustomerNotesAction(
   await requirePermission(ctx.id, 'customer:update')
   try {
     const value = notesSchema.parse(notes)
-    const { db } = await import('@/server/db')
-    await db.customer.update({
-      where: { id: customerId, organizationId: ctx.id },
-      data:  { notes: value || null },
-    })
+    await updateCustomerNotes(repo, customerId, ctx.id, value)
     revalidatePath(`/${slug}/panel/clientes/${customerId}`)
     return { ok: true }
   } catch {

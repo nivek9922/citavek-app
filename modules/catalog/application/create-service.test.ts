@@ -27,6 +27,8 @@ function createFakeRepo() {
     }),
     update: vi.fn(async (_id, _org, data: UpdateServiceData) => ({ ...BASE_SERVICE, ...data })),
     toggle: vi.fn(async () => undefined),
+    listIdsInPanelOrder: vi.fn(async () => []),
+    setSortOrders:       vi.fn(async () => undefined),
   }
   return { repo, created }
 }
@@ -36,7 +38,7 @@ describe('createService', () => {
     const { repo } = createFakeRepo()
 
     const result = await createService(repo, 'org-1', {
-      name: 'Corte clásico', durationMin: 30, priceCop: 20000, category: 'corte', sortOrder: 1,
+      name: 'Corte clásico', durationMin: 30, priceCop: 20000, category: 'corte',
     })
 
     expect(repo.create).toHaveBeenCalledOnce()
@@ -47,7 +49,7 @@ describe('createService', () => {
     const { repo } = createFakeRepo()
 
     await expect(
-      createService(repo, 'org-1', { name: '', durationMin: 30, priceCop: 20000, category: 'corte', sortOrder: 1 }),
+      createService(repo, 'org-1', { name: '', durationMin: 30, priceCop: 20000, category:  'corte' }),
     ).rejects.toBeInstanceOf(InvalidServiceError)
 
     expect(repo.create).not.toHaveBeenCalled()
@@ -57,7 +59,7 @@ describe('createService', () => {
     const { repo } = createFakeRepo()
 
     await expect(
-      createService(repo, 'org-1', { name: 'Corte', durationMin: 30, priceCop: -1, category: 'corte', sortOrder: 1 }),
+      createService(repo, 'org-1', { name: 'Corte', durationMin: 30, priceCop: -1, category:  'corte' }),
     ).rejects.toBeInstanceOf(InvalidServiceError)
 
     expect(repo.create).not.toHaveBeenCalled()
@@ -67,7 +69,7 @@ describe('createService', () => {
     const { repo } = createFakeRepo()
 
     await expect(
-      createService(repo, 'org-1', { name: 'Corte', durationMin: 2, priceCop: 10000, category: 'corte', sortOrder: 1 }),
+      createService(repo, 'org-1', { name: 'Corte', durationMin: 2, priceCop: 10000, category:  'corte' }),
     ).rejects.toBeInstanceOf(InvalidServiceError)
 
     expect(repo.create).not.toHaveBeenCalled()
@@ -77,7 +79,7 @@ describe('createService', () => {
     const { repo, created } = createFakeRepo()
 
     await createService(repo, 'org-99', {
-      name: 'Barba', durationMin: 20, priceCop: 15000, category: 'barba', sortOrder: 2,
+      name: 'Barba', durationMin: 20, priceCop: 15000, category: 'barba',
     })
 
     expect(created[0]?.[0]).toBe('org-99')

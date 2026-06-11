@@ -15,13 +15,15 @@ export interface Service {
   organizationId: string
 }
 
+// sortOrder NO es parte de los datos de entrada: lo asigna el repositorio al
+// crear (max+1) y solo cambia vía reorderService. Si viniera del formulario,
+// cada edición lo resetearía (bug histórico de las flechas de orden).
 export interface CreateServiceData {
   name:         string
   description?: string
   durationMin:  number
   priceCop:     number
   category:     ServiceCategory
-  sortOrder:    number
   imageUrl?:    string | null
 }
 

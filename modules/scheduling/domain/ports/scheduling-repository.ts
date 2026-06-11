@@ -56,6 +56,9 @@ export interface SchedulingRepository {
   /** ¿El barbero pertenece al tenant y está activo? */
   isActiveBarber(organizationId: string, barberId: string): Promise<boolean>
 
+  /** IDs de los barberos activos del tenant, ordenados por sortOrder. */
+  listActiveBarberIds(organizationId: string): Promise<string[]>
+
   /**
    * ¿Hay solape con otra cita activa del barbero en ese rango?
    * `excludeAppointmentId` excluye la cita que se está reprogramando para evitar

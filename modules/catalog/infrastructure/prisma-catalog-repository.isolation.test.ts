@@ -7,15 +7,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockDb = vi.hoisted(() => ({
+  $transaction: vi.fn(async (ops: unknown[]) => ops),
   service: {
     findFirst:  vi.fn(async () => null),
+    findMany:   vi.fn(async () => []),
     aggregate:  vi.fn(async () => ({ _max: { sortOrder: 0 } })),
     create:     vi.fn(async () => ({
       id: 'svc-1', name: 'Corte', description: null, durationMin: 30,
       priceCop: 20000, category: 'corte', active: true, sortOrder: 1,
       imageUrl: null, organizationId: 'org-a',
     })),
-    update: vi.fn(async () => ({
+    updateMany: vi.fn(async () => ({ count: 1 })),
+    findFirstOrThrow: vi.fn(async () => ({
       id: 'svc-1', name: 'Corte', description: null, durationMin: 30,
       priceCop: 20000, category: 'corte', active: true, sortOrder: 1,
       imageUrl: null, organizationId: 'org-a',
@@ -51,10 +54,48 @@ describe('PrismaCatalogRepository — tenant isolation', () => {
 
   it('create incluye organizationId en el data', async () => {
     await repo.create('org-a', {
-      name: 'Corte', durationMin: 30, priceCop: 20000, category: 'corte', sortOrder: 1,
+      name: 'Corte', durationMin: 30, priceCop: 20000, category: 'corte',
     })
     const arg = lastArg(mockDb.service.create)
     expect((arg?.data as Record<string, unknown>)?.organizationId).toBe('org-a')
+  })
+
+  it('update incluye organizationId en el WHERE', async () => {
+    await repo.update('svc-1', 'org-a', { name: 'Corte Premium' })
+    const arg = lastArg(mockDb.service.updateMany)
+    expect(arg?.where).toMatchObject({ id: 'svc-1', organizationId: 'org-a' })
+  })
+
+  it('update lanza si el servicio no pertenece al tenant (count 0)', async () => {
+    mockDb.service.updateMany.mockResolvedValueOnce({ count: 0 })
+    await expect(repo.update('svc-ajeno', 'org-a', { name: 'X' })).rejects.toThrow()
+    expect(mockDb.service.findFirstOrThrow).not.toHaveBeenCalled()
+  })
+
+  it('toggle incluye organizationId en el WHERE', async () => {
+    await repo.toggle('svc-1', 'org-a', false)
+    const arg = lastArg(mockDb.service.updateMany)
+    expect(arg?.where).toMatchObject({ id: 'svc-1', organizationId: 'org-a' })
+  })
+
+  it('toggle lanza si el servicio no pertenece al tenant (count 0)', async () => {
+    mockDb.service.updateMany.mockResolvedValueOnce({ count: 0 })
+    await expect(repo.toggle('svc-ajeno', 'org-a', false)).rejects.toThrow()
+  })
+
+  it('listIdsInPanelOrder filtra por organizationId', async () => {
+    await repo.listIdsInPanelOrder('org-a')
+    const arg = lastArg(mockDb.service.findMany)
+    expect(arg?.where).toMatchObject({ organizationId: 'org-a' })
+  })
+
+  it('setSortOrders incluye organizationId en cada WHERE del batch', async () => {
+    await repo.setSortOrders('org-a', ['svc-1', 'svc-2'])
+    const calls = mockDb.service.updateMany.mock.calls as unknown as [MockCall][]
+    for (const [arg] of calls) {
+      expect(arg?.where).toMatchObject({ organizationId: 'org-a' })
+    }
+    expect(calls).toHaveLength(2)
   })
 
   it('dos orgs distintas producen wheres distintos en findById', async () => {

@@ -83,6 +83,11 @@ export default async function PanelPage({
     listActiveBarbers(ctx.id),
   ])
 
+  // Instante de render del servidor: la agenda necesita "ahora" para marcar la
+  // hora actual. Página dinámica por request — la impureza es intencional.
+  // eslint-disable-next-line react-hooks/purity
+  const renderedAt = Date.now()
+
   const onboardingSteps = [
     {
       label: 'Personaliza tu marca',
@@ -209,7 +214,7 @@ export default async function PanelPage({
               isToday={selectedDate === today}
               count={appointments.length}
             />
-            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} now={Date.now()} organizationName={ctx.name} />
+            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} now={renderedAt} organizationName={ctx.name} />
           </>
         )}
       </section>

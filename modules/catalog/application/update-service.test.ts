@@ -24,6 +24,8 @@ function createFakeRepo(existing: Service | null = BASE_SERVICE) {
     create:   vi.fn(async () => BASE_SERVICE),
     update:   vi.fn(async (_id, _org, data) => { updated.push(data); return { ...BASE_SERVICE, ...data } }),
     toggle:   vi.fn(async () => undefined),
+    listIdsInPanelOrder: vi.fn(async () => []),
+    setSortOrders:       vi.fn(async () => undefined),
   }
   return { repo, updated }
 }

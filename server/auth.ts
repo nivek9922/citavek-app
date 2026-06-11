@@ -7,9 +7,26 @@ import { env } from '@/config/env'
 export const auth = betterAuth({
   baseURL: env.NEXT_PUBLIC_APP_URL,
 
+  // Explícito aunque coincida con baseURL: cuando haya subdominios por tenant
+  // o dominio de marketing, se declaran aquí (no desactivar el check de Origin).
+  trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
+
   database: prismaAdapter(db, { provider: 'postgresql' }),
 
   emailAndPassword: { enabled: true },
+
+  // Frena fuerza bruta en /api/auth/* (el rate limiter de los Server Actions
+  // no cubre estos endpoints). Storage en memoria por defecto: al desplegar
+  // multi-instancia (Vercel), mover a secondaryStorage con Redis/KV.
+  rateLimit: {
+    enabled: true,
+    window:  60,
+    max:     30,
+    customRules: {
+      '/sign-in/email': { window: 60, max: 5 },
+      '/sign-up/email': { window: 60, max: 5 },
+    },
+  },
 
   plugins: [
     organization({

@@ -12,6 +12,7 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null, startAt: D
   const repo: SchedulingRepository = {
     getBookableService:      vi.fn(async () => null),
     isActiveBarber:          vi.fn(async () => true),
+    listActiveBarberIds:         vi.fn(async () => []),
     hasConflict:             vi.fn(async () => false),
     upsertCustomer:          vi.fn(async () => ({ id: 'c' })),
     createAppointment:       vi.fn(async () => ({ id: 'a' })),

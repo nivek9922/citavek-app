@@ -51,7 +51,7 @@ export async function getTopReviews(
 function maskName(full: string): string {
   const parts = full.trim().split(/\s+/)
   if (parts.length < 2) return parts[0] ?? full
-  const last = parts[parts.length - 1][0]?.toUpperCase() ?? ''
+  const last = parts.at(-1)?.[0]?.toUpperCase() ?? ''
   return `${parts[0]} ${last}.`
 }
 
@@ -63,12 +63,17 @@ export interface ReviewDTO {
   serviceName:  string
 }
 
+/** Tope de filas: la vista agrupa por barbero y solo muestra las más recientes;
+ *  sin límite, un tenant con años de historial cargaría todo en memoria. */
+const REVIEWS_FETCH_LIMIT = 200
+
 export async function listReviewsByBarber(
   organizationId: string,
 ): Promise<Record<string, ReviewDTO[]>> {
   const reviews = await db.review.findMany({
     where:   { organizationId },
     orderBy: { createdAt: 'desc' },
+    take:    REVIEWS_FETCH_LIMIT,
     select:  {
       barberId:  true,
       rating:    true,

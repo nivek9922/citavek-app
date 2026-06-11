@@ -54,6 +54,15 @@ export const prismaSchedulingRepository: SchedulingRepository = {
     return barber !== null
   },
 
+  async listActiveBarberIds(organizationId) {
+    const barbers = await db.barber.findMany({
+      where:   { organizationId, active: true },
+      orderBy: { sortOrder: 'asc' },
+      select:  { id: true },
+    })
+    return barbers.map((b) => b.id)
+  },
+
   async hasConflict(organizationId, barberId, startAt, endAt, excludeAppointmentId?) {
     const conflict = await db.appointment.findFirst({
       where: {

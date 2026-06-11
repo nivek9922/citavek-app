@@ -1,6 +1,7 @@
 import { db } from '@/server/db'
 import type { StaffRepository } from '../domain/ports/staff-repository'
 import type { CreateBarberData, UpdateBarberData } from '../domain/barber'
+import { InvalidBarberError } from '../domain/barber'
 
 export const prismaStaffRepository: StaffRepository = {
   async findById(id, organizationId) {
@@ -28,10 +29,12 @@ export const prismaStaffRepository: StaffRepository = {
     })
   },
 
-  async update(id, _organizationId, data: UpdateBarberData) {
+  async update(id, organizationId, data: UpdateBarberData) {
     return db.$transaction(async (tx) => {
-      const barber = await tx.barber.update({
-        where: { id },
+      // updateMany permite WHERE compuesto: el tenant scoping va en la propia
+      // query, no solo en checks previos del use case (defensa en profundidad).
+      const { count } = await tx.barber.updateMany({
+        where: { id, organizationId },
         data: {
           ...(data.displayName !== undefined && { displayName: data.displayName }),
           ...(data.nickname    !== undefined && { nickname:    data.nickname }),
@@ -39,6 +42,8 @@ export const prismaStaffRepository: StaffRepository = {
           ...(data.avatarUrl   !== undefined && { avatarUrl:   data.avatarUrl }),
         },
       })
+      if (count === 0) throw new InvalidBarberError('Barbero no encontrado.')
+
       if (data.hours !== undefined) {
         await tx.workingHour.deleteMany({ where: { barberId: id } })
         if (data.hours.length > 0) {
@@ -47,11 +52,15 @@ export const prismaStaffRepository: StaffRepository = {
           })
         }
       }
-      return barber
+      return tx.barber.findFirstOrThrow({ where: { id, organizationId } })
     })
   },
 
-  async toggle(id, _organizationId, active) {
-    await db.barber.update({ where: { id }, data: { active } })
+  async toggle(id, organizationId, active) {
+    const { count } = await db.barber.updateMany({
+      where: { id, organizationId },
+      data:  { active },
+    })
+    if (count === 0) throw new InvalidBarberError('Barbero no encontrado.')
   },
 }
