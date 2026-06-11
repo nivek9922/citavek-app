@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { notFound } from 'next/navigation'
+import { cacheTag, cacheLife } from 'next/cache'
 import { db } from '@/server/db'
 
 export interface TenantContext {
@@ -20,10 +21,13 @@ export interface TenantContext {
   }
 }
 
-// Memoizado por request con cache() de React.
-// Una sola query a DB por request, sin importar cuántos layouts/componentes lo llamen.
-export const getTenantContext = cache(async (slug: string): Promise<TenantContext> => {
-  const org = await db.organization.findFirst({
+// Capa persistente: datos del tenant cacheados hasta que `tenant:${slug}` se invalide.
+// notFound() vive FUERA de este scope para no cachear el estado "no encontrado".
+async function fetchTenantData(slug: string) {
+  'use cache'
+  cacheTag(`tenant:${slug}`)
+  cacheLife('max')
+  return db.organization.findFirst({
     where: { slug, status: 'active' },
     select: {
       id: true,
@@ -44,6 +48,12 @@ export const getTenantContext = cache(async (slug: string): Promise<TenantContex
       },
     },
   })
+}
+
+// Capa de request: React cache() deduplicates within a single request.
+// Llama a fetchTenantData (persistente) y dispara notFound() si el tenant no existe.
+export const getTenantContext = cache(async (slug: string): Promise<TenantContext> => {
+  const org = await fetchTenantData(slug)
 
   if (!org) notFound()
 

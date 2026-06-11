@@ -105,7 +105,6 @@ export async function bookAppointmentAction(
       customerPhone:  parsed.customerPhone,
     })
 
-    if (result.ok) revalidatePath(`/${slug}`)
     return result
   } catch (err) {
     if (err instanceof SlotConflictError) {

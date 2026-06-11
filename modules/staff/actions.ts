@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
@@ -51,7 +51,7 @@ export async function upsertBarberAction(slug: string, id: string | null, formDa
       hours:       input.hoursJson,
     })
   }
-  revalidatePath(`/${slug}/panel/equipo`)
+  updateTag(`barbers:${ctx.id}`)
 }
 
 export async function uploadBarberAvatarAction(
@@ -68,8 +68,7 @@ export async function uploadBarberAvatarAction(
     if (!file.type.startsWith('image/')) return { ok: false, error: 'El archivo debe ser una imagen.' }
     const buffer = Buffer.from(await file.arrayBuffer())
     const url = await uploadBarberAvatar(repo, cloudinaryAdapter, barberId, ctx.id, slug, buffer)
-    revalidatePath(`/${slug}`)
-    revalidatePath(`/${slug}/panel/equipo`)
+    updateTag(`barbers:${ctx.id}`)
     return { ok: true, url }
   } catch {
     return { ok: false, error: 'No se pudo subir el avatar. Intenta de nuevo.' }
@@ -80,5 +79,5 @@ export async function toggleBarberAction(slug: string, id: string, active: boole
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'barber:update')
   await toggleBarber(repo, id, ctx.id, active)
-  revalidatePath(`/${slug}/panel/equipo`)
+  updateTag(`barbers:${ctx.id}`)
 }

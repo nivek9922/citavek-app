@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
@@ -31,7 +31,7 @@ export async function upsertServiceAction(slug: string, id: string | null, formD
   } else {
     await createService(repo, ctx.id, input)
   }
-  revalidatePath(`/${slug}/panel/servicios`)
+  updateTag(`services:${ctx.id}`)
 }
 
 export async function toggleServiceAction(
@@ -43,7 +43,7 @@ export async function toggleServiceAction(
   await requirePermission(ctx.id, 'service:update')
   try {
     await toggleService(repo, id, ctx.id, active)
-    revalidatePath(`/${slug}/panel/servicios`)
+    updateTag(`services:${ctx.id}`)
     return { ok: true }
   } catch {
     return { ok: false, error: 'No se pudo cambiar el estado del servicio.' }
@@ -61,6 +61,6 @@ export async function reorderServiceAction(
   const result = await reorderService(repo, ctx.id, id, direction)
   if (!result.ok) return result
 
-  revalidatePath(`/${slug}/panel/servicios`)
+  updateTag(`services:${ctx.id}`)
   return { ok: true }
 }

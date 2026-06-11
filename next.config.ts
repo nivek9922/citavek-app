@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
   ],
   // Subresource Integrity: hashea los scripts en build y añade `integrity` a los
   // <script>, para que el navegador rechace assets manipulados en tránsito.
+  // Habilita la directiva `"use cache"` y las funciones cacheTag/cacheLife.
+  // Permite cachear lecturas de tenant/servicios/barberos con invalidación por tag
+  // en lugar de revalidatePath, reduciendo SSR completo en el hot path de reservas.
+  cacheComponents: true,
   experimental: {
     sri: {
       algorithm: 'sha256',

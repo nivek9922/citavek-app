@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
@@ -37,7 +37,7 @@ export async function updateBrandingAction(slug: string, formData: FormData) {
   })
 
   await updateBranding(repo, ctx.id, input)
-  revalidatePath(`/${slug}/panel/marca`)
+  updateTag(`tenant:${slug}`)
   // El color de marca alimenta el theme_color del manifiesto y el avatar fallback.
   revalidatePath(`/${slug}/manifest.webmanifest`)
   revalidatePath(`/${slug}/icon`)
@@ -61,8 +61,7 @@ export async function uploadTenantLogoAction(
     const result = await extractImageBuffer(formData)
     if (!Buffer.isBuffer(result)) return { ok: false, error: result.error }
     const url = await uploadBrandImage(repo, cloudinaryAdapter, ctx.id, slug, 'logo', result, ctx.branding.logoUrl)
-    revalidatePath(`/${slug}`)
-    revalidatePath(`/${slug}/panel/marca`)
+    updateTag(`tenant:${slug}`)
     // El logo es el icono del manifiesto; si antes no había, deja de usarse el avatar fallback.
     revalidatePath(`/${slug}/manifest.webmanifest`)
     revalidatePath(`/${slug}/icon`)
@@ -82,8 +81,7 @@ export async function uploadTenantCoverAction(
     const result = await extractImageBuffer(formData)
     if (!Buffer.isBuffer(result)) return { ok: false, error: result.error }
     const url = await uploadBrandImage(repo, cloudinaryAdapter, ctx.id, slug, 'cover', result, ctx.branding.coverUrl)
-    revalidatePath(`/${slug}`)
-    revalidatePath(`/${slug}/panel/marca`)
+    updateTag(`tenant:${slug}`)
     return { ok: true, url }
   } catch {
     return { ok: false, error: 'No se pudo subir la imagen de portada. Intenta de nuevo.' }
@@ -102,7 +100,7 @@ export async function updateOrgInfoAction(slug: string, formData: FormData) {
   })
 
   await updateOrgInfo(repo, ctx.id, input)
-  revalidatePath(`/${slug}/panel/marca`)
+  updateTag(`tenant:${slug}`)
   // El nombre alimenta name/short_name del manifiesto y la inicial del avatar fallback.
   revalidatePath(`/${slug}/manifest.webmanifest`)
   revalidatePath(`/${slug}/icon`)
@@ -117,9 +115,7 @@ export async function deleteTenantBrandAssetAction(
   try {
     const existingUrl = field === 'logo' ? ctx.branding.logoUrl : ctx.branding.coverUrl
     await deleteBrandImage(repo, cloudinaryAdapter, ctx.id, field, existingUrl)
-    revalidatePath(`/${slug}`)
-    revalidatePath(`/${slug}/panel/marca`)
-    revalidatePath(`/${slug}/panel`)
+    updateTag(`tenant:${slug}`)
     // Solo el logo es icono del manifiesto; al quitarlo se vuelve al avatar fallback.
     if (field === 'logo') {
       revalidatePath(`/${slug}/manifest.webmanifest`)
@@ -139,8 +135,11 @@ export async function setOrgStatusAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireSuperAdmin()
   try {
+    // Obtener slug ANTES de la mutación para poder invalidar el tag del tenant público.
+    const orgRow = await db.organization.findUnique({ where: { id: orgId }, select: { slug: true } })
     await setOrgStatus(repo, orgId, status)
     log.audit('org.status_changed', { orgId, status, by: session.user.email })
+    if (orgRow) updateTag(`tenant:${orgRow.slug}`)
     revalidatePath('/admin')
     return { ok: true }
   } catch (err) {
@@ -176,6 +175,7 @@ export async function deleteOrgAction(
       }
     }
 
+    updateTag(`tenant:${slug}`)
     revalidatePath('/admin')
     return { ok: true }
   } catch {
