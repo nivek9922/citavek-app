@@ -80,7 +80,7 @@ export default async function AdminPage() {
       </div>
 
       {/* ── Torre de Control — 3 columnas ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
         {/* Adopción de Marca */}
         <section className="rounded-2xl border border-border bg-card/40 p-6 space-y-4">
@@ -105,7 +105,7 @@ export default async function AdminPage() {
             <h2 className="text-sm font-semibold">Salud de la plataforma</h2>
             <span className="ml-auto text-xs text-muted-foreground">últimos 7 días</span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <HealthStat count={healthCounts.green}      label="Saludables" sub="≥5 citas netas"  color="text-green-400"   bg="bg-green-500/10"    border="border-green-500/20" />
             <HealthStat count={healthCounts.yellow}     label="Moderada"   sub="1–4 citas netas" color="text-yellow-400"  bg="bg-yellow-500/10"   border="border-yellow-500/20" />
             <HealthStat count={healthCounts.red}        label="En riesgo"  sub="0 citas netas"   color="text-destructive" bg="bg-destructive/10"  border="border-destructive/20" />

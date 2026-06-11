@@ -3,7 +3,7 @@
 import { useState }       from 'react'
 import { Phone, Mail, MessageCircle, Loader2, Check } from 'lucide-react'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
 } from '@/shared/ui/sheet'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { getOrgDetailsAction, saveAdminNoteAction, type OrgDetails } from '@/modules/tenancy/actions'
@@ -83,6 +83,9 @@ export function OrgDetailsSheet({ orgId, orgName, branding }: Props) {
             </Avatar>
             <SheetTitle className="text-base">{orgName}</SheetTitle>
           </div>
+          <SheetDescription className="sr-only">
+            Detalles, contacto y notas internas del negocio {orgName}.
+          </SheetDescription>
         </SheetHeader>
 
         {loading && (

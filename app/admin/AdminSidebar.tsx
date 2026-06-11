@@ -2,7 +2,7 @@ import { AdminNavLinks } from './AdminNavLinks'
 
 export function AdminSidebar() {
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-card/40">
+    <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-card/40 md:flex">
       <div className="px-4 py-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Plataforma

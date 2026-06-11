@@ -56,80 +56,86 @@ export function OrgList({ orgs, onStatusChange, onDelete }: Props) {
           const healthBadge = HEALTH_BADGE[org.health.level]
 
           return (
-            <div key={org.id} className="flex items-center gap-4 bg-card px-5 py-4 hover:bg-accent/20 transition-smooth">
-              <Avatar className="h-10 w-10 shrink-0 rounded-xl border border-border">
-                <AvatarFallback
-                  style={{ backgroundColor: org.branding?.primaryColor ?? '#E0A300' }}
-                  className="rounded-xl text-white font-bold text-sm"
-                >
-                  {org.name[0]?.toUpperCase() ?? '?'}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="font-semibold">{org.name}</p>
-
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] font-medium px-2 py-0 ${
-                      org.status === 'active'
-                        ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                        : 'bg-destructive/10 text-destructive border-destructive/20'
-                    }`}
+            <div key={org.id} className="flex flex-col gap-3 bg-card px-5 py-4 hover:bg-accent/20 transition-smooth md:flex-row md:items-center md:gap-4">
+              {/* Fila superior en móvil: Avatar + Info */}
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+                <Avatar className="h-10 w-10 shrink-0 rounded-xl border border-border">
+                  <AvatarFallback
+                    style={{ backgroundColor: org.branding?.primaryColor ?? '#E0A300' }}
+                    className="rounded-xl text-white font-bold text-sm"
                   >
-                    {org.status === 'active' ? 'activa' : 'suspendida'}
-                  </Badge>
+                    {org.name[0]?.toUpperCase() ?? '?'}
+                  </AvatarFallback>
+                </Avatar>
 
-                  {isChurn && (
-                    <Badge variant="outline" className="text-[10px] font-medium px-2 py-0 bg-orange-500/10 text-orange-400 border-orange-500/20">
-                      sin actividad
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="font-semibold">{org.name}</p>
+
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-medium px-2 py-0 ${
+                        org.status === 'active'
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                          : 'bg-destructive/10 text-destructive border-destructive/20'
+                      }`}
+                    >
+                      {org.status === 'active' ? 'activa' : 'suspendida'}
                     </Badge>
-                  )}
 
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] font-medium px-2 py-0 ${healthBadge.cls}`}
-                    title={`+${org.health.created} creadas / −${org.health.cancelled} canceladas (7d)`}
-                  >
-                    {healthBadge.label}
-                  </Badge>
+                    {isChurn && (
+                      <Badge variant="outline" className="text-[10px] font-medium px-2 py-0 bg-orange-500/10 text-orange-400 border-orange-500/20">
+                        sin actividad
+                      </Badge>
+                    )}
+
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-medium px-2 py-0 ${healthBadge.cls}`}
+                      title={`+${org.health.created} creadas / −${org.health.cancelled} canceladas (7d)`}
+                    >
+                      {healthBadge.label}
+                    </Badge>
+                  </div>
+
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    /{org.slug}
+                    {org.city ? ` · ${org.city}` : ''}
+                    {daysAgo !== null ? ` · última cita hace ${daysAgo}d` : ' · sin citas aún'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Fila inferior en móvil: Stats + Acciones */}
+              <div className="flex items-center justify-end gap-3">
+                <div className="hidden items-center gap-3 text-xs text-muted-foreground md:flex">
+                  <span className="flex items-center gap-1" title="Profesionales">
+                    <Users className="h-3.5 w-3.5" /> {org._count.barbers}
+                  </span>
+                  <span className="flex items-center gap-1" title="Citas totales">
+                    <CalendarDays className="h-3.5 w-3.5" /> {org._count.appointments}
+                  </span>
                 </div>
 
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  /{org.slug}
-                  {org.city ? ` · ${org.city}` : ''}
-                  {daysAgo !== null ? ` · última cita hace ${daysAgo}d` : ' · sin citas aún'}
-                </p>
-              </div>
-
-              <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
-                <span className="flex items-center gap-1" title="Profesionales">
-                  <Users className="h-3.5 w-3.5" /> {org._count.barbers}
-                </span>
-                <span className="flex items-center gap-1" title="Citas totales">
-                  <CalendarDays className="h-3.5 w-3.5" /> {org._count.appointments}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <OrgStatusToggle orgId={org.id} status={org.status} onStatusChange={onStatusChange} />
-                <OrgDetailsSheet orgId={org.id} orgName={org.name} branding={org.branding} />
-                <Link
-                  href={`/${org.slug}`}
-                  target="_blank"
-                  className="rounded-lg border border-border p-1.5 text-xs transition-smooth hover:border-primary/50"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-                <OrgDeleteButton
-                  orgId={org.id}
-                  slug={org.slug}
-                  name={org.name}
-                  appointments={org._count.appointments}
-                  barbers={org._count.barbers}
-                  onDelete={onDelete}
-                />
+                <div className="flex items-center gap-2">
+                  <OrgStatusToggle orgId={org.id} status={org.status} onStatusChange={onStatusChange} />
+                  <OrgDetailsSheet orgId={org.id} orgName={org.name} branding={org.branding} />
+                  <Link
+                    href={`/${org.slug}`}
+                    target="_blank"
+                    className="rounded-lg border border-border p-1.5 text-xs transition-smooth hover:border-primary/50"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                  <OrgDeleteButton
+                    orgId={org.id}
+                    slug={org.slug}
+                    name={org.name}
+                    appointments={org._count.appointments}
+                    barbers={org._count.barbers}
+                    onDelete={onDelete}
+                  />
+                </div>
               </div>
             </div>
           )
