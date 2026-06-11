@@ -8,6 +8,7 @@ import { type AdminOrgRow }       from '@/modules/tenancy/queries'
 import { type HealthLevel }       from '@/modules/tenancy/domain/health-score'
 import { OrgStatusToggle }        from './OrgStatusToggle'
 import { OrgDeleteButton }        from './OrgDeleteButton'
+import { OrgDetailsSheet }        from './OrgDetailsSheet'
 
 const CHURN_DAYS = 30
 
@@ -113,12 +114,7 @@ export function OrgList({ orgs, onStatusChange, onDelete }: Props) {
 
               <div className="flex items-center gap-2">
                 <OrgStatusToggle orgId={org.id} status={org.status} onStatusChange={onStatusChange} />
-                <Link
-                  href={`/${org.slug}/panel`}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs transition-smooth hover:border-primary/50 hover:text-primary"
-                >
-                  Panel
-                </Link>
+                <OrgDetailsSheet orgId={org.id} orgName={org.name} branding={org.branding} />
                 <Link
                   href={`/${org.slug}`}
                   target="_blank"

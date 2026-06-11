@@ -195,12 +195,6 @@ export default async function AdminPage() {
                 <span className="text-xs text-muted-foreground tabular-nums ml-4">
                   {formatCOP(row._sum?.priceCop ?? 0)} COP
                 </span>
-                <Link
-                  href={`/${row.org.slug}/panel`}
-                  className="ml-2 text-xs text-primary/60 hover:text-primary transition-colors"
-                >
-                  Panel →
-                </Link>
               </div>
             ))}
           </div>

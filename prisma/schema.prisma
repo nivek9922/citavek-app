@@ -75,9 +75,24 @@ model Organization {
   members     Member[]
   invitations Invitation[]
   reviews     Review[]
+  adminNote   AdminNote?
 
   @@index([status])
   @@map("organization")
+}
+
+// ──────────────────── Notas internas (solo Super Admin) ────────────────────
+// Aislado de Organization para que ninguna query de tenant lo exponga por accidente.
+
+model AdminNote {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  content   String
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("admin_note")
 }
 
 // ──────────────────── Sucursales ────────────────────

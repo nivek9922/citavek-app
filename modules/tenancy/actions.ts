@@ -127,6 +127,80 @@ export async function deleteTenantBrandAssetAction(
   }
 }
 
+// ── Super-admin: detalles del negocio (para el Sheet Mini-CRM) ───────────────
+
+export interface OrgDetails {
+  phone:        string | null
+  ownerName:    string | null
+  ownerEmail:   string | null
+  onlineCount:  number
+  manualCount:  number
+  adminNote:    string | null
+}
+
+export async function getOrgDetailsAction(
+  orgId: string,
+): Promise<{ ok: true; data: OrgDetails } | { ok: false; error: string }> {
+  await requireSuperAdmin()
+  try {
+    const [org, owner, sourceCounts, adminNote] = await Promise.all([
+      db.organization.findUnique({ where: { id: orgId }, select: { phone: true } }),
+      db.member.findFirst({
+        where:  { organizationId: orgId, role: 'owner' },
+        select: { user: { select: { email: true, name: true } } },
+      }),
+      db.appointment.groupBy({
+        by:     ['source'],
+        where:  { organizationId: orgId },
+        _count: { _all: true },
+      }),
+      db.adminNote.findUnique({
+        where:  { organizationId: orgId },
+        select: { content: true },
+      }),
+    ])
+
+    const onlineCount = sourceCounts.find((s) => s.source === 'online')?._count._all ?? 0
+    const manualCount = sourceCounts.find((s) => s.source === 'manual')?._count._all ?? 0
+
+    return {
+      ok:   true,
+      data: {
+        phone:       org?.phone ?? null,
+        ownerName:   owner?.user.name ?? null,
+        ownerEmail:  owner?.user.email ?? null,
+        onlineCount,
+        manualCount,
+        adminNote:   adminNote?.content ?? null,
+      },
+    }
+  } catch (err) {
+    log.error('getOrgDetailsAction', { orgId, err: String(err) })
+    return { ok: false, error: 'No se pudieron cargar los detalles.' }
+  }
+}
+
+// ── Super-admin: guardar nota interna sobre un negocio ────────────────────────
+
+export async function saveAdminNoteAction(
+  orgId:   string,
+  content: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireSuperAdmin()
+  try {
+    await db.adminNote.upsert({
+      where:  { organizationId: orgId },
+      create: { organizationId: orgId, content },
+      update: { content },
+    })
+    log.audit('org.admin_note_saved', { orgId, by: session.user.email, charCount: content.length })
+    return { ok: true }
+  } catch (err) {
+    log.error('saveAdminNoteAction', { orgId, err: String(err) })
+    return { ok: false, error: 'No se pudo guardar la nota.' }
+  }
+}
+
 // ── Super-admin: suspender / reactivar suscripción ───────────────────────────
 
 export async function setOrgStatusAction(
