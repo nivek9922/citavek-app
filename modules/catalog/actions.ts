@@ -3,10 +3,10 @@ import { updateTag } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
-import { createService }   from './application/create-service'
-import { updateService }   from './application/update-service'
-import { toggleService }   from './application/toggle-service'
-import { reorderService }  from './application/reorder-service'
+import { createService }    from './application/create-service'
+import { updateService }    from './application/update-service'
+import { toggleService }    from './application/toggle-service'
+import { setServiceOrder }  from './application/set-service-order'
 import { prismaCatalogRepository as repo } from './infrastructure/prisma-catalog-repository'
 
 const serviceSchema = z.object({
@@ -59,17 +59,17 @@ export async function toggleServiceAction(
   }
 }
 
-export async function reorderServiceAction(
+export async function setServiceOrderAction(
   slug: string,
-  id: string,
-  direction: 'up' | 'down',
+  orderedIds: string[],
 ): Promise<{ ok: boolean; error?: string }> {
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'service:update')
-
-  const result = await reorderService(repo, ctx.id, id, direction)
-  if (!result.ok) return result
-
-  updateTag(`services:${ctx.id}`)
-  return { ok: true }
+  try {
+    await setServiceOrder(repo, ctx.id, orderedIds)
+    updateTag(`services:${ctx.id}`)
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'No se pudo reordenar.' }
+  }
 }

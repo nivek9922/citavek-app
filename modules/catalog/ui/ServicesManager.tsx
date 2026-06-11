@@ -11,7 +11,7 @@ import { Badge }      from '@/shared/ui/badge'
 import { cn }         from '@/shared/ui/utils'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { formatCop, formatDuration } from '@/shared/format'
-import { upsertServiceAction, toggleServiceAction, reorderServiceAction } from '../actions'
+import { upsertServiceAction, toggleServiceAction, setServiceOrderAction } from '../actions'
 import type { ServiceDTO } from '../queries'
 
 const CATEGORIES = [
@@ -49,33 +49,47 @@ interface Props {
 }
 
 export function ServicesManager({ services: initial, tenantSlug }: Props) {
-  // useOptimistic recibe `initial` directamente desde el Server Component.
-  // Cuando revalidatePath() dispara un re-render del RSC, `initial` cambia y
-  // useOptimistic lo recoge automáticamente — sin useState que lo bloquee.
   const [optimistic, setOptimistic] = useOptimistic(initial, applyOptimistic)
-  const [isPending,  startTransition] = useTransition()
-  const [togglingId, setTogglingId]  = useState<string | null>(null)
-  const [showForm,   setShowForm]    = useState(false)
-  const [editing,    setEditing]     = useState<ServiceDTO | null>(null)
+  const [, startTransition] = useTransition()
+  const [pendingCounts, setPendingCounts] = useState<Map<string, number>>(new Map())
+  const [showForm, setShowForm] = useState(false)
+  const [editing,  setEditing]  = useState<ServiceDTO | null>(null)
+
+  const isPendingItem = (id: string) => (pendingCounts.get(id) ?? 0) > 0
+
+  function addPending(id: string) {
+    setPendingCounts(prev => new Map(prev).set(id, (prev.get(id) ?? 0) + 1))
+  }
+  function removePending(id: string) {
+    setPendingCounts(prev => {
+      const m = new Map(prev)
+      const n = (m.get(id) ?? 1) - 1
+      if (n <= 0) m.delete(id); else m.set(id, n)
+      return m
+    })
+  }
 
   const openCreate = () => { setEditing(null); setShowForm(true) }
   const openEdit   = (s: ServiceDTO) => { setEditing(s); setShowForm(true) }
   const close      = () => { setShowForm(false); setEditing(null) }
 
   function toggle(id: string, active: boolean) {
-    setTogglingId(id)
+    addPending(id)
     startTransition(async () => {
       setOptimistic({ type: 'toggle', id, active })
       const res = await toggleServiceAction(tenantSlug, id, active)
-      setTogglingId(null)
-      if (res && !res.ok) toast.error(res.error ?? 'No se pudo cambiar el estado.')
+      removePending(id)
+      if (!res.ok) toast.error(res.error ?? 'No se pudo cambiar el estado.')
     })
   }
 
   function reorder(id: string, direction: 'up' | 'down') {
+    const orderedIds = applyOptimistic(optimistic, { type: 'reorder', id, direction }).map(s => s.id)
+    addPending(id)
     startTransition(async () => {
       setOptimistic({ type: 'reorder', id, direction })
-      const res = await reorderServiceAction(tenantSlug, id, direction)
+      const res = await setServiceOrderAction(tenantSlug, orderedIds)
+      removePending(id)
       if (!res.ok) toast.error(res.error ?? 'No se pudo reordenar.')
     })
   }
@@ -110,8 +124,7 @@ export function ServicesManager({ services: initial, tenantSlug }: Props) {
           <ServiceRow
             key={svc.id}
             service={svc}
-            isToggling={togglingId === svc.id}
-            isPendingReorder={isPending && togglingId === null}
+            isPending={isPendingItem(svc.id)}
             onToggle={() => toggle(svc.id, !svc.active)}
             onEdit={() => openEdit(svc)}
             onMoveUp={idx > 0 ? () => reorder(svc.id, 'up') : undefined}
@@ -125,21 +138,19 @@ export function ServicesManager({ services: initial, tenantSlug }: Props) {
 }
 
 interface RowProps {
-  service:          ServiceDTO
-  isToggling:       boolean
-  isPendingReorder: boolean
-  onToggle:         () => void
-  onEdit:           () => void
-  onMoveUp?:        () => void
-  onMoveDown?:      () => void
+  service:    ServiceDTO
+  isPending:  boolean
+  onToggle:   () => void
+  onEdit:     () => void
+  onMoveUp?:  () => void
+  onMoveDown?: () => void
 }
 
-function ServiceRow({ service, isToggling, isPendingReorder, onToggle, onEdit, onMoveUp, onMoveDown }: RowProps) {
+function ServiceRow({ service, isPending, onToggle, onEdit, onMoveUp, onMoveDown }: RowProps) {
   return (
     <div className={cn(
       'flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth',
       !service.active && 'opacity-50',
-      isPendingReorder && 'opacity-70',
     )}>
       {service.imageUrl ? (
         <Image
@@ -170,11 +181,11 @@ function ServiceRow({ service, isToggling, isPendingReorder, onToggle, onEdit, o
       </div>
       <div className="flex items-center gap-1">
         <div className="flex flex-col">
-          <button onClick={onMoveUp} disabled={!onMoveUp || isPendingReorder} title="Subir"
+          <button onClick={onMoveUp} disabled={!onMoveUp || isPending} title="Subir"
             className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronUp className="h-3.5 w-3.5" />
           </button>
-          <button onClick={onMoveDown} disabled={!onMoveDown || isPendingReorder} title="Bajar"
+          <button onClick={onMoveDown} disabled={!onMoveDown || isPending} title="Bajar"
             className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
@@ -183,9 +194,9 @@ function ServiceRow({ service, isToggling, isPendingReorder, onToggle, onEdit, o
           className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
           <Pencil className="h-4 w-4" />
         </button>
-        <button onClick={onToggle} disabled={isToggling} title={service.active ? 'Desactivar' : 'Activar'}
+        <button onClick={onToggle} disabled={isPending} title={service.active ? 'Desactivar' : 'Activar'}
           className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
-          {isToggling
+          {isPending
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : service.active
               ? <ToggleRight className="h-5 w-5 text-primary" />
