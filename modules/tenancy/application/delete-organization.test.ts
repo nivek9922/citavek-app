@@ -2,18 +2,19 @@ import { describe, it, expect, vi } from 'vitest'
 import { deleteOrganization } from './delete-organization'
 import type { TenancyRepository } from '../domain/ports/tenancy-repository'
 import type { Organization, OrgStatus } from '../domain/organization'
-import { OrgStatusError } from '../domain/organization'
+import { OrgStatusError, OrgHasAppointmentsError } from '../domain/organization'
 
 const BASE_ORG: Organization = { id: 'org-1', slug: 'test-slug', name: 'Test Barbería', status: 'active' }
 
-function createFakeRepo(org: Organization | null = BASE_ORG) {
+function createFakeRepo(org: Organization | null = BASE_ORG, appointmentCount = 0) {
   const repo: TenancyRepository = {
-    findById:          vi.fn(async () => org),
-    setStatus:         vi.fn(async (_id: string, _s: OrgStatus) => undefined),
-    updateBranding:    vi.fn(async () => undefined),
-    patchBranding:     vi.fn(async () => undefined),
-    updateInfo:        vi.fn(async () => undefined),
-    deleteWithCascade: vi.fn(async () => ({ slug: org?.slug ?? '', memberUserIds: ['u-1', 'u-2'] })),
+    findById:           vi.fn(async () => org),
+    setStatus:          vi.fn(async (_id: string, _s: OrgStatus) => undefined),
+    updateBranding:     vi.fn(async () => undefined),
+    patchBranding:      vi.fn(async () => undefined),
+    updateInfo:         vi.fn(async () => undefined),
+    countAppointments:  vi.fn(async () => appointmentCount),
+    deleteWithCascade:  vi.fn(async () => ({ slug: org?.slug ?? '', memberUserIds: ['u-1', 'u-2'] })),
   }
   return { repo }
 }
@@ -32,6 +33,14 @@ describe('deleteOrganization', () => {
     const { repo } = createFakeRepo(null)
 
     await expect(deleteOrganization(repo, 'org-x')).rejects.toBeInstanceOf(OrgStatusError)
+
+    expect(repo.deleteWithCascade).not.toHaveBeenCalled()
+  })
+
+  it('org con citas lanza OrgHasAppointmentsError, no llama deleteWithCascade', async () => {
+    const { repo } = createFakeRepo(BASE_ORG, 5)
+
+    await expect(deleteOrganization(repo, 'org-1')).rejects.toBeInstanceOf(OrgHasAppointmentsError)
 
     expect(repo.deleteWithCascade).not.toHaveBeenCalled()
   })

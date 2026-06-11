@@ -39,3 +39,10 @@ export class OrgStatusError extends Error {
     this.name = 'OrgStatusError'
   }
 }
+
+export class OrgHasAppointmentsError extends Error {
+  constructor() {
+    super('Esta organización tiene citas registradas. Por integridad financiera, suspéndela en lugar de eliminarla.')
+    this.name = 'OrgHasAppointmentsError'
+  }
+}

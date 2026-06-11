@@ -29,16 +29,17 @@ export const prismaTenancyRepository: TenancyRepository = {
     await db.organization.update({ where: { id }, data })
   },
 
+  async countAppointments(id) {
+    return db.appointment.count({ where: { organizationId: id } })
+  },
+
   async deleteWithCascade(id): Promise<DeleteResult> {
     const [org, members] = await Promise.all([
       db.organization.findUnique({ where: { id }, select: { slug: true } }),
       db.member.findMany({ where: { organizationId: id }, select: { userId: true } }),
     ])
 
-    await db.$transaction([
-      db.appointment.deleteMany({ where: { organizationId: id } }),
-      db.organization.delete({ where: { id } }),
-    ])
+    await db.organization.delete({ where: { id } })
 
     return {
       slug:          org?.slug ?? '',

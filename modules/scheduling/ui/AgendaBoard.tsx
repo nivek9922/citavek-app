@@ -161,7 +161,7 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
       {/* Acciones */}
       {apt.status === 'confirmed' && (
         <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
-          {apt.customerPhone && (
+          {isFuture && apt.customerPhone && (
             <ActionBtn
               onClick={sendReminder}
               icon={reminded ? <CheckCheck className="h-3.5 w-3.5" /> : <BellRing className="h-3.5 w-3.5" />}
@@ -186,6 +186,8 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
             icon={<UserX className="h-3.5 w-3.5" />}
             label="No llegó"
             className="text-orange-400 hover:bg-orange-500/10"
+            disabled={isFuture || isPending}
+            title={isFuture ? 'No puedes marcar No llegó en una cita futura' : undefined}
           />
           <ActionBtn
             onClick={() => update('cancelled')}

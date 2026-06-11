@@ -1,8 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { ExternalLink, LogOut } from 'lucide-react'
-import { getTenantContext }  from '@/server/tenant'
-import { requireMembership } from '@/server/auth-guards'
+import { getTenantContextPermissive } from '@/server/tenant'
+import { requireMembership }          from '@/server/auth-guards'
 import { signOutAction }     from '@/modules/identity/actions'
 import { PanelNav }          from '@/modules/identity/ui/PanelNav'
 
@@ -14,7 +15,8 @@ export default async function PanelLayout({
   params: Promise<{ tenant: string }>
 }) {
   const { tenant: slug } = await params
-  const ctx = await getTenantContext(slug)
+  const ctx = await getTenantContextPermissive(slug)
+  if (!ctx) notFound()
   const { member, session } = await requireMembership(ctx.id)
   const initial = ctx.name.charAt(0).toUpperCase()
 
@@ -65,6 +67,14 @@ export default async function PanelLayout({
 
       {/* ── Columna principal ── */}
       <div className="flex min-h-screen flex-col">
+
+        {/* Banner de cuenta suspendida */}
+        {ctx.status === 'suspended' && (
+          <div className="sticky top-0 z-50 bg-destructive px-4 py-2.5 text-center text-sm font-medium text-destructive-foreground">
+            Tu cuenta está suspendida por falta de pago. Tus clientes no pueden agendar nuevas citas.{' '}
+            <span className="underline underline-offset-2">Contacta a soporte.</span>
+          </div>
+        )}
 
         {/* Top bar (mobile) */}
         <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm lg:hidden">

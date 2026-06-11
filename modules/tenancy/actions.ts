@@ -8,6 +8,7 @@ import { db } from '@/server/db'
 import log from '@/server/logger'
 import { setOrgStatus }       from './application/set-org-status'
 import { deleteOrganization } from './application/delete-organization'
+import { OrgHasAppointmentsError } from './domain/organization'
 import { updateBranding }     from './application/update-branding'
 import { updateOrgInfo }      from './application/update-org-info'
 import { uploadBrandImage }   from './application/upload-brand-image'
@@ -252,7 +253,10 @@ export async function deleteOrgAction(
     updateTag(`tenant:${slug}`)
     revalidatePath('/admin')
     return { ok: true }
-  } catch {
+  } catch (err) {
+    if (err instanceof OrgHasAppointmentsError) {
+      return { ok: false, error: err.message }
+    }
     return { ok: false, error: 'No se pudo eliminar la barbería.' }
   }
 }

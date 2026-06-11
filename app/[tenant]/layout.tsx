@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
-import { getTenantContext } from '@/server/tenant'
+import { getTenantContextPermissive } from '@/server/tenant'
 import { hexToOklch } from '@/shared/color-utils'
 import { buildCloudinaryIconUrl } from '@/shared/cloudinary-url'
 import { db } from '@/server/db'
@@ -22,7 +22,9 @@ export async function generateMetadata({
   params: Promise<{ tenant: string }>
 }): Promise<Metadata> {
   const { tenant: slug } = await params
-  const ctx = await getTenantContext(slug)
+  const ctx = await getTenantContextPermissive(slug)
+  if (!ctx) return { title: 'No encontrado' }
+
   const color = ctx.branding.primaryColor
 
   // iOS Safari NO lee el manifiesto para el icono de inicio: exige un
@@ -66,8 +68,8 @@ export async function generateViewport({
   params: Promise<{ tenant: string }>
 }): Promise<Viewport> {
   const { tenant: slug } = await params
-  const ctx = await getTenantContext(slug)
-  return { themeColor: ctx.branding.primaryColor }
+  const ctx = await getTenantContextPermissive(slug)
+  return { themeColor: ctx?.branding.primaryColor ?? '#E0A300' }
 }
 
 // El layout NO es async: el shell (children) es estático y se renderiza de
@@ -93,8 +95,8 @@ export default function TenantLayout({
 
 async function TenantTheme({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params
-  const ctx = await getTenantContext(slug)
-  const { primary, glow } = hexToOklch(ctx.branding.primaryColor)
+  const ctx = await getTenantContextPermissive(slug)
+  const { primary, glow } = hexToOklch(ctx?.branding.primaryColor ?? '#E0A300')
   const ring = primary.replace(')', ' / 60%)')
 
   // Valores derivados de un hex validado (no texto libre del usuario) → seguro interpolar.

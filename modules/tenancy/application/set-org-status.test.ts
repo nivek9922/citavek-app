@@ -9,12 +9,13 @@ const BASE_ORG: Organization = { id: 'org-1', slug: 'test-slug', name: 'Test Bar
 function createFakeRepo(org: Organization | null = BASE_ORG) {
   const statusSet: OrgStatus[] = []
   const repo: TenancyRepository = {
-    findById:          vi.fn(async () => org),
-    setStatus:         vi.fn(async (_id, s) => { statusSet.push(s) }),
-    updateBranding:    vi.fn(async () => undefined),
-    patchBranding:     vi.fn(async () => undefined),
-    updateInfo:        vi.fn(async () => undefined),
-    deleteWithCascade: vi.fn(async () => ({ slug: org?.slug ?? '', memberUserIds: [] })),
+    findById:           vi.fn(async () => org),
+    setStatus:          vi.fn(async (_id, s) => { statusSet.push(s) }),
+    updateBranding:     vi.fn(async () => undefined),
+    patchBranding:      vi.fn(async () => undefined),
+    updateInfo:         vi.fn(async () => undefined),
+    countAppointments:  vi.fn(async () => 0),
+    deleteWithCascade:  vi.fn(async () => ({ slug: org?.slug ?? '', memberUserIds: [] })),
   }
   return { repo, statusSet }
 }
