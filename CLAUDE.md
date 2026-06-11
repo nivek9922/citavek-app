@@ -1,86 +1,124 @@
-# Context
-You are working on BookingFlow KR, a multi-tenant SaaS platform for appointment management.
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+npm run dev           # Start dev server (runs predev node version check first)
+npm run build         # Production build
+npm run lint          # ESLint with zero warnings tolerance
+npm run typecheck     # tsc --noEmit
+npm run test          # vitest run (single pass)
+npm run test:watch    # vitest interactive
+npm run validate      # typecheck + lint + test (run before committing)
+
+npm run db:migrate    # prisma migrate dev
+npm run db:seed       # tsx prisma/seed.ts
+npm run db:studio     # Prisma Studio
+npm run db:reset      # prisma migrate reset (destructive)
+```
+
+**Node requirement**: ≥20.9.0. If running in a shell with Node 18 (system default), export nvm's Node 20+ to PATH before running Prisma or Vitest.
+
+**Running a single test file**:
+```bash
+npx vitest run modules/scheduling/application/find-dead-slots.test.ts
+```
+
+**Prisma client is generated to `generated/prisma/`** (not `node_modules/@prisma/client`). Always import from `@/generated/prisma/client`.
+
+## Architecture
+
+### Top-level layout
+
+```
+modules/          # Business domains — primary area to work in
+server/           # Server-only singletons (db, auth, guards, rbac, tenant)
+shared/           # Cross-cutting utilities and primitive UI components
+app/              # Next.js App Router (routing shell only — no business logic)
+config/env.ts     # Zod-validated environment schema; validated at startup
+lib/              # Client-side utilities (auth-client.ts)
+test/mocks/       # server-only.ts stub for vitest
+```
+
+### Module internal layout
+
+Each domain module under `modules/<name>/` follows:
+```
+domain/           # Entities, value objects, ports (interfaces). Zero external deps.
+application/      # Use cases. No Prisma imports. Receives/returns plain DTOs.
+infrastructure/   # Prisma adapter implementing the domain port.
+ui/               # React components for the panel or public pages.
+actions.ts        # 'use server' — auth/validation boundary → calls use cases.
+queries.ts        # 'server-only' read-side queries (sometimes 'use cache').
+```
+
+`modules/scheduling` is the reference implementation — it demonstrates the complete pattern including advisory locks, slot calculator, ports, full test coverage, and proper guard placement.
+
+### Server singletons (`server/`)
+
+| File | Purpose |
+|---|---|
+| `db.ts` | Prisma singleton via `@prisma/adapter-pg` |
+| `tenant.ts` | `getTenantContext(slug)` — resolves and caches the tenant; deduped per request via React `cache()` |
+| `auth-guards.ts` | `requireSession`, `requireMembership`, `requirePermission` |
+| `rbac.ts` | Flat permissions map: `{ 'permission:action': ['owner', 'barber'] }` |
+| `session.ts` | Thin wrapper over better-auth session |
+| `rate-limit.ts` | In-memory sliding window rate limiter |
+
+### Routing
+
+- `app/[tenant]/` — public booking flow for a specific tenant
+- `app/[tenant]/panel/` — owner/barber management panel (gated by `requireMembership`)
+- `app/admin/` — super-admin panel (gated by `requireSuperAdmin`)
+- `app/api/auth/` — better-auth route handler
+- `app/api/cron/` — cron jobs (verified by secret header)
+
+### Tenant resolution flow
+
+Every request involving a tenant starts with:
+```ts
+const ctx = await getTenantContext(slug)   // resolves org from slug, 404 if not found
+await requirePermission(ctx.id, 'permission:action')  // auth + role check
+```
+
+`getTenantContext` is a two-layer cache: `'use cache'` with `cacheTag('tenant:${slug}')` for persistence, wrapped in React `cache()` for per-request deduplication.
+
+### Cache strategy
+
+- **Reads**: Use `'use cache'` directive inside `queries.ts` functions with `cacheTag('resource:${organizationId}')` and `cacheLife('max')`.
+- **Writes**: Call `updateTag('resource:${organizationId}')` inside `actions.ts` after a successful mutation.
+- **Legacy**: Some actions still use `revalidatePath` — migrate to `updateTag` when touching them.
+- Tag convention: `services:${orgId}`, `barbers:${orgId}`, `tenant:${slug}` — always scoped to tenant.
+
+### Server Actions pattern
+
+```ts
+// Guards OUTSIDE try/catch — redirect()/notFound() throw control-flow errors
+// that catch would silently swallow.
+const ctx = await getTenantContext(slug)
+await requirePermission(ctx.id, 'permission:action')
+
+try {
+  const parsed = schema.parse(input)
+  const result = await useCase(repo, { organizationId: ctx.id, ...parsed })
+  if (result.ok) updateTag(`resource:${ctx.id}`)
+  return result
+} catch (err) {
+  log.error('actionName', { err: String(err) })
+  return { ok: false, error: 'Message shown to the user.' }
+}
+```
+
+### Multi-tenant safety rule
+
+`organizationId` is **always** derived from `getTenantContext(slug)` on the server. It is **never** accepted from client input. Every Prisma query in repositories must include `organizationId` in the `where` clause.
+
+### Testing
+
+Tests live next to the code they test (`.test.ts`). Vitest with `environment: 'node'`. The `server-only` package is stubbed at `test/mocks/server-only.ts`. Domain and application layer tests use a fake repository (see `find-dead-slots.test.ts` for the pattern). Infrastructure isolation tests (`*.isolation.test.ts`) require a real DB and are typically skipped in CI without one.
 
 ## Product Vision
-The platform helps businesses manage:
-- appointments
-- customers
-- staff schedules
-- subscriptions
-- payments
-- tenant branding
-- analytics
 
-The system must be designed to support:
-- barber shops
-- hair salons
-- beauty salons
-- future appointment-based businesses
-
-## Stack
-- Next.js 16 (App Router strictly)
-- React 19
-- TypeScript
-- PostgreSQL
-- Prisma
-- Tailwind CSS
-- shadcn/ui
-
-## Architecture Rules
-The project follows:
-- Modular Monolith
-- Clean Architecture
-- Hexagonal Architecture
-- DDD-inspired module organization
-
-### Folder/Layer Rules
-- Domain: Contains business rules, entities, value objects, and ports.
-- Application: Contains use cases and orchestration.
-- Infrastructure: Contains Prisma, external services, and adapters.
-- UI: Contains React components and presentation logic.
-
-### Dependency Direction
-Allowed:
-- UI -> Application
-- Application -> Domain
-- Infrastructure -> Domain
-
-Forbidden:
-- Domain depending on Prisma, React, Next.js, or any external library.
-- Application depending directly on Prisma (use ports/interfaces).
-- UI containing business rules.
-- Leaking Prisma Models to the UI. Always map DB results to Domain Entities or plain DTOs before passing them to Client Components.
-
-## Next.js 16 & React 19 Rules
-Prefer:
-- Server Components by default.
-- Server Actions for all mutations.
-- React 19 hooks for UI state (`useOptimistic`, `useActionState`, `useFormStatus`).
-- Immediate cache invalidation using `revalidatePath` or `revalidateTag` at the end of successful Server Actions.
-- Suspense and streaming for parallel data fetching.
-
-Avoid:
-- Client Components (`"use client"`) unless interactivity (e.g., onClick, hooks) is strictly required. Push `"use client"` down the component tree to the leaf nodes.
-- Overusing `useEffect`. State derivation and Server Actions should replace most effects.
-- Passing non-serializable data from Server to Client.
-
-## Performance Rules
-Always think about:
-- Rendering cost and reducing LCP (Largest Contentful Paint).
-- Minimizing client JS bundle size.
-- Database query efficiency (avoid N+1 queries in Prisma).
-- Avoiding unnecessary re-renders.
-
-## Testing Rules
-Every important feature must include:
-- Unit tests for domain and use cases.
-- Integration tests for repositories and server actions.
-
-## Working Style
-Before implementing:
-1. Analyze the problem.
-2. Identify the root cause.
-3. Propose the smallest correct solution.
-4. Validate edge cases.
-
-Do not guess. Do not over-engineer. Do not rewrite large parts without need. Do not use magic strings (e.g., "any"); use proper typing, nulls, or domain constants.
+BookingFlow KR is a multi-tenant SaaS for appointment-based businesses (barber shops, salons). Each `Organization` is a tenant identified by its `slug`. The platform manages appointments, customers, staff schedules, subscriptions, and tenant branding. Timezone handling is per-tenant (`America/Bogota` default); all timestamps stored as `timestamptz`.

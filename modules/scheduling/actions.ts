@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { fromZonedTime } from 'date-fns-tz'
 import { z } from 'zod'
 import { getTenantContext } from '@/server/tenant'
@@ -228,7 +228,7 @@ export async function blockBarberDateAction(
       reason:         parsed.reason ?? null,
     })
 
-    if (result.ok) revalidatePath(`/${slug}/panel`)
+    if (result.ok) updateTag(`schedule:${ctx.id}`)
     return result
   } catch (err) {
     log.error('blockBarberDateAction', { err: String(err) })
@@ -249,7 +249,7 @@ export async function unblockBarberDateAction(
       dateStr:        input.dateStr,
     })
 
-    if (result.ok) revalidatePath(`/${slug}/panel`)
+    if (result.ok) updateTag(`schedule:${ctx.id}`)
     return result
   } catch (err) {
     log.error('unblockBarberDateAction', { err: String(err) })

@@ -1,7 +1,11 @@
 import 'server-only'
+import { cacheTag, cacheLife } from 'next/cache'
 import { db } from '@/server/db'
 
 export const listScheduleExceptions = async (organizationId: string) => {
+  'use cache'
+  cacheTag(`schedule:${organizationId}`)
+  cacheLife('max')
   return db.scheduleException.findMany({
     where:   { organizationId },
     orderBy: { date: 'asc' },

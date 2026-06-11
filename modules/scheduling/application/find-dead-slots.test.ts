@@ -139,12 +139,13 @@ describe('findDeadSlots', () => {
     expect(dates).toEqual(['2025-06-16', '2025-06-17', '2025-06-18', '2025-06-19', '2025-06-20'])
   })
 
-  it('varios barberos: cada uno se consulta en paralelo para cada día', async () => {
+  it('varios barberos: working hours se cargan 1 vez por barbero; busy/blocked por día', async () => {
     const repo = createFakeRepo({ barberIds: ['b1', 'b2', 'b3'] })
     await findDeadSlots(repo, 'org', 2, SUNDAY_NOON_UTC)
 
-    // 3 barberos × 2 días = 6 llamadas a cada método
-    expect(repo.getBarberWorkingHours).toHaveBeenCalledTimes(6)
+    // Working hours son estáticos → 1 fetch por barbero (no por día)
+    expect(repo.getBarberWorkingHours).toHaveBeenCalledTimes(3)
+    // Busy slots y bloqueos cambian por día → 3 barberos × 2 días = 6 llamadas
     expect(repo.getBarberBusySlots).toHaveBeenCalledTimes(6)
     expect(repo.isDateBlocked).toHaveBeenCalledTimes(6)
   })

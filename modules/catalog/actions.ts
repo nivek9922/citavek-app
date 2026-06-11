@@ -21,17 +21,26 @@ const serviceSchema = z.object({
   imageUrl:    z.string().url().max(500).optional().or(z.literal('')).transform((v) => v || null),
 })
 
-export async function upsertServiceAction(slug: string, id: string | null, formData: FormData) {
-  const ctx   = await getTenantContext(slug)
+export async function upsertServiceAction(
+  slug: string,
+  id: string | null,
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, id ? 'service:update' : 'service:create')
-  const input = serviceSchema.parse(Object.fromEntries(formData))
-
-  if (id) {
-    await updateService(repo, id, ctx.id, input)
-  } else {
-    await createService(repo, ctx.id, input)
+  try {
+    const input = serviceSchema.parse(Object.fromEntries(formData))
+    if (id) {
+      await updateService(repo, id, ctx.id, input)
+    } else {
+      await createService(repo, ctx.id, input)
+    }
+    updateTag(`services:${ctx.id}`)
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'No se pudo guardar el servicio.'
+    return { ok: false, error: msg }
   }
-  updateTag(`services:${ctx.id}`)
 }
 
 export async function toggleServiceAction(

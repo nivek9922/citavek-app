@@ -222,9 +222,9 @@ function buildInitialHours(wh: BarberWithHours['workingHours']): HoursState {
 function BarberForm({
   tenantSlug, barber, onDone,
 }: { tenantSlug: string; barber: BarberWithHours | null; onDone: () => void }) {
-  const [isPending, setIsPending] = useState(false)
-  const [error, setError]         = useState('')
-  const [hours, setHours]   = useState<HoursState>(() =>
+  const [isPending, startTransition] = useTransition()
+  const [error, setError]            = useState('')
+  const [hours, setHours]            = useState<HoursState>(() =>
     buildInitialHours(barber?.workingHours ?? []),
   )
 
@@ -239,10 +239,9 @@ function BarberForm({
     setHours((prev) => ({ ...prev, [day]: { ...prev[day]!, [field]: value } }))
   }
 
-  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
-    setIsPending(true)
 
     const hoursJson = JSON.stringify(
       DAYS
@@ -257,14 +256,15 @@ function BarberForm({
     const fd = new FormData(e.currentTarget)
     fd.set('hoursJson', hoursJson)
 
-    try {
-      await upsertBarberAction(tenantSlug, barber?.id ?? null, fd)
+    startTransition(async () => {
+      const result = await upsertBarberAction(tenantSlug, barber?.id ?? null, fd)
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+      toast.success(barber ? 'Barbero actualizado correctamente.' : 'Barbero creado correctamente.')
       onDone()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar')
-    } finally {
-      setIsPending(false)
-    }
+    })
   }
 
   return (

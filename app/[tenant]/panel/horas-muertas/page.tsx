@@ -1,10 +1,10 @@
-import { db } from '@/server/db'
 import { getTenantContext } from '@/server/tenant'
-import { requireMembership } from '@/server/auth-guards'
+import { requirePermission } from '@/server/auth-guards'
 import { findDeadSlots } from '@/modules/scheduling/application/find-dead-slots'
 import { findInactiveCustomers } from '@/modules/customers/queries'
 import { prismaSchedulingRepository } from '@/modules/scheduling/infrastructure/prisma-scheduling-repository'
 import { sanitizePhoneForWa } from '@/modules/scheduling/domain/whatsapp-reminder'
+import { listActiveBarbers } from '@/modules/staff/queries'
 import { PageHeader } from '@/shared/ui/page-header'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -18,15 +18,12 @@ export default async function HorasMuertasPage({
 }) {
   const { tenant: slug } = await params
   const ctx = await getTenantContext(slug)
-  await requireMembership(ctx.id)
+  await requirePermission(ctx.id, 'analytics:revenue')
 
   const [deadSlots, inactiveCustomers, barbers] = await Promise.all([
     findDeadSlots(prismaSchedulingRepository, ctx.id),
     findInactiveCustomers(ctx.id),
-    db.barber.findMany({
-      where:  { organizationId: ctx.id, active: true },
-      select: { id: true, displayName: true, nickname: true },
-    }),
+    listActiveBarbers(ctx.id),
   ])
 
   const barberLabel = (id: string) => {

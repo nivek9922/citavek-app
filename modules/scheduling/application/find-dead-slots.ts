@@ -40,51 +40,62 @@ export async function findDeadSlots(
 
   if (barberIds.length === 0) return []
 
-  const base   = startFrom ?? new Date()
-  const result: DeadSlotDay[] = []
+  const base = startFrom ?? new Date()
 
-  for (let i = 1; i <= daysAhead; i++) {
-    const dayUtc   = addDays(base, i)
-    const zonedDay = toZonedTime(dayUtc, timezone)
-    const dateStr  = format(zonedDay, 'yyyy-MM-dd')
-    const dow      = getDay(startOfDay(zonedDay)) // 0=dom…6=sáb
+  // Horarios laborales son datos semanales estáticos — se cargan una vez por barbero.
+  const workingHoursMap = new Map(
+    await Promise.all(
+      barberIds.map(async (id) =>
+        [id, await repo.getBarberWorkingHours(organizationId, id)] as const,
+      ),
+    ),
+  )
 
-    const barberData = await Promise.all(
-      barberIds.map(async (barberId) => {
-        const [workingHours, busySlots, isBlocked] = await Promise.all([
-          repo.getBarberWorkingHours(organizationId, barberId),
-          repo.getBarberBusySlots(organizationId, barberId, dayUtc),
-          repo.isDateBlocked(organizationId, barberId, dateStr),
-        ])
+  // Todos los días se procesan en paralelo.
+  const settled = await Promise.all(
+    Array.from({ length: daysAhead }, async (_, i) => {
+      const dayUtc   = addDays(base, i + 1)
+      const zonedDay = toZonedTime(dayUtc, timezone)
+      const dateStr  = format(zonedDay, 'yyyy-MM-dd')
+      const dow      = getDay(startOfDay(zonedDay)) // 0=dom…6=sáb
 
-        if (isBlocked) return null
+      const barberData = await Promise.all(
+        barberIds.map(async (barberId) => {
+          const [busySlots, isBlocked] = await Promise.all([
+            repo.getBarberBusySlots(organizationId, barberId, dayUtc),
+            repo.isDateBlocked(organizationId, barberId, dateStr),
+          ])
 
-        const wh = workingHours.find((w) => w.dayOfWeek === dow)
-        if (!wh) return null
+          if (isBlocked) return null
 
-        const workingMin = wh.endMin - wh.startMin
-        const busyMin    = busySlots.reduce(
-          (sum, s) => sum + (s.endAt.getTime() - s.startAt.getTime()) / 60_000,
-          0,
-        )
-        const freeMin = Math.max(0, workingMin - busyMin)
-        return { barberId, freeMin, workingMin }
-      }),
-    )
+          const workingHours = workingHoursMap.get(barberId) ?? []
+          const wh = workingHours.find((w) => w.dayOfWeek === dow)
+          if (!wh) return null
 
-    const barbers = barberData.filter(
-      (d): d is DeadSlotBarber => d !== null && d.freeMin >= DEAD_SLOT_THRESHOLD_MIN,
-    )
+          const workingMin = wh.endMin - wh.startMin
+          const busyMin    = busySlots.reduce(
+            (sum, s) => sum + (s.endAt.getTime() - s.startAt.getTime()) / 60_000,
+            0,
+          )
+          const freeMin = Math.max(0, workingMin - busyMin)
+          return { barberId, freeMin, workingMin }
+        }),
+      )
 
-    if (barbers.length > 0) {
-      result.push({
+      const barbers = barberData.filter(
+        (d): d is DeadSlotBarber => d !== null && d.freeMin >= DEAD_SLOT_THRESHOLD_MIN,
+      )
+
+      if (barbers.length === 0) return null
+
+      return {
         date:         dateStr,
         dateUtc:      dayUtc,
         barbers,
         totalFreeMin: barbers.reduce((s, b) => s + b.freeMin, 0),
-      })
-    }
-  }
+      }
+    }),
+  )
 
-  return result
+  return settled.filter((d): d is DeadSlotDay => d !== null)
 }
