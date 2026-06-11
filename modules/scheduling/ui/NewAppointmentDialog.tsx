@@ -1,14 +1,16 @@
 'use client'
 import { useState } from 'react'
+import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { Plus, Loader2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/shared/ui/dialog'
-import { Button }   from '@/shared/ui/button'
-import { Input }    from '@/shared/ui/input'
-import { Label }    from '@/shared/ui/label'
-import { Textarea } from '@/shared/ui/textarea'
+import { Button }     from '@/shared/ui/button'
+import { Input }      from '@/shared/ui/input'
+import { Label }      from '@/shared/ui/label'
+import { Textarea }   from '@/shared/ui/textarea'
+import { DatePicker } from '@/shared/ui/date-picker'
 import { formatCop, formatDuration } from '@/shared/format'
 import { createManualAppointmentAction } from '../actions'
 import type { ServiceDTO } from '@/modules/catalog/queries'
@@ -25,6 +27,9 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
   const [open,      setOpen]      = useState(false)
   const [isPending, setIsPending] = useState(false)
   const [error,     setError]     = useState('')
+  const [dateValue, setDateValue] = useState<Date | undefined>(
+    () => new Date(`${defaultDate}T00:00:00`),
+  )
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -97,8 +102,18 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="dateStr">Fecha</Label>
-              <Input id="dateStr" name="dateStr" type="date" defaultValue={defaultDate} required />
+              <Label>Fecha</Label>
+              <DatePicker
+                value={dateValue}
+                onChange={setDateValue}
+                placeholder="Selecciona fecha"
+                disabled={isPending}
+              />
+              <input
+                type="hidden"
+                name="dateStr"
+                value={dateValue ? format(dateValue, 'yyyy-MM-dd') : ''}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="timeStr">Hora</Label>

@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { format } from 'date-fns'
+import { toast } from 'sonner'
 import { AlertCircle, CalendarOff, Trash2 } from 'lucide-react'
-import { Button }  from '@/shared/ui/button'
-import { Input }   from '@/shared/ui/input'
-import { Label }   from '@/shared/ui/label'
+import { Button }     from '@/shared/ui/button'
+import { Input }      from '@/shared/ui/input'
+import { Label }      from '@/shared/ui/label'
+import { DatePicker } from '@/shared/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { blockBarberDateAction, unblockBarberDateAction } from '../actions'
 import type { ScheduleExceptionDTO } from '../queries'
@@ -30,7 +33,7 @@ function formatDate(dateStr: string) {
 
 export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr }: Props) {
   const [list, setList]           = useState<ScheduleExceptionDTO[]>(exceptions)
-  const [date, setDate]           = useState('')
+  const [date, setDate]           = useState<Date | undefined>(undefined)
   const [scope, setScope]         = useState<string>('org')
   const [reason, setReason]       = useState('')
   const [error, setError]         = useState<string | null>(null)
@@ -44,27 +47,33 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr 
     if (!date) return
     setError(null)
     setIsPending(true)
+    const dateStr = format(date, 'yyyy-MM-dd')
     try {
       const barberId = scope === 'org' ? null : scope
       const res = await blockBarberDateAction(tenantSlug, {
         barberId,
-        dateStr: date,
-        reason:  reason.trim() || undefined,
+        dateStr,
+        reason: reason.trim() || undefined,
       })
 
-      if (!res.ok) { setError(res.error); return }
+      if (!res.ok) {
+        setError(res.error ?? null)
+        toast.error(res.error ?? 'No se pudo bloquear el día.')
+        return
+      }
 
       const barberName = barberId ? barbers.find((b) => b.id === barberId)?.displayName ?? null : null
       const newEntry: ScheduleExceptionDTO = {
         id:       crypto.randomUUID(),
-        date,
+        date:     dateStr,
         reason:   reason.trim() || null,
         barberId: barberId ?? null,
         barber:   barberName ? { displayName: barberName } : null,
       }
       setList((prev) => [...prev, newEntry])
-      setDate('')
+      setDate(undefined)
       setReason('')
+      toast.success('Día bloqueado correctamente')
     } finally {
       setIsPending(false)
     }
@@ -75,6 +84,7 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr 
     try {
       await unblockBarberDateAction(tenantSlug, { barberId, dateStr })
       setList((prev) => prev.filter((e) => e.id !== id))
+      toast.success('Bloqueo eliminado')
     } finally {
       setIsPending(false)
     }
@@ -98,14 +108,13 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr 
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="block-date">Fecha</Label>
-            <Input
-              id="block-date"
-              type="date"
-              min={todayStr}
+            <Label>Fecha</Label>
+            <DatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+              onChange={setDate}
+              min={new Date(todayStr + 'T00:00:00')}
+              placeholder="Selecciona una fecha"
+              disabled={isPending}
             />
           </div>
 
@@ -145,7 +154,7 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr 
           </div>
         )}
 
-        <Button type="submit" disabled={isPending || !date} className="w-full sm:w-auto">
+        <Button type="submit" disabled={isPending || !date} className="w-full sm:w-auto" size="sm">
           {isPending ? 'Guardando…' : 'Bloquear día'}
         </Button>
       </form>

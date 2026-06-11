@@ -1,8 +1,8 @@
 'use client'
 import Image from 'next/image'
-import { useOptimistic, useState, useTransition } from 'react'
+import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, ChevronUp, ChevronDown, ImagePlus, X } from 'lucide-react'
 import { Button }     from '@/shared/ui/button'
 import { Input }      from '@/shared/ui/input'
 import { Label }      from '@/shared/ui/label'
@@ -11,7 +11,7 @@ import { Badge }      from '@/shared/ui/badge'
 import { cn }         from '@/shared/ui/utils'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { formatCop, formatDuration } from '@/shared/format'
-import { upsertServiceAction, toggleServiceAction, setServiceOrderAction } from '../actions'
+import { upsertServiceAction, toggleServiceAction, setServiceOrderAction, uploadServiceImageAction } from '../actions'
 import type { ServiceDTO } from '../queries'
 
 const CATEGORIES = [
@@ -210,23 +210,48 @@ function ServiceRow({ service, isPending, onToggle, onEdit, onMoveUp, onMoveDown
 function ServiceForm({
   tenantSlug, service, onDone,
 }: { tenantSlug: string; service: ServiceDTO | null; onDone: () => void }) {
-  const [isPending, setIsPending] = useState(false)
-  const [error,     setError]     = useState('')
+  const [isPending,   setIsPending]   = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [imageUrl,    setImageUrl]    = useState<string | null>(service?.imageUrl ?? null)
+  const [error,       setError]       = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await uploadServiceImageAction(tenantSlug, fd, imageUrl)
+    setIsUploading(false)
+    if (res.ok) {
+      setImageUrl(res.url)
+    } else {
+      toast.error(res.error ?? 'No se pudo subir la imagen.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     setIsPending(true)
     const fd = new FormData(e.currentTarget)
-    try {
-      await upsertServiceAction(tenantSlug, service?.id ?? null, fd)
+    // Asegura que imageUrl del estado (subida eager) sobreescriba cualquier valor del form
+    fd.set('imageUrl', imageUrl ?? '')
+    const res = await upsertServiceAction(tenantSlug, service?.id ?? null, fd)
+    setIsPending(false)
+    if (res.ok) {
+      toast.success(service ? 'Servicio actualizado correctamente' : 'Servicio creado correctamente')
       onDone()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar')
-    } finally {
-      setIsPending(false)
+    } else {
+      const msg = res.error ?? 'No se pudo guardar el servicio.'
+      toast.error(msg)
+      setError(msg)
     }
   }
+
+  const isBusy = isPending || isUploading
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
@@ -253,17 +278,71 @@ function ServiceForm({
           <Textarea id="description" name="description" rows={2} maxLength={300}
             defaultValue={service?.description ?? ''} />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="imageUrl">URL de imagen (opcional)</Label>
-          <Input id="imageUrl" name="imageUrl" type="url"
-            defaultValue={service?.imageUrl ?? ''} placeholder="https://…" />
+
+        {/* ── Imagen del servicio ── */}
+        <div className="space-y-2">
+          <Label>Imagen del servicio (opcional)</Label>
+          {imageUrl ? (
+            <div className="flex items-center gap-3">
+              <Image
+                src={imageUrl}
+                alt="Vista previa"
+                width={64} height={64}
+                unoptimized
+                className="h-16 w-16 rounded-lg object-cover border border-border"
+              />
+              <div className="flex flex-col gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setImageUrl(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                  disabled={isBusy}
+                >
+                  <X className="h-3.5 w-3.5" /> Quitar imagen
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isBusy}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  Cambiar imagen
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+              className={cn(
+                'flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-50',
+              )}
+            >
+              {isUploading
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo imagen…</>
+                : <><ImagePlus className="h-4 w-4" /> Subir imagen</>}
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={isBusy}
+          />
         </div>
+
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex gap-2">
-          <Button type="submit" disabled={isPending} size="sm">
+          <Button type="submit" disabled={isBusy} size="sm">
             {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : 'Guardar'}
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onDone}>Cancelar</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onDone} disabled={isBusy}>
+            Cancelar
+          </Button>
         </div>
       </form>
     </div>
