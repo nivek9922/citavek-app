@@ -54,6 +54,51 @@ export async function listCustomers(organizationId: string, q?: string) {
 
 export type CustomerListItem = Awaited<ReturnType<typeof listCustomers>>[number]
 
+// ── Clientes inactivos para re-engagement (horas muertas 5.1) ──────────────
+// "Inactivo" = tiene al menos una visita completada Y no tiene cita
+// activa/completada desde `inactiveDays` días atrás.
+
+export async function findInactiveCustomers(
+  organizationId: string,
+  inactiveDays = 30,
+  limit = 50,
+) {
+  const cutoff = new Date(Date.now() - inactiveDays * 24 * 60 * 60_000)
+
+  const customers = await db.customer.findMany({
+    where: {
+      organizationId,
+      appointments: {
+        some: { status: 'completed' },
+        none: {
+          status:  { in: ['pending', 'confirmed', 'completed'] },
+          startAt: { gte: cutoff },
+        },
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: limit,
+    select: {
+      id: true, name: true, phone: true,
+      appointments: {
+        where:   { status: { not: 'cancelled' } },
+        orderBy: { startAt: 'desc' },
+        take:    1,
+        select:  { startAt: true },
+      },
+    },
+  })
+
+  return customers.map((c) => ({
+    id:        c.id,
+    name:      c.name,
+    phone:     c.phone,
+    lastVisit: c.appointments[0]?.startAt ?? null,
+  }))
+}
+
+export type InactiveCustomer = Awaited<ReturnType<typeof findInactiveCustomers>>[number]
+
 // ── Detalle de un cliente con su historial ──────────────────────────────────
 
 export async function getCustomerDetail(organizationId: string, customerId: string) {

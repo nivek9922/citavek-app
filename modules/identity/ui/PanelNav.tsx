@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, CalendarOff, Code2, Scissors, Users, Palette, Contact, KeyRound, type LucideIcon } from 'lucide-react'
+import { Calendar, CalendarOff, Code2, Scissors, TrendingUp, Users, Palette, Contact, KeyRound, type LucideIcon } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 
 interface NavItem {
@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { label: 'Clientes',  href: '/clientes',  icon: Contact },
   { label: 'Servicios', href: '/servicios', icon: Scissors },
   { label: 'Equipo',    href: '/equipo',    icon: Users },
+  { label: 'Huecos',    href: '/horas-muertas', icon: TrendingUp, roles: ['owner'] },
   { label: 'Bloqueos',  href: '/bloqueos',  icon: CalendarOff, roles: ['owner'] },
   { label: 'Widget',    href: '/widget',    icon: Code2,       roles: ['owner'] },
   { label: 'Marca',     href: '/marca',     icon: Palette,     roles: ['owner'] },
