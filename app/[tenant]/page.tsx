@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { MapPin, Phone, Star, Clock, Scissors } from 'lucide-react'
+import { MapPin, Phone, Star, Clock, Scissors, Users } from 'lucide-react'
 import { getTenantContext } from '@/server/tenant'
 import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers }  from '@/modules/staff/queries'
@@ -10,6 +10,7 @@ import { Badge }             from '@/shared/ui/badge'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/shared/ui/avatar'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
+import { EmptyState }        from '@/shared/ui/empty-state'
 
 const CATEGORY_LABELS: Record<string, string> = {
   corte: 'Corte', barba: 'Barba', combo: 'Combo',
@@ -129,9 +130,11 @@ export default async function TenantPage({
           <CardContent className="p-5 sm:p-7">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="font-display text-2xl tracking-wide">Reserva tu cita</h2>
-              <span className="text-xs text-muted-foreground">
-                {services.length} servicios disponibles
-              </span>
+              {services.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {services.length} servicios disponibles
+                </span>
+              )}
             </div>
             <BookingFlow
               tenantSlug={slug}
@@ -150,94 +153,110 @@ export default async function TenantPage({
       <section className="mx-auto max-w-2xl px-4 py-10">
         <SectionHeader icon={<Scissors className="h-5 w-5 text-primary" />} title="Servicios" />
 
-        <Card className="mt-5 overflow-hidden">
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {services.map((svc, i) => (
-                <div key={svc.id} className="flex items-center gap-4 bg-card px-5 py-4 hover:bg-accent/30 transition-smooth">
-                  {/* Número */}
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {i + 1}
-                  </span>
+        {services.length === 0 ? (
+          <EmptyState
+            icon={<Scissors className="h-8 w-8 text-muted-foreground/50" />}
+            title="Catálogo en actualización"
+            description="Pronto verás nuestros servicios aquí."
+          />
+        ) : (
+          <Card className="mt-5 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {services.map((svc, i) => (
+                  <div key={svc.id} className="flex items-center gap-4 bg-card px-5 py-4 hover:bg-accent/30 transition-smooth">
+                    {/* Número */}
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {i + 1}
+                    </span>
 
-                  {/* Info */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold truncate">{svc.name}</p>
-                      <Badge variant="secondary" className="hidden sm:inline-flex text-[10px] px-1.5">
-                        {CATEGORY_LABELS[svc.category] ?? svc.category}
-                      </Badge>
+                    {/* Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold truncate">{svc.name}</p>
+                        <Badge variant="secondary" className="hidden sm:inline-flex text-[10px] px-1.5">
+                          {CATEGORY_LABELS[svc.category] ?? svc.category}
+                        </Badge>
+                      </div>
+                      {svc.description && (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{svc.description}</p>
+                      )}
                     </div>
-                    {svc.description && (
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{svc.description}</p>
-                    )}
-                  </div>
 
-                  {/* Duración + precio */}
-                  <div className="shrink-0 text-right">
-                    <p className="font-bold text-primary">{formatCop(svc.priceCop)}</p>
-                    <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {formatDuration(svc.durationMin)}
-                    </p>
+                    {/* Duración + precio */}
+                    <div className="shrink-0 text-right">
+                      <p className="font-bold text-primary">{formatCop(svc.priceCop)}</p>
+                      <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(svc.durationMin)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </section>
 
       {/* ─── EQUIPO ───────────────────────────────────────────── */}
       <section className="mx-auto max-w-2xl px-4 py-4 pb-16">
         <SectionHeader icon={<Star className="h-5 w-5 text-primary" />} title="Nuestro equipo" />
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {barbers.map((b, i) => (
-            <Card
-              key={b.id}
-              className="hover:border-primary/40 hover:shadow-elegant transition-smooth"
-            >
-              <CardContent className="flex items-center gap-3 p-4">
-                {/* Avatar */}
-                <Avatar className="h-14 w-14 shrink-0">
-                  {b.avatarUrl && (
-                    <AvatarImage
-                      src={b.avatarUrl}
-                      alt={b.displayName}
-                      loading={i === 0 ? 'eager' : undefined}
-                    />
-                  )}
-                  <AvatarFallback className="text-xl font-bold">
-                    {b.displayName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+        {barbers.length === 0 ? (
+          <EmptyState
+            icon={<Users className="h-8 w-8 text-muted-foreground/50" />}
+            title="Equipo en formación"
+            description="Pronto conocerás a nuestros profesionales."
+          />
+        ) : (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {barbers.map((b, i) => (
+              <Card
+                key={b.id}
+                className="hover:border-primary/40 hover:shadow-elegant transition-smooth"
+              >
+                <CardContent className="flex items-center gap-3 p-4">
+                  {/* Avatar */}
+                  <Avatar className="h-14 w-14 shrink-0">
+                    {b.avatarUrl && (
+                      <AvatarImage
+                        src={b.avatarUrl}
+                        alt={b.displayName}
+                        loading={i === 0 ? 'eager' : undefined}
+                      />
+                    )}
+                    <AvatarFallback className="text-xl font-bold">
+                      {b.displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="min-w-0">
-                  <p className="font-semibold leading-tight">
-                    {b.nickname
-                      ? `${b.displayName.split(' ')[0]} "${b.nickname}"`
-                      : b.displayName.split(' ').slice(0, 2).join(' ')}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1 text-xs">
-                    <Star className="h-3 w-3 fill-primary text-primary" />
-                    <span className="font-medium">{b.rating.toFixed(1)}</span>
-                    <span className="text-muted-foreground">· {b.reviewsCount} reseñas</span>
-                  </div>
-                  {b.specialties.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {b.specialties.slice(0, 2).map((s) => (
-                        <span key={s} className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-accent-foreground">
-                          {s}
-                        </span>
-                      ))}
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-tight">
+                      {b.nickname
+                        ? `${b.displayName.split(' ')[0]} "${b.nickname}"`
+                        : b.displayName.split(' ').slice(0, 2).join(' ')}
+                    </p>
+                    <div className="mt-1 flex items-center gap-1 text-xs">
+                      <Star className="h-3 w-3 fill-primary text-primary" />
+                      <span className="font-medium">{b.rating.toFixed(1)}</span>
+                      <span className="text-muted-foreground">· {b.reviewsCount} reseñas</span>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    {b.specialties.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {b.specialties.slice(0, 2).map((s) => (
+                          <span key={s} className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-accent-foreground">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ─── TESTIMONIOS ─────────────────────────────────────── */}
