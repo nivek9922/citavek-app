@@ -22,6 +22,8 @@ Build, review, and optimize UI components ensuring:
 - **Loading States:** Always implement Suspense boundaries with skeleton loaders (using shadcn's `<Skeleton />`) to prevent layout shifts (CLS).
 - **Error Handling:** Implement robust error handling using `error.tsx` boundaries and toast notifications for Server Action failures.
 - **Images:** Always use `next/image` with correct sizing and prioritization for Above-The-Fold content to optimize LCP.
+- **DatePicker — OBLIGATORIO:** Está PROHIBIDO usar `<input type="date">` o cualquier input nativo de fecha/hora. Siempre usar el componente `<DatePicker>` de `shared/ui/date-picker.tsx`, que encapsula react-day-picker v10 con locale español y soporte para fecha mínima.
+- **AlertDialog para acciones destructivas — OBLIGATORIO:** Toda acción destructiva (eliminar, suspender, resetear, revocar) DEBE envolverse en un `<AlertDialog>` de shadcn/ui antes de ejecutar el Server Action. El flujo es: trigger → AlertDialog (título + descripción del riesgo) → botón de confirmación → acción. No se permite eliminar/suspender con un solo click sin confirmación.
 
 ## What to Check & Enforce
 - Bundle size: Avoid importing heavy client-side libraries when a server-side alternative exists.

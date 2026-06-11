@@ -119,6 +119,33 @@ try {
 
 Tests live next to the code they test (`.test.ts`). Vitest with `environment: 'node'`. The `server-only` package is stubbed at `test/mocks/server-only.ts`. Domain and application layer tests use a fake repository (see `find-dead-slots.test.ts` for the pattern). Infrastructure isolation tests (`*.isolation.test.ts`) require a real DB and are typically skipped in CI without one.
 
+## UI Component Stack
+
+### Librerías de UI instaladas
+
+| Librería | Versión | Propósito |
+|---|---|---|
+| `sonner` | ^2.0.7 | Sistema de toasts — `import { toast } from 'sonner'` |
+| `react-day-picker` | ^10.0.1 | Base del calendario interno; no usar directamente |
+| shadcn/ui `Sheet` | — | Panel lateral para flujos de detalle/edición |
+| shadcn/ui `AlertDialog` | — | Confirmación de acciones destructivas |
+
+El componente `<DatePicker>` del proyecto está en `shared/ui/date-picker.tsx` y envuelve react-day-picker + Popover de Radix. Es el único picker de fechas permitido en el proyecto.
+
+### REGLA ESTRICTA — Feedback de Server Actions
+
+**Todo feedback al usuario tras una Server Action DEBE usar el sistema de toasts (sonner).**
+
+```ts
+const res = await someAction(data)
+if (res.ok) toast.success('Operación completada.')
+else        toast.error(res.error)
+```
+
+- `toast.success()` para confirmaciones positivas.
+- `toast.error()` para errores devueltos por el action.
+- **Prohibido** usar estado local (`useState` con mensaje de error/éxito) como mecanismo principal de feedback visible. Solo se permite estado local cuando la UI necesita controlar la visibilidad de un elemento (ej. cerrar un Sheet tras éxito).
+
 ## Product Vision
 
 BookingFlow KR is a multi-tenant SaaS for appointment-based businesses (barber shops, salons). Each `Organization` is a tenant identified by its `slug`. The platform manages appointments, customers, staff schedules, subscriptions, and tenant branding. Timezone handling is per-tenant (`America/Bogota` default); all timestamps stored as `timestamptz`.
