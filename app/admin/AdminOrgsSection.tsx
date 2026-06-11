@@ -31,6 +31,7 @@ export function AdminOrgsSection({ initialOrgs }: Props) {
       _count:        { barbers: 0, appointments: 0 },
       appointments: [],
       health:       { created: 0, cancelled: 0, score: 0, level: 'red' },
+      churn:        { score: 0, trend: 'growing' },
     }
     setOrgs((prev) => [newOrg, ...prev])
   }

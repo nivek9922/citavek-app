@@ -1,13 +1,23 @@
 import Link from 'next/link'
 import {
   Building2, AlertTriangle, CalendarDays, TrendingUp,
-  ShieldAlert, Activity,
+  ShieldAlert, Activity, Flame, DollarSign, Users,
 } from 'lucide-react'
-import { requireSuperAdmin }          from '@/server/super-admin'
-import { listOrganizationsForAdmin, getPlatformKPIs } from '@/modules/tenancy/queries'
-import { Avatar, AvatarFallback }     from '@/shared/ui/avatar'
+import { requireSuperAdmin }       from '@/server/super-admin'
+import {
+  listOrganizationsForAdmin,
+  getPlatformKPIs,
+  getBrandingAdoptionStats,
+  getMonthlyTrafficByOrg,
+  getOnboardingFunnel,
+} from '@/modules/tenancy/queries'
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 
-const CHURN_DAYS = 30
+function formatCOP(cop: number): string {
+  if (cop >= 1_000_000) return `${(cop / 1_000_000).toFixed(1)}M`
+  if (cop >= 1_000)     return `${Math.round(cop / 1_000)}K`
+  return cop.toString()
+}
 
 function daysSince(date: Date) {
   return Math.floor((Date.now() - date.getTime()) / 86_400_000)
@@ -16,17 +26,13 @@ function daysSince(date: Date) {
 export default async function AdminPage() {
   await requireSuperAdmin()
 
-  const [orgs, kpis] = await Promise.all([
+  const [orgs, kpis, branding, monthlyTraffic, funnel] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
+    getBrandingAdoptionStats(),
+    getMonthlyTrafficByOrg(),
+    getOnboardingFunnel(),
   ])
-
-  const churnRisk = orgs.filter((o) => {
-    const last = o.appointments[0]?.startAt
-    return o.status === 'active'
-      && daysSince(o.createdAt) > CHURN_DAYS
-      && (!last || daysSince(last) > CHURN_DAYS)
-  })
 
   const healthCounts = {
     green:      orgs.filter((o) => o.health.level === 'green').length,
@@ -35,123 +41,167 @@ export default async function AdminPage() {
     onboarding: orgs.filter((o) => o.health.level === 'onboarding').length,
   }
 
+  // Atención requerida — 3 niveles de urgencia
+  const dormant   = orgs.filter((o) => o.status === 'active' && o.churn.trend === 'dormant')
+  const declining = orgs.filter((o) => o.status === 'active' && o.churn.trend === 'declining')
+  const stuck     = orgs.filter((o) => {
+    const age = daysSince(o.createdAt)
+    return o.status === 'active' && age > 14 && age <= 90 && o.health.created === 0
+  })
+
+  // Top 5 por volumen mensual
+  const orgById    = new Map(orgs.map((o) => [o.id, o]))
+  const topTenants = monthlyTraffic
+    .slice(0, 5)
+    .map((row) => ({ ...row, org: orgById.get(row.organizationId) }))
+    .filter((r): r is typeof r & { org: NonNullable<typeof r.org> } => r.org != null)
+
+  const hasAlerts = dormant.length > 0 || declining.length > 0 || stuck.length > 0
+
   return (
     <div className="space-y-8">
 
-      {/* ── Título de sección ── */}
+      {/* ── Título ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Torre de Control</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Estado global de la plataforma en tiempo real.
+          Telemetría global de la plataforma en tiempo real.
         </p>
       </div>
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KPI
-          icon={Building2}
-          label="Negocios activos"
-          value={kpis.activeCount}
-          sub="cuentas en la plataforma"
-        />
-        <KPI
-          icon={ShieldAlert}
-          label="Suspendidos"
-          value={kpis.suspendedCount}
-          sub="requieren atención"
-          warn={kpis.suspendedCount > 0}
-        />
-        <KPI
-          icon={CalendarDays}
-          label="Citas hoy"
-          value={kpis.todayCount}
-          sub="en curso hoy (UTC)"
-          highlight
-        />
-        <KPI
-          icon={TrendingUp}
-          label="Esta semana"
-          value={kpis.weekCount}
-          sub="acumuladas lunes–hoy"
-        />
+      {/* ── KPI Strip — 6 cards ── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+        <KPI icon={Building2}  label="Negocios activos" value={kpis.activeCount}        sub="cuentas activas" />
+        <KPI icon={ShieldAlert} label="Suspendidos"      value={kpis.suspendedCount}     sub="requieren atención" warn={kpis.suspendedCount > 0} />
+        <KPI icon={CalendarDays} label="Citas hoy"       value={kpis.todayCount}         sub="en curso hoy (UTC)" highlight />
+        <KPI icon={TrendingUp}  label="Esta semana"      value={kpis.weekCount}          sub="acumuladas lunes–hoy" />
+        <KPI icon={Activity}    label="Este mes"         value={kpis.monthCount}         sub="citas procesadas" />
+        <KPI icon={DollarSign}  label="Revenue mes"      value={formatCOP(kpis.monthRevenueCop)} sub="COP facturado" />
       </div>
 
-      {/* ── Salud de la plataforma ── */}
-      <section className="rounded-2xl border border-border bg-card/40 p-6">
-        <div className="mb-5 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold">Salud de la plataforma</h2>
-          <span className="ml-auto text-xs text-muted-foreground">últimos 7 días</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <HealthStat
-            count={healthCounts.green}
-            label="Saludables"
-            sub="≥5 citas netas"
-            color="text-green-400"
-            bg="bg-green-500/10"
-            border="border-green-500/20"
-          />
-          <HealthStat
-            count={healthCounts.yellow}
-            label="Moderada"
-            sub="1–4 citas netas"
-            color="text-yellow-400"
-            bg="bg-yellow-500/10"
-            border="border-yellow-500/20"
-          />
-          <HealthStat
-            count={healthCounts.red}
-            label="En riesgo"
-            sub="0 o más bajas que altas"
-            color="text-destructive"
-            bg="bg-destructive/10"
-            border="border-destructive/20"
-          />
-          <HealthStat
-            count={healthCounts.onboarding}
-            label="Nuevos"
-            sub="≤14 días, aún configurando"
-            color="text-blue-400"
-            bg="bg-blue-500/10"
-            border="border-blue-500/20"
-          />
-        </div>
-      </section>
+      {/* ── Torre de Control — 3 columnas ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 
-      {/* ── Alertas de churn ── */}
-      {churnRisk.length > 0 && (
-        <section className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5">
-          <div className="mb-4 flex items-center gap-2 text-orange-400">
-            <AlertTriangle className="h-4 w-4" />
-            <p className="text-sm font-semibold">
-              {churnRisk.length}{' '}
-              {churnRisk.length === 1 ? 'negocio sin' : 'negocios sin'} actividad en +{CHURN_DAYS} días
-            </p>
-            <Link
-              href="/admin/negocios"
-              className="ml-auto text-xs text-orange-400/80 underline-offset-2 hover:underline"
-            >
-              Ver todos
-            </Link>
+        {/* Adopción de Marca */}
+        <section className="rounded-2xl border border-border bg-card/40 p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Flame className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Adopción de Marca</h2>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {churnRisk.map((o) => (
-              <Link
-                key={o.id}
-                href={`/${o.slug}/panel`}
-                className="flex items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/5 px-3 py-2 text-xs font-medium text-orange-300 hover:bg-orange-500/10 transition-colors"
+          <FunnelBar label="Logo subido"          count={branding.withLogo}        total={branding.totalActive} color="bg-violet-500" />
+          <FunnelBar label="Color personalizado"  count={branding.withCustomColor} total={branding.totalActive} color="bg-indigo-500" />
+          {branding.totalActive > 0 && (
+            <p className="text-xs text-muted-foreground pt-1">
+              {branding.totalActive - branding.withLogo}{' '}
+              {branding.totalActive - branding.withLogo !== 1 ? 'negocios sin' : 'negocio sin'} logo aún
+            </p>
+          )}
+        </section>
+
+        {/* Salud 7 días */}
+        <section className="rounded-2xl border border-border bg-card/40 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Salud de la plataforma</h2>
+            <span className="ml-auto text-xs text-muted-foreground">últimos 7 días</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <HealthStat count={healthCounts.green}      label="Saludables" sub="≥5 citas netas"  color="text-green-400"   bg="bg-green-500/10"    border="border-green-500/20" />
+            <HealthStat count={healthCounts.yellow}     label="Moderada"   sub="1–4 citas netas" color="text-yellow-400"  bg="bg-yellow-500/10"   border="border-yellow-500/20" />
+            <HealthStat count={healthCounts.red}        label="En riesgo"  sub="0 citas netas"   color="text-destructive" bg="bg-destructive/10"  border="border-destructive/20" />
+            <HealthStat count={healthCounts.onboarding} label="Nuevos"     sub="≤14 días"        color="text-blue-400"   bg="bg-blue-500/10"     border="border-blue-500/20" />
+          </div>
+        </section>
+
+        {/* Onboarding DNA */}
+        <section className="rounded-2xl border border-border bg-card/40 p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Onboarding DNA</h2>
+          </div>
+          {funnel.total > 0 ? (
+            <>
+              <FunnelBar label="Perfil completo"         count={funnel.withProfile}           total={funnel.total} color="bg-cyan-500" />
+              <FunnelBar label="Primer barbero activo"   count={funnel.withBarber}            total={funnel.total} color="bg-cyan-500" />
+              <FunnelBar label="Primer servicio activo"  count={funnel.withService}           total={funnel.total} color="bg-cyan-500" />
+              <FunnelBar label="1ª cita online recibida" count={funnel.withOnlineAppointment} total={funnel.total} color="bg-cyan-500" />
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">Sin datos aún.</p>
+          )}
+        </section>
+      </div>
+
+      {/* ── Atención Requerida ── */}
+      {hasAlerts && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
+            Atención Requerida
+          </h2>
+          {dormant.length > 0 && (
+            <AlertTier
+              level="red"
+              title={`${dormant.length} ${dormant.length === 1 ? 'negocio dormido' : 'negocios dormidos'} — sin actividad en 30+ días`}
+              orgs={dormant}
+            />
+          )}
+          {declining.length > 0 && (
+            <AlertTier
+              level="orange"
+              title={`${declining.length} ${declining.length === 1 ? 'negocio cayendo' : 'negocios cayendo'} — sin reservas esta semana`}
+              orgs={declining}
+            />
+          )}
+          {stuck.length > 0 && (
+            <AlertTier
+              level="yellow"
+              title={`${stuck.length} ${stuck.length === 1 ? 'negocio atascado' : 'negocios atascados'} en onboarding — sin primera cita online`}
+              orgs={stuck}
+            />
+          )}
+        </section>
+      )}
+
+      {/* ── Top Negocios del Mes ── */}
+      {topTenants.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card/40 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Top Negocios del Mes</h2>
+            <span className="ml-auto text-xs text-muted-foreground">por volumen de citas</span>
+          </div>
+          <div className="space-y-1">
+            {topTenants.map((row, i) => (
+              <div
+                key={row.organizationId}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-accent/30 transition-colors"
               >
-                <Avatar className="h-5 w-5 rounded-md border-0">
+                <span className="w-5 text-xs font-bold text-muted-foreground tabular-nums">
+                  #{i + 1}
+                </span>
+                <Avatar className="h-7 w-7 rounded-lg border-0 shrink-0">
                   <AvatarFallback
-                    style={{ backgroundColor: o.branding?.primaryColor ?? '#E0A300' }}
-                    className="rounded-md text-white text-[9px] font-bold"
+                    style={{ backgroundColor: row.org.branding?.primaryColor ?? '#E0A300' }}
+                    className="rounded-lg text-white text-[10px] font-bold"
                   >
-                    {o.name[0]?.toUpperCase() ?? '?'}
+                    {row.org.name[0]?.toUpperCase() ?? '?'}
                   </AvatarFallback>
                 </Avatar>
-                {o.name}
-              </Link>
+                <span className="flex-1 text-sm font-medium truncate">{row.org.name}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {row._count?._all ?? 0} citas
+                </span>
+                <span className="text-xs text-muted-foreground tabular-nums ml-4">
+                  {formatCOP(row._sum?.priceCop ?? 0)} COP
+                </span>
+                <Link
+                  href={`/${row.org.slug}/panel`}
+                  className="ml-2 text-xs text-primary/60 hover:text-primary transition-colors"
+                >
+                  Panel →
+                </Link>
+              </div>
             ))}
           </div>
         </section>
@@ -171,7 +221,7 @@ export default async function AdminPage() {
               <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="font-medium group-hover:text-primary transition-colors">Gestionar negocios</p>
+              <p className="font-medium transition-colors group-hover:text-primary">Gestionar negocios</p>
               <p className="text-xs text-muted-foreground">Crear, suspender o eliminar cuentas</p>
             </div>
           </Link>
@@ -183,7 +233,7 @@ export default async function AdminPage() {
               <CalendarDays className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="font-medium group-hover:text-primary transition-colors">Códigos de acceso</p>
+              <p className="font-medium transition-colors group-hover:text-primary">Códigos de acceso</p>
               <p className="text-xs text-muted-foreground">Generar invitaciones para nuevos negocios</p>
             </div>
           </Link>
@@ -194,12 +244,14 @@ export default async function AdminPage() {
   )
 }
 
+// ── Componentes auxiliares ──────────────────────────────────────────────────
+
 function KPI({
   icon: Icon, label, value, sub, highlight, warn,
 }: {
   icon:       React.ComponentType<{ className?: string }>
   label:      string
-  value:      number
+  value:      number | string
   sub:        string
   highlight?: boolean
   warn?:      boolean
@@ -213,6 +265,31 @@ function KPI({
       </div>
       <p className={`mt-2 text-3xl font-bold tabular-nums ${accent}`}>{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+    </div>
+  )
+}
+
+function FunnelBar({
+  label, count, total, color,
+}: {
+  label:  string
+  count:  number
+  total:  number
+  color:  string
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium tabular-nums">{count}/{total} <span className="text-muted-foreground">({pct}%)</span></span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted/50">
+        <div
+          className={`h-1.5 rounded-full ${color} transition-all`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   )
 }
@@ -232,6 +309,56 @@ function HealthStat({
       <p className={`text-2xl font-bold tabular-nums ${color}`}>{count}</p>
       <p className={`mt-0.5 text-sm font-medium ${color}`}>{label}</p>
       <p className="mt-1 text-xs text-muted-foreground/70">{sub}</p>
+    </div>
+  )
+}
+
+type OrgSnippet = {
+  id:       string
+  name:     string
+  slug:     string
+  branding: { primaryColor: string } | null
+}
+
+function AlertTier({
+  level, title, orgs,
+}: {
+  level: 'red' | 'orange' | 'yellow'
+  title: string
+  orgs:  OrgSnippet[]
+}) {
+  const colors = {
+    red:    { border: 'border-destructive/30',  bg: 'bg-destructive/5',  text: 'text-destructive',  chip: 'border-destructive/20  bg-destructive/5  text-red-300'    },
+    orange: { border: 'border-orange-500/30',   bg: 'bg-orange-500/5',  text: 'text-orange-400',   chip: 'border-orange-500/20   bg-orange-500/5   text-orange-300' },
+    yellow: { border: 'border-yellow-500/30',   bg: 'bg-yellow-500/5',  text: 'text-yellow-400',   chip: 'border-yellow-500/20   bg-yellow-500/5   text-yellow-300' },
+  }
+  const c = colors[level]
+
+  return (
+    <div className={`rounded-2xl border ${c.border} ${c.bg} p-5`}>
+      <p className={`mb-3 text-sm font-semibold ${c.text} flex items-center gap-2`}>
+        <AlertTriangle className="h-3.5 w-3.5" />
+        {title}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {orgs.map((o) => (
+          <Link
+            key={o.id}
+            href={`/${o.slug}/panel`}
+            className={`flex items-center gap-2 rounded-xl border ${c.chip} px-3 py-2 text-xs font-medium transition-colors hover:opacity-80`}
+          >
+            <Avatar className="h-5 w-5 rounded-md border-0">
+              <AvatarFallback
+                style={{ backgroundColor: o.branding?.primaryColor ?? '#E0A300' }}
+                className="rounded-md text-white text-[9px] font-bold"
+              >
+                {o.name[0]?.toUpperCase() ?? '?'}
+              </AvatarFallback>
+            </Avatar>
+            {o.name}
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
