@@ -1,6 +1,4 @@
-// Seed de demostración — 3 barberías listas para demos de venta.
-// Porta los datos de barrio-glow-up/src/features/tenant/mockData.ts
-// con las convenciones reales del proyecto (priceCop entero, timestamptz UTC).
+// Seed de demostración — 1 barbería de prueba + super admin.
 // Idempotente: upsert por slug/teléfono.
 
 import 'dotenv/config'
@@ -27,18 +25,6 @@ const TEST_USERS = [
     email:    'owner@sanfernando.demo',
     password: 'Demo2024!',
     slug:     'san-fernando-cali',
-  },
-  {
-    name:     'Sebastián Arango (Envigado)',
-    email:    'owner@envigado.demo',
-    password: 'Demo2024!',
-    slug:     'envigado-cuts',
-  },
-  {
-    name:     'Diego Peñaloza (Chapinero)',
-    email:    'owner@chapinero.demo',
-    password: 'Demo2024!',
-    slug:     'chapinero-shave',
   },
 ]
 
@@ -194,50 +180,6 @@ const ORGS = [
       { key: 'c3', displayName: 'Steven Palacios', specialties: ['Niños', 'Texturizado'], rating: 4.7, reviewsCount: 132 },
     ],
   },
-  {
-    slug: 'envigado-cuts',
-    name: 'Envigado Cuts',
-    city: 'Envigado, Antioquia',
-    address: 'Cl 37 Sur #43A-22',
-    phone: '+573042221188',
-    timezone: 'America/Bogota',
-    branding: {
-      primaryColor: '#22C55E',
-      tagline: 'Premium grooming paisa.',
-    },
-    services: [
-      { key: 'm1', name: 'Corte Ejecutivo', description: 'Corte profesional con detalle.', durationMin: 40, priceCop: 35000, category: 'corte' as const },
-      { key: 'm2', name: 'Combo Premium', description: 'Corte, barba, mascarilla y masaje capilar.', durationMin: 75, priceCop: 65000, category: 'combo' as const },
-      { key: 'm3', name: 'Barba Premium', description: 'Diseño con navaja, toalla caliente y aceites.', durationMin: 40, priceCop: 30000, category: 'barba' as const },
-      { key: 'm4', name: 'Color Camuflaje Canas', description: 'Disimula canas naturalmente.', durationMin: 45, priceCop: 50000, category: 'tratamiento' as const },
-    ],
-    barbers: [
-      { key: 'm1', displayName: 'Sebastián Arango', nickname: 'Sebas', specialties: ['Premium', 'Ejecutivo'], rating: 5.0, reviewsCount: 412 },
-      { key: 'm2', displayName: 'Andrés Felipe Gómez', specialties: ['Barba', 'Color'], rating: 4.9, reviewsCount: 298 },
-    ],
-  },
-  {
-    slug: 'chapinero-shave',
-    name: 'Chapinero Shave Co.',
-    city: 'Bogotá D.C.',
-    address: 'Cra 13 #63-20, Chapinero',
-    phone: '+573115559090',
-    timezone: 'America/Bogota',
-    branding: {
-      primaryColor: '#F43F5E',
-      tagline: 'Tradición desde el centro de Bogotá.',
-    },
-    services: [
-      { key: 'b1', name: 'Corte Clásico', description: 'Corte tradicional con tijera y máquina.', durationMin: 30, priceCop: 25000, category: 'corte' as const },
-      { key: 'b2', name: 'Corte + Barba', description: 'El combo más pedido de la casa.', durationMin: 60, priceCop: 45000, category: 'combo' as const },
-      { key: 'b3', name: 'Diseño de Barba', description: 'Perfilado y arreglo con navaja.', durationMin: 30, priceCop: 22000, category: 'barba' as const },
-      { key: 'b4', name: 'Corte Niño', description: 'Servicio especial para los más pequeños.', durationMin: 30, priceCop: 20000, category: 'infantil' as const },
-    ],
-    barbers: [
-      { key: 'b1', displayName: 'Carlos Andrés Mosquera', nickname: 'El Negro', specialties: ['Fades', 'Diseños'], rating: 4.9, reviewsCount: 248 },
-      { key: 'b2', displayName: 'Diego Peñaloza', specialties: ['Clásico', 'Niños'], rating: 4.6, reviewsCount: 95 },
-    ],
-  },
 ]
 
 // ── Main seed ─────────────────────────────────────────────────────────────────
@@ -345,19 +287,10 @@ async function main() {
   await seedUsers()
 
   console.log('\n✅ Seed completado.')
-  console.log('\n─── Usuarios de prueba ─────────────────────────────────────')
-  console.log('  Super-admin:')
-  console.log(`    Email:     ${process.env.SUPER_ADMIN_EMAIL ?? 'nivek9922@gmail.com'}`)
-  console.log(`    Password:  ${process.env.SUPER_ADMIN_PASSWORD ?? 'Admin2024!'}`)
-  console.log(`    Acceso:    /admin`)
-  console.log('\n  Dueños de barberías (password: Demo2024!):')
-  for (const u of TEST_USERS.filter((u) => u.slug)) {
-    console.log(`    ${u.email.padEnd(30)} → /${u.slug}/panel`)
-  }
-  console.log('\n─── URLs públicas ───────────────────────────────────────────')
-  for (const org of ORGS) {
-    console.log(`    http://localhost:3000/${org.slug}`)
-  }
+  console.log('\n─── Accesos ────────────────────────────────────────────────')
+  console.log(`    Super-admin → /admin  (${process.env.SUPER_ADMIN_EMAIL ?? 'nivek9922@gmail.com'})`)
+  console.log(`    Demo owner  → /san-fernando-cali/panel  (owner@sanfernando.demo / Demo2024!)`)
+  console.log(`    Demo public → /san-fernando-cali`)
 }
 
 main()
