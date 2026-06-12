@@ -13,8 +13,8 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { label: 'Agenda',    href: '',           icon: Calendar },
-  { label: 'Clientes',  href: '/clientes',  icon: Contact },
-  { label: 'Servicios', href: '/servicios', icon: Scissors },
+  { label: 'Clientes',  href: '/clientes',  icon: Contact,  roles: ['owner'] },
+  { label: 'Servicios', href: '/servicios', icon: Scissors, roles: ['owner'] },
   { label: 'Equipo',    href: '/equipo',    icon: Users },
   { label: 'Huecos',    href: '/horas-muertas', icon: TrendingUp, roles: ['owner'] },
   { label: 'Bloqueos',  href: '/bloqueos',  icon: CalendarOff, roles: ['owner'] },

@@ -71,10 +71,11 @@ model Organization {
   appointments       Appointment[]
   scheduleExceptions ScheduleException[]
 
-  members     Member[]
-  invitations Invitation[]
-  reviews     Review[]
-  adminNote   AdminNote?
+  members            Member[]
+  invitations        Invitation[]
+  reviews            Review[]
+  adminNote          AdminNote?
+  barberInvitations  BarberInvitation[]
 
   @@index([status])
   @@map("organization")
@@ -187,6 +188,7 @@ model Barber {
   appointments       Appointment[]
   scheduleExceptions ScheduleException[]
   reviews            Review[]
+  barberInvitations  BarberInvitation[]
 
   @@index([organizationId, active, sortOrder])
   @@index([branchId])
@@ -414,6 +416,24 @@ model Review {
 
   @@index([organizationId, barberId, createdAt])
   @@map("review")
+}
+
+// ──────────────────── Invitaciones de barbero ────────────────────────────────
+
+model BarberInvitation {
+  id             String   @id @default(cuid())
+  token          String   @unique
+  barberId       String
+  organizationId String
+  used           Boolean  @default(false)
+  expiresAt      DateTime @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  barber         Barber       @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([barberId])
+  @@map("barber_invitation")
 }
 
 // ──────────────────── Códigos de acceso (registro controlado) ────────────────

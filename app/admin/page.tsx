@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import {
   Building2, AlertTriangle, CalendarDays, TrendingUp,
-  ShieldAlert, Activity, Flame, DollarSign, Users,
+  ShieldAlert, Activity, Flame, DollarSign, Users, UserCheck,
 } from 'lucide-react'
 import { requireSuperAdmin }       from '@/server/super-admin'
 import {
@@ -11,6 +11,7 @@ import {
   getMonthlyTrafficByOrg,
   getOnboardingFunnel,
 } from '@/modules/tenancy/queries'
+import { getBarberLoginAdoptionStats } from '@/modules/analytics/queries'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 
 function formatCOP(cop: number): string {
@@ -26,12 +27,13 @@ function daysSince(date: Date) {
 export default async function AdminPage() {
   await requireSuperAdmin()
 
-  const [orgs, kpis, branding, monthlyTraffic, funnel] = await Promise.all([
+  const [orgs, kpis, branding, monthlyTraffic, funnel, barberLoginStats] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
     getBrandingAdoptionStats(),
     getMonthlyTrafficByOrg(),
     getOnboardingFunnel(),
+    getBarberLoginAdoptionStats(),
   ])
 
   const healthCounts = {
@@ -131,6 +133,49 @@ export default async function AdminPage() {
           )}
         </section>
       </div>
+
+      {/* ── Adopción de Login de Barberos (B5) ── */}
+      {barberLoginStats.totalBarbers > 0 && (
+        <section className="rounded-2xl border border-border bg-card/40 p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Adopción de Login de Barberos</h2>
+            <span className="ml-auto text-xs text-muted-foreground">barberos activos en plataforma</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-background p-4">
+              <p className="text-2xl font-bold tabular-nums text-primary">{barberLoginStats.loginRatioPct}%</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Ratio de adopción</p>
+            </div>
+            <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-4">
+              <p className="text-2xl font-bold tabular-nums text-green-400">{barberLoginStats.barbersWithLogin}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Con cuenta activa</p>
+            </div>
+            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+              <p className="text-2xl font-bold tabular-nums text-orange-400">{barberLoginStats.barbersWithoutLogin}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Sin cuenta vinculada</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background p-4">
+              <p className="text-2xl font-bold tabular-nums">{barberLoginStats.totalBarbers}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Total barberos</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <FunnelBar
+              label="Equipos completamente vinculados"
+              count={barberLoginStats.tenantsFullyLinked}
+              total={barberLoginStats.tenantsTotal}
+              color="bg-green-500"
+            />
+            <FunnelBar
+              label="Equipos con barberos sin cuenta"
+              count={barberLoginStats.tenantsPartial}
+              total={barberLoginStats.tenantsTotal}
+              color="bg-orange-500"
+            />
+          </div>
+        </section>
+      )}
 
       {/* ── Atención Requerida ── */}
       {hasAlerts && (

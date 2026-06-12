@@ -125,12 +125,12 @@ try {
 |---|---|---|
 | `catalog` | Stable | Services (cortes/tratamientos): CRUD, images, ordering, toggle active |
 | `scheduling` | Stable — reference impl. | Availability engine, slot calculator, appointment state machine |
-| `staff` | Stable | Barbers: profiles, schedules, working hours |
+| `staff` | Stable | Barbers: profiles, schedules, working hours, invitations, team stats |
 | `tenancy` | Stable | Organization config, branding, calendar blocks, AdminNote |
 | `identity` | Stable | Auth: registration, login, session (Better Auth) |
 | `onboarding` | Stable | Tenant onboarding funnel tracking |
 | `customers` | In development | Customer profiles, booking history |
-| `analytics` | In development | Churn score, telemetry, MRR metrics (Super Admin) |
+| `analytics` | In development | Churn score, telemetry, MRR metrics, barber login adoption (Super Admin) |
 | `reviews` | Pending | Customer reviews per appointment |
 
 When adding code to an existing module, check this table first to confirm the right module. When creating a new module, follow the layout of `modules/scheduling` exactly.

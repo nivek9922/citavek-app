@@ -3,12 +3,16 @@ import { updateTag } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
+import { getSession } from '@/server/session'
 import { createBarber }        from './application/create-barber'
 import { updateBarber }        from './application/update-barber'
 import { toggleBarber }        from './application/toggle-barber'
 import { uploadBarberAvatar }  from './application/upload-barber-avatar'
+import { inviteBarber }        from './application/invite-barber'
+import { registerFromInvite }  from './application/register-from-invite'
 import { prismaStaffRepository as repo } from './infrastructure/prisma-staff-repository'
 import { cloudinaryAdapter } from '@/server/cloudinary'
+import { env } from '@/config/env'
 
 const barberSchema = z.object({
   displayName: z.string().min(2).max(80),
@@ -89,4 +93,43 @@ export async function toggleBarberAction(slug: string, id: string, active: boole
   await requirePermission(ctx.id, 'barber:update')
   await toggleBarber(repo, id, ctx.id, active)
   updateTag(`barbers:${ctx.id}`)
+}
+
+export async function generateBarberInviteAction(
+  slug: string,
+  barberId: string,
+): Promise<{ ok: true; inviteUrl: string } | { ok: false; error: string }> {
+  const ctx = await getTenantContext(slug)
+  await requirePermission(ctx.id, 'barber:update')
+  try {
+    const { token } = await inviteBarber(repo, barberId, ctx.id)
+    const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
+    return { ok: true, inviteUrl: `${base}/invite/${token}` }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'No se pudo generar la invitación.'
+    return { ok: false, error: msg }
+  }
+}
+
+/**
+ * Llamada por el cliente DESPUÉS de que Better Auth creó el usuario con signUp.email().
+ * Vincula la cuenta recién creada al barbero de la invitación.
+ */
+export async function linkBarberInviteAction(
+  token: string,
+): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  const session = await getSession()
+  if (!session) return { ok: false, error: 'No hay sesión activa. Intenta iniciar sesión.' }
+
+  try {
+    const { organizationId, orgSlug } = await registerFromInvite(repo, token, session.user.id)
+
+    updateTag(`barbers:${organizationId}`)
+    updateTag(`staff:${organizationId}`)
+
+    return { ok: true, slug: orgSlug }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'No se pudo completar el registro.'
+    return { ok: false, error: msg }
+  }
 }

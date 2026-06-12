@@ -9,12 +9,19 @@ export default async function EquipoPage({
 }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params
   const ctx = await getTenantContext(slug)
-  await requirePermission(ctx.id, 'barber:read')
+  const { member } = await requirePermission(ctx.id, 'barber:read')
 
   const [barbers, reviewsByBarber] = await Promise.all([
     listAllBarbersWithHours(ctx.id),
     listReviewsByBarber(ctx.id),
   ])
 
-  return <BarbersManager barbers={barbers} tenantSlug={slug} reviewsByBarber={reviewsByBarber} />
+  return (
+    <BarbersManager
+      barbers={barbers}
+      tenantSlug={slug}
+      reviewsByBarber={reviewsByBarber}
+      isOwner={member.role === 'owner'}
+    />
+  )
 }

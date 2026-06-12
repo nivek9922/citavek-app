@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { getTenantContext } from '@/server/tenant'
-import { requireMembership } from '@/server/auth-guards'
+import { requirePermission } from '@/server/auth-guards'
 import { listCustomers } from '@/modules/customers/queries'
 import { formatCop } from '@/shared/format'
 import { PageHeader } from '@/shared/ui/page-header'
@@ -31,7 +31,7 @@ export default async function ClientesPage({
   const page = Math.max(1, Number(pageParam) || 1)
 
   const ctx = await getTenantContext(slug)
-  await requireMembership(ctx.id)
+  await requirePermission(ctx.id, 'customer:read')
 
   const { items: customers, total } = await listCustomers(ctx.id, q, page)
   const totalPages = Math.max(1, Math.ceil(total / 15))

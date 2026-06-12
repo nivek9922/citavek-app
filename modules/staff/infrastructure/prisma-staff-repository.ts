@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { db } from '@/server/db'
 import type { StaffRepository } from '../domain/ports/staff-repository'
 import type { CreateBarberData, UpdateBarberData } from '../domain/barber'
@@ -62,5 +63,55 @@ export const prismaStaffRepository: StaffRepository = {
       data:  { active },
     })
     if (count === 0) throw new InvalidBarberError('Barbero no encontrado.')
+  },
+
+  async createInvitation(barberId, organizationId, token, expiresAt) {
+    const inv = await db.barberInvitation.create({
+      data: { token, barberId, organizationId, expiresAt },
+      select: { id: true, token: true },
+    })
+    return inv
+  },
+
+  async findInvitationByToken(token) {
+    return db.barberInvitation.findUnique({
+      where: { token },
+      select: {
+        id:             true,
+        token:          true,
+        barberId:       true,
+        organizationId: true,
+        used:           true,
+        expiresAt:      true,
+        createdAt:      true,
+        barber:       { select: { displayName: true, organizationId: true } },
+        organization: { select: { slug: true, name: true } },
+      },
+    })
+  },
+
+  async completeInvitationRegistration(invitationId, barberId, organizationId, userId) {
+    await db.$transaction(async (tx) => {
+      const { count } = await tx.barber.updateMany({
+        where: { id: barberId, organizationId },
+        data:  { userId },
+      })
+      if (count === 0) throw new InvalidBarberError('Barbero no encontrado al vincular usuario.')
+
+      await tx.barberInvitation.update({
+        where: { id: invitationId },
+        data:  { used: true },
+      })
+
+      await tx.member.create({
+        data: {
+          id:             randomUUID(),
+          organizationId,
+          userId,
+          role:           'barber',
+          createdAt:      new Date(),
+        },
+      })
+    })
   },
 }

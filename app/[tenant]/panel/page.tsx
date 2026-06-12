@@ -12,7 +12,7 @@ import {
   tenantToday,
 } from '@/modules/analytics/queries'
 import { listActiveServices } from '@/modules/catalog/queries'
-import { listActiveBarbers }  from '@/modules/staff/queries'
+import { listActiveBarbers, getBarberByUserId, getTeamStats } from '@/modules/staff/queries'
 import { formatCop } from '@/shared/format'
 import { cn } from '@/shared/ui/utils'
 import { PageHeader } from '@/shared/ui/page-header'
@@ -50,7 +50,7 @@ export default async function PanelPage({
   const { tenant: slug }      = await params
   const { date, view, week }  = await searchParams
   const ctx = await getTenantContext(slug)
-  await requireMembership(ctx.id)
+  const { session, member } = await requireMembership(ctx.id)
 
   const jar = await cookies()
   const dismissed    = jar.get(`ob-dismissed-${ctx.id}`)?.value === '1'
@@ -59,6 +59,13 @@ export default async function PanelPage({
   const today      = tenantToday(ctx.timezone)
   const isWeekView = view === 'week'
   const base       = `/${slug}/panel`
+  const isBarber   = member.role === 'barber'
+
+  // Si es barbero, filtrar la agenda por su barberId vinculado
+  const currentBarber = isBarber
+    ? await getBarberByUserId(ctx.id, session.user.id)
+    : null
+  const currentBarberId = currentBarber?.id
 
   // ── Vista diaria ────────────────────────────────────────────────────────────
   const selectedDate = isValidDateStr(date) ? date : today
@@ -75,12 +82,13 @@ export default async function PanelPage({
     + ' – '
     + format(parseISO(weekEndStr), "d MMM yyyy", { locale: es })
 
-  const [kpis, appointments, weekDays, services, barbers] = await Promise.all([
+  const [kpis, appointments, weekDays, services, barbers, teamStats] = await Promise.all([
     getDashboardKPIs(ctx.id, ctx.timezone),
-    isWeekView ? Promise.resolve([]) : getAppointmentsForDate(ctx.id, ctx.timezone, selectedDate),
-    isWeekView ? getAppointmentsForWeek(ctx.id, ctx.timezone, weekStartStr) : Promise.resolve([]),
+    isWeekView ? Promise.resolve([]) : getAppointmentsForDate(ctx.id, ctx.timezone, selectedDate, currentBarberId),
+    isWeekView ? getAppointmentsForWeek(ctx.id, ctx.timezone, weekStartStr, currentBarberId) : Promise.resolve([]),
     listActiveServices(ctx.id),
     listActiveBarbers(ctx.id),
+    !isBarber ? getTeamStats(ctx.id) : Promise.resolve(null),
   ])
 
   // Instante de render del servidor: la agenda necesita "ahora" para marcar la
@@ -163,6 +171,53 @@ export default async function PanelPage({
           <StatCard icon={TrendingUp} label="Esta semana" value={formatCop(kpis.earningsWeek)} hint="Citas completadas" />
         </div>
       </section>
+
+      {/* Estadísticas de equipo — solo owners (B4) */}
+      {!isBarber && teamStats && teamStats.total > 0 && (
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Equipo esta semana
+          </h2>
+          <div className="rounded-2xl border border-border bg-card/40 p-4 space-y-3">
+            {teamStats.weekStats.length > 0 ? (
+              <div className="space-y-2">
+                {teamStats.weekStats.slice(0, 5).map((row) => {
+                  if (!row.barber) return null
+                  const maxCount = teamStats.weekStats[0]?.count ?? 1
+                  const pct = Math.round((row.count / maxCount) * 100)
+                  return (
+                    <div key={row.barber.id} className="flex items-center gap-3 text-sm">
+                      <span className="w-24 truncate text-xs font-medium">
+                        {row.barber.nickname ?? row.barber.displayName.split(' ')[0]}
+                      </span>
+                      <div className="flex-1 h-1.5 rounded-full bg-muted/50">
+                        <div
+                          className="h-1.5 rounded-full bg-primary transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
+                        {row.count}
+                      </span>
+                      {!row.barber.userId && (
+                        <span className="text-[10px] text-orange-400" title="Sin cuenta">
+                          Sin cuenta
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin citas esta semana aún.</p>
+            )}
+            <div className="flex items-center gap-4 border-t border-border pt-3 text-xs text-muted-foreground">
+              <span className="text-green-400 font-medium">{teamStats.withAccount} con cuenta</span>
+              <span className="text-orange-400 font-medium">{teamStats.withoutAccount} sin cuenta</span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Agenda con toggle día / semana */}
       <section>

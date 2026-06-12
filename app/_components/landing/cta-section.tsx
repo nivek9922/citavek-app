@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowRight, MessageCircle } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
 
-const WA_NUMBER = '573001234567' // TODO: reemplazar con número real de contacto
+const WA_NUMBER = '573026889618'
 
 export function CtaSection() {
   return (
@@ -10,7 +10,7 @@ export function CtaSection() {
       {/* Background glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-125 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
             'radial-gradient(ellipse, oklch(0.78 0.16 75 / 0.08) 0%, transparent 65%)',

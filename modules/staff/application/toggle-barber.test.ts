@@ -19,10 +19,13 @@ const BASE_BARBER: Barber = {
 function createFakeRepo(existing: Barber | null = BASE_BARBER) {
   const toggled: boolean[] = []
   const repo: StaffRepository = {
-    findById: vi.fn(async () => existing),
-    create:   vi.fn(async () => BASE_BARBER),
-    update:   vi.fn(async (_id, _org, _data: UpdateBarberData) => BASE_BARBER),
-    toggle:   vi.fn(async (_id, _org, active) => { toggled.push(active) }),
+    findById:              vi.fn(async () => existing),
+    create:                vi.fn(async () => BASE_BARBER),
+    update:                vi.fn(async (_id, _org, _data: UpdateBarberData) => BASE_BARBER),
+    toggle:                vi.fn(async (_id, _org, active) => { toggled.push(active) }),
+    createInvitation:               vi.fn(async () => ({ id: 'inv-1', token: 'tok' })),
+    findInvitationByToken:          vi.fn(async () => null),
+    completeInvitationRegistration: vi.fn(async () => undefined),
   }
   return { repo, toggled }
 }

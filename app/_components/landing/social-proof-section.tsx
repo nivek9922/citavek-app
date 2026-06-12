@@ -1,7 +1,7 @@
 import { MessageCircle } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
 
-const WA_NUMBER = '573001234567' // TODO: reemplazar con número real de contacto
+const WA_NUMBER = '573026889618' // TODO: reemplazar con número real de contacto
 
 export function SocialProofSection() {
   return (

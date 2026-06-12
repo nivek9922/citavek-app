@@ -4,7 +4,7 @@ import { useState, useTransition, useRef } from 'react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star, MessageCircle } from 'lucide-react'
+import { Plus, Pencil, ToggleLeft, ToggleRight, Loader2, Star, MessageCircle, UserCheck } from 'lucide-react'
 import { Button }      from '@/shared/ui/button'
 import { Input }       from '@/shared/ui/input'
 import { Label }       from '@/shared/ui/label'
@@ -16,6 +16,7 @@ import {
 } from '@/shared/ui/dialog'
 import { StarRating } from '@/modules/reviews/ui/StarRating'
 import { upsertBarberAction, toggleBarberAction, uploadBarberAvatarAction } from '../actions'
+import { InviteBarberButton } from './InviteBarberButton'
 import type { BarberWithHours } from '../queries'
 import type { ReviewDTO } from '@/modules/reviews/queries'
 
@@ -40,9 +41,10 @@ interface Props {
   barbers:          BarberWithHours[]
   tenantSlug:       string
   reviewsByBarber?: Record<string, ReviewDTO[]>
+  isOwner?:         boolean
 }
 
-export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Props) {
+export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {}, isOwner = true }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editing,  setEditing]  = useState<BarberWithHours | null>(null)
 
@@ -54,12 +56,14 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Pr
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-2xl tracking-wide">Equipo</h2>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Añadir barbero
-        </Button>
+        {isOwner && (
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Añadir barbero
+          </Button>
+        )}
       </div>
 
-      {showForm && (
+      {isOwner && showForm && (
         <BarberForm tenantSlug={tenantSlug} barber={editing} onDone={close} />
       )}
 
@@ -68,7 +72,7 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Pr
           icon="✂️"
           title="Aún no tienes barberos registrados"
           description="Tus clientes podrán elegir con quién cortarse. Añade a tu equipo con sus horarios y especialidades para que aparezcan en la página de reservas."
-          action={<Button size="sm" onClick={openCreate}>Añadir primer barbero</Button>}
+          action={isOwner ? <Button size="sm" onClick={openCreate}>Añadir primer barbero</Button> : undefined}
         />
       ) : (
       <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
@@ -79,6 +83,7 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Pr
             tenantSlug={tenantSlug}
             onEdit={() => openEdit(b)}
             reviews={reviewsByBarber[b.id] ?? []}
+            isOwner={isOwner}
           />
         ))}
       </div>
@@ -88,8 +93,9 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {} }: Pr
 }
 
 function BarberRow({
-  barber, tenantSlug, onEdit, reviews,
-}: { barber: BarberWithHours; tenantSlug: string; onEdit: () => void; reviews: ReviewDTO[] }) {
+  barber, tenantSlug, onEdit, reviews, isOwner = true,
+}: { barber: BarberWithHours; tenantSlug: string; onEdit: () => void; reviews: ReviewDTO[]; isOwner?: boolean }) {
+  const hasAccount = barber.userId != null
   const [isPending, setIsPending] = useState(false)
 
   async function toggle() {
@@ -129,6 +135,11 @@ function BarberRow({
             {barber.nickname && <span className="text-muted-foreground"> &ldquo;{barber.nickname}&rdquo;</span>}
           </p>
           {!barber.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
+          {hasAccount && (
+            <span title="Cuenta vinculada" className="text-green-400">
+              <UserCheck className="h-3.5 w-3.5" />
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-0.5">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -179,18 +190,29 @@ function BarberRow({
             </DialogContent>
           </Dialog>
         )}
-        <button onClick={onEdit} title="Editar"
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
-          <Pencil className="h-4 w-4" />
-        </button>
-        <button onClick={toggle} disabled={isPending}
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
-          {isPending
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : barber.active
-              ? <ToggleRight className="h-5 w-5 text-primary" />
-              : <ToggleLeft  className="h-5 w-5" />}
-        </button>
+        {isOwner && !hasAccount && (
+          <InviteBarberButton
+            tenantSlug={tenantSlug}
+            barberId={barber.id}
+            barberName={barber.displayName}
+          />
+        )}
+        {isOwner && (
+          <button onClick={onEdit} title="Editar"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+            <Pencil className="h-4 w-4" />
+          </button>
+        )}
+        {isOwner && (
+          <button onClick={toggle} disabled={isPending}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+            {isPending
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : barber.active
+                ? <ToggleRight className="h-5 w-5 text-primary" />
+                : <ToggleLeft  className="h-5 w-5" />}
+          </button>
+        )}
       </div>
     </div>
   )
