@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ExternalLink, LogOut } from 'lucide-react'
@@ -6,6 +5,7 @@ import { getTenantContextPermissive } from '@/server/tenant'
 import { requireMembership }          from '@/server/auth-guards'
 import { signOutAction }     from '@/modules/identity/actions'
 import { PanelNav }          from '@/modules/identity/ui/PanelNav'
+import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
 
 export default async function PanelLayout({
   children,
@@ -18,7 +18,6 @@ export default async function PanelLayout({
   const ctx = await getTenantContextPermissive(slug)
   if (!ctx) notFound()
   const { member, session } = await requireMembership(ctx.id)
-  const initial = ctx.name.charAt(0).toUpperCase()
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[256px_1fr]">
@@ -26,15 +25,12 @@ export default async function PanelLayout({
       {/* ── Sidebar (desktop) ── */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-card/40 lg:flex">
         <div className="flex items-center gap-3 px-5 py-5">
-          {ctx.branding.logoUrl ? (
-            <div className="relative h-9 w-9 overflow-hidden rounded-xl">
-              <Image src={ctx.branding.logoUrl} alt={ctx.name} fill unoptimized priority className="object-contain" />
-            </div>
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground">
-              {initial}
-            </div>
-          )}
+          <TenantAvatar
+            name={ctx.name}
+            logoUrl={ctx.branding.logoUrl}
+            className="h-9 w-9 rounded-xl"
+            fallbackClassName="rounded-xl text-base"
+          />
           <div className="min-w-0">
             <p className="truncate font-semibold leading-tight">{ctx.name}</p>
             <p className="text-xs text-muted-foreground">Panel de gestión</p>
@@ -80,15 +76,12 @@ export default async function PanelLayout({
         <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm lg:hidden">
           <div className="flex h-14 items-center justify-between px-4">
             <div className="flex items-center gap-2">
-              {ctx.branding.logoUrl ? (
-                <div className="relative h-7 w-7 overflow-hidden rounded-lg">
-                  <Image src={ctx.branding.logoUrl} alt={ctx.name} fill unoptimized priority className="object-contain" />
-                </div>
-              ) : (
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-primary text-xs font-bold text-primary-foreground">
-                  {initial}
-                </div>
-              )}
+              <TenantAvatar
+                name={ctx.name}
+                logoUrl={ctx.branding.logoUrl}
+                className="h-7 w-7 rounded-lg"
+                fallbackClassName="rounded-lg text-xs"
+              />
               <span className="font-semibold">{ctx.name}</span>
             </div>
             <form action={signOutAction}>

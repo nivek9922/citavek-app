@@ -44,9 +44,10 @@
   --color-sidebar-primary:      var(--sidebar-primary);
   --color-sidebar-border:       var(--sidebar-border);
 
-  /* Tipografía */
-  --font-display: "Bebas Neue", "Oswald", system-ui, sans-serif;
-  --font-sans:    "Inter", system-ui, sans-serif;
+  /* Tipografía — las familias se cargan vía next/font en app/layout.tsx y se
+     exponen como --font-bebas / --font-inter. */
+  --font-display: var(--font-bebas), "Oswald", system-ui, sans-serif;
+  --font-sans:    var(--font-inter), "Inter", system-ui, sans-serif;
 }
 
 /* ── Tema base dark-first (barbershop aesthetic) ── */
@@ -109,9 +110,14 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  h1, h2, h3, .font-display {
+  /* La tipografía display (Bebas Neue, condensada) se aplica SOLO a elementos
+     que la piden explícitamente con la clase .font-display (wordmark de marca,
+     nombre del tenant, títulos de página). No se aplica a h1/h2/h3 a secas: en
+     paneles densos como el CRM super admin, Bebas en mayúsculas pequeñas queda
+     apretada e ilegible — esos títulos deben usar la sans (Inter). */
+  .font-display {
     font-family: var(--font-display);
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
   }
 }
 

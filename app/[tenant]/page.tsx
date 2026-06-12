@@ -10,6 +10,7 @@ import { formatCop, formatDuration } from '@/shared/format'
 import { Badge }             from '@/shared/ui/badge'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/shared/ui/avatar'
+import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
 import { EmptyState }        from '@/shared/ui/empty-state'
 
@@ -99,14 +100,12 @@ export default async function TenantPage({
         <div className="px-5 pb-5">
           {/* Avatar con overlap sobre el borde inferior del cover */}
           <div className="-mt-10 mb-3">
-            <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
-              {ctx.branding.logoUrl && (
-                <AvatarImage src={ctx.branding.logoUrl} alt={ctx.name} />
-              )}
-              <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold font-display">
-                {ctx.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <TenantAvatar
+              name={ctx.name}
+              logoUrl={ctx.branding.logoUrl}
+              className="h-20 w-20 ring-4 ring-background shadow-lg"
+              fallbackClassName="text-2xl"
+            />
           </div>
 
           <h1 className="font-display text-4xl leading-none tracking-wide sm:text-5xl">

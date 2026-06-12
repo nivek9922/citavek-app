@@ -1,13 +1,48 @@
 import type { Metadata } from 'next'
+import { Bebas_Neue, Inter } from 'next/font/google'
 import { Analytics }     from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Toaster }       from 'sonner'
 import './globals.css'
 
+// Tipografías de marca. La display (Bebas Neue) da el wordmark de "lujo
+// minimalista"; Inter es el cuerpo. Se exponen como variables CSS que consume
+// globals.css (--font-display / --font-sans).
+const bebas = Bebas_Neue({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-bebas',
+  display: 'swap',
+})
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const title = 'Citavek — Software para barberías'
+const description = 'Reservas online y gestión para barberías en Colombia.'
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://citavek.app'),
-  title: 'Citavek — Software para barberías',
-  description: 'Reservas online y gestión para barberías en Colombia.',
+  title,
+  description,
+  // openGraph/twitter globales para las rutas no-tenant: sin esto, al compartir
+  // el link por WhatsApp salía el preview por defecto de Vercel. La imagen la
+  // resuelve automáticamente app/opengraph-image.tsx.
+  openGraph: {
+    type: 'website',
+    siteName: 'Citavek',
+    title,
+    description,
+    url: '/',
+    locale: 'es_CO',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title,
+    description,
+  },
   // Desactiva la auto-detección de teléfonos de iOS/Brave móvil. Sin esto, el
   // navegador transforma el texto del teléfono en <a href="tel:"> antes de que
   // React hidrate, causando un hydration mismatch inevitable.
@@ -16,7 +51,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" data-scroll-behavior="smooth">
+    <html lang="es" data-scroll-behavior="smooth" className={`${bebas.variable} ${inter.variable}`}>
       <body>
         {children}
         {/* Vercel Analytics: pageviews, eventos y Core Web Vitals.
