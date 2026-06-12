@@ -8,7 +8,7 @@
   "scripts": {
     "predev": "node scripts/check-node.mjs",
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
