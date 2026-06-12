@@ -290,7 +290,7 @@ export default async function TenantPage({
           Reservar cita ahora →
         </a>
         <p className="mt-2 text-xs text-muted-foreground">
-          Powered by <span className="font-semibold">BookingFlow</span>
+          Powered by <span className="font-semibold">Citavek</span>
         </p>
       </div>
 

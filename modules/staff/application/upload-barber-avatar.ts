@@ -20,7 +20,7 @@ export async function uploadBarberAvatar(
     if (publicId) await imageStorage.delete(publicId).catch(() => {})
   }
 
-  const { secureUrl } = await imageStorage.upload(buffer, `bookingflow/${orgSlug}/barbers`)
+  const { secureUrl } = await imageStorage.upload(buffer, `citavek/${orgSlug}/barbers`)
   await repo.update(id, organizationId, { avatarUrl: secureUrl })
   return secureUrl
 }

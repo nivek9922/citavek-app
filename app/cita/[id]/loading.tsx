@@ -8,7 +8,7 @@ export default function CitaLoading() {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Scissors className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="mt-3 font-display text-3xl tracking-wide text-primary">BookingFlow</h1>
+          <h1 className="mt-3 font-display text-3xl tracking-wide text-primary">Citavek</h1>
           <p className="mt-1 text-sm text-muted-foreground">Portal de tu cita</p>
         </div>
         <div className="h-48 rounded-2xl border border-border bg-card/60 animate-pulse" />

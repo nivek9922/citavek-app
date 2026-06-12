@@ -84,7 +84,7 @@ export function CreateBarberiaForm({ onCreated }: Props = {}) {
               if (slugEl && !slugEl.dataset.edited) slugEl.value = slugify(v)
             }} />
           <Field label="Slug (URL)" name="slug" placeholder="san-fernando-cali"
-            hint="bookingflow.co/san-fernando-cali"
+            hint="citavek.co/san-fernando-cali"
             onInput={(e) => { (e.target as HTMLInputElement).dataset.edited = '1' }} />
           <div className="space-y-1.5">
             <Label htmlFor="city">Ciudad</Label>

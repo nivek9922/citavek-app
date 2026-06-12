@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function WidgetShare({ tenantSlug }: Props) {
-  const origin     = typeof window !== 'undefined' ? window.location.origin : 'https://bookingflow.app'
+  const origin     = typeof window !== 'undefined' ? window.location.origin : 'https://citavek.app'
   const directUrl  = `${origin}/${tenantSlug}`
   const [copied, setCopied] = useState(false)
 

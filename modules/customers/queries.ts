@@ -4,35 +4,49 @@ import { db } from '@/server/db'
 // ── Lista de clientes con stats agregadas ───────────────────────────────────
 // 2 queries (lista + sumas por groupBy) en vez de N+1.
 
-export async function listCustomers(organizationId: string, q?: string) {
-  const term = q?.trim()
-  const customers = await db.customer.findMany({
-    where: {
-      organizationId,
-      ...(term
-        ? {
-            OR: [
-              { name:  { contains: term, mode: 'insensitive' as const } },
-              { phone: { contains: term } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-    select: {
-      id: true, name: true, phone: true, email: true,
-      _count: { select: { appointments: true } },
-      appointments: {
-        where: { status: { not: 'cancelled' } },
-        orderBy: { startAt: 'desc' },
-        take: 1,
-        select: { startAt: true },
-      },
-    },
-  })
+const CUSTOMER_PAGE_SIZE = 15
 
-  if (customers.length === 0) return []
+export async function listCustomers(
+  organizationId: string,
+  q?: string,
+  page = 1,
+  limit = CUSTOMER_PAGE_SIZE,
+) {
+  const term = q?.trim()
+  const where = {
+    organizationId,
+    ...(term
+      ? {
+          OR: [
+            { name:  { contains: term, mode: 'insensitive' as const } },
+            { phone: { contains: term } },
+          ],
+        }
+      : {}),
+  }
+  const skip = (Math.max(1, page) - 1) * limit
+
+  const [customers, total] = await Promise.all([
+    db.customer.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      select: {
+        id: true, name: true, phone: true, email: true,
+        _count: { select: { appointments: true } },
+        appointments: {
+          where: { status: { not: 'cancelled' } },
+          orderBy: { startAt: 'desc' },
+          take: 1,
+          select: { startAt: true },
+        },
+      },
+    }),
+    db.customer.count({ where }),
+  ])
+
+  if (customers.length === 0) return { items: [], total }
 
   const sums = await db.appointment.groupBy({
     by: ['customerId'],
@@ -41,7 +55,7 @@ export async function listCustomers(organizationId: string, q?: string) {
   })
   const spentBy = new Map(sums.map((s) => [s.customerId, s._sum.priceCop ?? 0]))
 
-  return customers.map((c) => ({
+  const items = customers.map((c) => ({
     id:                c.id,
     name:              c.name,
     phone:             c.phone,
@@ -50,9 +64,11 @@ export async function listCustomers(organizationId: string, q?: string) {
     lastVisit:         c.appointments[0]?.startAt ?? null,
     totalSpent:        spentBy.get(c.id) ?? 0,
   }))
+
+  return { items, total }
 }
 
-export type CustomerListItem = Awaited<ReturnType<typeof listCustomers>>[number]
+export type CustomerListItem = Awaited<ReturnType<typeof listCustomers>>['items'][number]
 
 // ── Clientes inactivos para re-engagement (horas muertas 5.1) ──────────────
 // "Inactivo" = tiene al menos una visita completada Y no tiene cita

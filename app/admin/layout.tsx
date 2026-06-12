@@ -4,16 +4,16 @@ import { signOutAction }     from '@/modules/identity/actions'
 import { AdminSidebar }      from './AdminSidebar'
 import { AdminMobileNav }    from './AdminMobileNav'
 
-export const metadata = { title: 'Super Admin — BookingFlow' }
+export const metadata = { title: 'Super Admin — Citavek' }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Header ── branding + sesión */}
-      <header className="flex shrink-0 items-center justify-between border-b border-border bg-card px-6 py-3">
+      <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-card px-6 py-3">
         <div className="flex items-center gap-3">
           <AdminMobileNav />
-          <span className="font-display text-xl text-primary">BookingFlow</span>
+          <span className="font-display text-xl text-primary">Citavek</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
             Super Admin
           </span>
@@ -26,9 +26,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </header>
 
       {/* Body ── sidebar + contenido */}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex flex-1">
         <AdminSidebar />
-        <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           {children}
         </main>
       </div>

@@ -49,7 +49,7 @@ export async function generateMetadata({
       type: 'website',
       title: ogTitle,
       description: ogDescription,
-      siteName: 'BookingFlow',
+      siteName: 'Citavek',
     },
     twitter: {
       card: 'summary_large_image',

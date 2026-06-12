@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { SignUpForm } from '@/modules/identity/ui/SignUpForm'
 
-export const metadata = { title: 'Registra tu barbería — BookingFlow' }
+export const metadata = { title: 'Registra tu barbería — Citavek' }
 
 export default function RegistroPage() {
   return (
@@ -10,7 +10,7 @@ export default function RegistroPage() {
 
         {/* Cabecera */}
         <div className="text-center">
-          <h1 className="font-display text-4xl tracking-wide text-primary">BookingFlow</h1>
+          <h1 className="font-display text-4xl tracking-wide text-primary">Citavek</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Tu barbería con reservas online en minutos
           </p>

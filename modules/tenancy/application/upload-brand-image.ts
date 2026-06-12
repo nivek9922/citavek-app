@@ -19,7 +19,7 @@ export async function uploadBrandImage(
     if (publicId) await imageStorage.delete(publicId).catch(() => {})
   }
 
-  const { secureUrl } = await imageStorage.upload(buffer, `bookingflow/${orgSlug}/brand`)
+  const { secureUrl } = await imageStorage.upload(buffer, `citavek/${orgSlug}/brand`)
   await repo.patchBranding(
     organizationId,
     field === 'logo' ? { logoUrl: secureUrl } : { coverUrl: secureUrl },

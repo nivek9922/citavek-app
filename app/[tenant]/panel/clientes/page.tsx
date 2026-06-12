@@ -9,26 +9,38 @@ import { formatCop } from '@/shared/format'
 import { PageHeader } from '@/shared/ui/page-header'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { CustomerSearch } from '@/modules/customers/ui/CustomerSearch'
+import { CustomerPagination } from '@/modules/customers/ui/CustomerPagination'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/shared/ui/table'
 
 export default async function ClientesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ tenant: string }>
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
   const { tenant: slug } = await params
-  const { q } = await searchParams
+  const { q, page: pageParam } = await searchParams
+  const page = Math.max(1, Number(pageParam) || 1)
+
   const ctx = await getTenantContext(slug)
   await requireMembership(ctx.id)
 
-  const customers = await listCustomers(ctx.id, q)
+  const { items: customers, total } = await listCustomers(ctx.id, q, page)
+  const totalPages = Math.max(1, Math.ceil(total / 15))
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Clientes"
-        description={`${customers.length} ${customers.length === 1 ? 'cliente' : 'clientes'}`}
+        description={`${total} ${total === 1 ? 'cliente' : 'clientes'}`}
       />
 
       {/* CustomerSearch usa useSearchParams() → requiere un límite de Suspense
@@ -48,33 +60,62 @@ export default async function ClientesPage({
           }
         />
       ) : (
-        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
-          {customers.map((c) => (
-            <Link
-              key={c.id}
-              href={`/${slug}/panel/clientes/${c.id}`}
-              className="flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth hover:bg-accent/30"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{c.name}</p>
-                <p className="text-xs text-muted-foreground">{c.phone}</p>
-              </div>
-              <div className="hidden flex-col items-end text-xs text-muted-foreground sm:flex">
-                <span>{c.totalAppointments} {c.totalAppointments === 1 ? 'cita' : 'citas'}</span>
-                {c.lastVisit && (
-                  <span>Última: {format(new Date(c.lastVisit), 'd MMM', { locale: es })}</span>
-                )}
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-sm font-bold text-primary">{formatCop(c.totalSpent)}</p>
-                <p className="text-[10px] text-muted-foreground">gastado</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="overflow-x-auto rounded-2xl border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="hidden sm:table-cell">Citas</TableHead>
+                  <TableHead className="hidden sm:table-cell">Última visita</TableHead>
+                  <TableHead className="text-right">Total gastado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.map((c) => (
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-accent/30">
+                    <TableCell>
+                      <Link
+                        href={`/${slug}/panel/clientes/${c.id}`}
+                        className="flex items-center gap-3"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium leading-tight">{c.name}</p>
+                          <p className="text-xs text-muted-foreground">{c.phone}</p>
+                        </div>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                      {c.totalAppointments} {c.totalAppointments === 1 ? 'cita' : 'citas'}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                      {c.lastVisit
+                        ? format(new Date(c.lastVisit), 'd MMM yyyy', { locale: es })
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-primary text-sm">
+                      {formatCop(c.totalSpent)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {totalPages > 1 && (
+            <Suspense fallback={null}>
+              <CustomerPagination
+                currentPage={page}
+                totalPages={totalPages}
+                total={total}
+                slug={slug}
+              />
+            </Suspense>
+          )}
+        </>
       )}
     </div>
   )

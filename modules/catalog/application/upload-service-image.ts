@@ -12,6 +12,6 @@ export async function uploadServiceImage(
     if (publicId) await imageStorage.delete(publicId).catch(() => {})
   }
 
-  const { secureUrl } = await imageStorage.upload(buffer, `bookingflow/${orgSlug}/services`)
+  const { secureUrl } = await imageStorage.upload(buffer, `citavek/${orgSlug}/services`)
   return secureUrl
 }

@@ -124,7 +124,7 @@ export default async function OgImage({
           </div>
         </div>
 
-        {/* Branding BookingFlow */}
+        {/* Branding Citavek */}
         <div
           style={{
             position: 'absolute',
@@ -134,7 +134,7 @@ export default async function OgImage({
             fontSize: 17,
           }}
         >
-          Powered by BookingFlow
+          Powered by Citavek
         </div>
       </div>
     ),

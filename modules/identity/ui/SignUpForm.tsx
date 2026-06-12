@@ -153,7 +153,7 @@ export function SignUpForm() {
         <div className="space-y-1.5">
           <Label htmlFor="slug">URL de tu página</Label>
           <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
-            <span className="shrink-0 text-muted-foreground">bookingflow.co/</span>
+            <span className="shrink-0 text-muted-foreground">citavek.co/</span>
             <input id="slug" name="slug" required
               pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Solo letras minúsculas, números y guiones, sin guión al inicio ni al final"
               className="min-w-0 flex-1 bg-transparent font-medium outline-none placeholder:text-muted-foreground/50"
