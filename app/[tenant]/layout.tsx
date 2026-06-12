@@ -13,6 +13,7 @@ export async function generateStaticParams() {
     where:   { status: 'active' },
     select:  { slug: true },
   })
+  if (orgs.length === 0) return [{ tenant: 'citavek-init' }]
   return orgs.map((o) => ({ tenant: o.slug }))
 }
 
