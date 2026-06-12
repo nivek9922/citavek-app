@@ -104,6 +104,7 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
             <div className="space-y-1.5">
               <Label>Fecha</Label>
               <DatePicker
+                modal
                 value={dateValue}
                 onChange={setDateValue}
                 placeholder="Selecciona fecha"

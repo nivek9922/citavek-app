@@ -14,6 +14,7 @@ export interface DatePickerProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  modal?: boolean
 }
 
 export function DatePicker({
@@ -23,9 +24,10 @@ export function DatePicker({
   placeholder = 'Selecciona una fecha',
   disabled = false,
   className,
+  modal,
 }: DatePickerProps) {
   return (
-    <Popover>
+    <Popover modal={modal}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -36,10 +38,12 @@ export function DatePicker({
             className,
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {value
-            ? format(value, "EEEE d 'de' MMMM, yyyy", { locale: es })
-            : placeholder}
+          <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+          <span className="truncate min-w-0 flex-1">
+            {value
+              ? format(value, "EEEE d 'de' MMMM, yyyy", { locale: es })
+              : placeholder}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

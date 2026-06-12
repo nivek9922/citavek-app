@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, KeyRound } from 'lucide-react'
+import { LayoutDashboard, Building2, KeyRound, UserCircle } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
 
 const NAV_ITEMS = [
   { href: '/admin',         label: 'Overview',  icon: LayoutDashboard, exact: true  },
   { href: '/admin/negocios', label: 'Negocios',  icon: Building2,       exact: false },
   { href: '/admin/codigos',  label: 'Códigos',   icon: KeyRound,        exact: false },
+  { href: '/admin/cuenta',   label: 'Mi cuenta', icon: UserCircle,      exact: false },
 ]
 
 export function AdminNavLinks() {

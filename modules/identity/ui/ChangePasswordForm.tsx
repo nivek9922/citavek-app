@@ -1,22 +1,20 @@
 'use client'
-import { useState, useTransition } from 'react'
-import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react'
+import { useRef, useState, useTransition } from 'react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Input }  from '@/shared/ui/input'
 import { Label }  from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
 import { changePasswordAction } from '@/modules/identity/actions'
 
 export function ChangePasswordForm() {
+  const formRef = useRef<HTMLFormElement>(null)
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew,     setShowNew]     = useState(false)
-  const [error,       setError]       = useState('')
-  const [success,     setSuccess]     = useState(false)
   const [isPending,   startTransition] = useTransition()
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError('')
-    setSuccess(false)
 
     const fd = new FormData(e.currentTarget)
     const currentPassword = fd.get('currentPassword') as string
@@ -24,23 +22,23 @@ export function ChangePasswordForm() {
     const confirmPassword = fd.get('confirmPassword') as string
 
     if (newPassword !== confirmPassword) {
-      setError('Las contraseñas nuevas no coinciden.')
+      toast.error('Las contraseñas nuevas no coinciden.')
       return
     }
 
     startTransition(async () => {
       const res = await changePasswordAction({ currentPassword, newPassword })
       if (!res.ok) {
-        setError(res.error)
+        toast.error(res.error)
         return
       }
-      setSuccess(true)
-      ;(e.target as HTMLFormElement).reset()
+      toast.success('Contraseña actualizada correctamente.')
+      formRef.current?.reset()
     })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 max-w-sm">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 max-w-sm">
       <PasswordField
         id="currentPassword"
         label="Contraseña actual"
@@ -67,16 +65,6 @@ export function ChangePasswordForm() {
         disabled={isPending}
         autoComplete="new-password"
       />
-
-      {error && (
-        <p className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{error}</p>
-      )}
-      {success && (
-        <p className="flex items-center gap-2 rounded-xl bg-green-500/10 px-4 py-2.5 text-sm text-green-600 dark:text-green-400">
-          <ShieldCheck className="h-4 w-4" />
-          Contraseña actualizada correctamente.
-        </p>
-      )}
 
       <Button type="submit" disabled={isPending} className="gap-2">
         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
