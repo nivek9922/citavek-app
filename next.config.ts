@@ -26,17 +26,15 @@ const nextConfig: NextConfig = {
     'kysely',
     '@prisma/adapter-pg',
   ],
-  // Subresource Integrity: hashea los scripts en build y añade `integrity` a los
-  // <script>, para que el navegador rechace assets manipulados en tránsito.
   // Habilita la directiva `"use cache"` y las funciones cacheTag/cacheLife.
   // Permite cachear lecturas de tenant/servicios/barberos con invalidación por tag
   // en lugar de revalidatePath, reduciendo SSR completo en el hot path de reservas.
   cacheComponents: true,
-  experimental: {
-    sri: {
-      algorithm: 'sha256',
-    },
-  },
+  // experimental.sri eliminado: en Vercel el HTML y los chunks JS se invalidan en
+  // capas independientes del CDN, lo que crea una ventana donde el HTML cacheado
+  // contiene hashes SRI viejos apuntando a chunks nuevos → fallo de integridad en
+  // el navegador. Vercel ya provee cache-busting nativo vía URLs con hash de contenido
+  // en /_next/static/, por lo que SRI es redundante y contraproducente aquí.
 }
 
 export default nextConfig
