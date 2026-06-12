@@ -15,6 +15,8 @@ function createFakeRepo(org: Organization | null = BASE_ORG, appointmentCount = 
     updateInfo:         vi.fn(async () => undefined),
     countAppointments:  vi.fn(async () => appointmentCount),
     deleteWithCascade:  vi.fn(async () => ({ slug: org?.slug ?? '', memberUserIds: ['u-1', 'u-2'] })),
+    deleteOrphanUsers:  vi.fn(async () => undefined),
+    saveAdminNote:      vi.fn(async () => undefined),
   }
   return { repo }
 }

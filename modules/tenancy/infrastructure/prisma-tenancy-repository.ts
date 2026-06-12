@@ -1,4 +1,5 @@
 import { db } from '@/server/db'
+import { isSuperAdmin } from '@/server/super-admin'
 import type { TenancyRepository, DeleteResult } from '../domain/ports/tenancy-repository'
 
 export const prismaTenancyRepository: TenancyRepository = {
@@ -45,5 +46,25 @@ export const prismaTenancyRepository: TenancyRepository = {
       slug:          org?.slug ?? '',
       memberUserIds: members.map((m) => m.userId),
     }
+  },
+
+  async deleteOrphanUsers(userIds) {
+    if (userIds.length === 0) return
+    const orphans = await db.user.findMany({
+      where:  { id: { in: userIds }, members: { none: {} }, barbers: { none: {} } },
+      select: { id: true, email: true },
+    })
+    const orphanIds = orphans.filter((u) => !isSuperAdmin(u.email)).map((u) => u.id)
+    if (orphanIds.length > 0) {
+      await db.user.deleteMany({ where: { id: { in: orphanIds } } })
+    }
+  },
+
+  async saveAdminNote(orgId, content) {
+    await db.adminNote.upsert({
+      where:  { organizationId: orgId },
+      create: { organizationId: orgId, content },
+      update: { content },
+    })
   },
 }

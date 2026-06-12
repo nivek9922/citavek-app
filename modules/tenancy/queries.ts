@@ -1,4 +1,5 @@
 import 'server-only'
+import { cacheTag, cacheLife } from 'next/cache'
 import { db } from '@/server/db'
 import { computeHealthScore } from './domain/health-score'
 import { computeChurnScore  } from './domain/churn-score'
@@ -25,6 +26,9 @@ export async function getOrgSettings(organizationId: string) {
  * Las suspendidas se muestran con su badge para poder reactivarlas, no se ocultan.
  */
 export async function listOrganizationsForAdmin() {
+  'use cache'
+  cacheTag('admin-orgs')
+  cacheLife('max')
   const since7  = new Date(Date.now() -  HEALTH_WINDOW_DAYS * 86_400_000)
   const since30 = new Date(Date.now() -  30 * 86_400_000)
   const since90 = new Date(Date.now() -  90 * 86_400_000)

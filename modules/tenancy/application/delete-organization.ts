@@ -10,5 +10,12 @@ export async function deleteOrganization(
   if (!org) throw new OrgStatusError('Organización no encontrada.')
   const count = await repo.countAppointments(orgId)
   if (count > 0) throw new OrgHasAppointmentsError()
-  return repo.deleteWithCascade(orgId)
+  const result = await repo.deleteWithCascade(orgId)
+  // Best-effort: si falla, la org ya fue eliminada — no se revierte.
+  try {
+    await repo.deleteOrphanUsers(result.memberUserIds)
+  } catch {
+    // ignorado a propósito
+  }
+  return result
 }

@@ -15,4 +15,8 @@ export interface TenancyRepository {
   countAppointments(id: string): Promise<number>
   /** Borra la org (cascade via FK). Devuelve datos necesarios para cleanup post-borrado. */
   deleteWithCascade(id: string): Promise<DeleteResult>
+  /** Elimina usuarios que no pertenecen a ninguna otra org ni tienen rol de barbero. */
+  deleteOrphanUsers(userIds: string[]): Promise<void>
+  /** Guarda (upsert) la nota interna de super-admin sobre un negocio. */
+  saveAdminNote(orgId: string, content: string): Promise<void>
 }

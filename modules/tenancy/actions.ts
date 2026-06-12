@@ -3,11 +3,12 @@ import { revalidatePath, updateTag } from 'next/cache'
 import { z } from 'zod'
 import { getTenantContext }  from '@/server/tenant'
 import { requirePermission } from '@/server/auth-guards'
-import { requireSuperAdmin, isSuperAdmin } from '@/server/super-admin'
+import { requireSuperAdmin } from '@/server/super-admin'
 import { db } from '@/server/db'
 import log from '@/server/logger'
 import { setOrgStatus }       from './application/set-org-status'
 import { deleteOrganization } from './application/delete-organization'
+import { saveAdminNote }      from './application/save-admin-note'
 import { OrgHasAppointmentsError } from './domain/organization'
 import { updateBranding }     from './application/update-branding'
 import { updateOrgInfo }      from './application/update-org-info'
@@ -189,11 +190,7 @@ export async function saveAdminNoteAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireSuperAdmin()
   try {
-    await db.adminNote.upsert({
-      where:  { organizationId: orgId },
-      create: { organizationId: orgId, content },
-      update: { content },
-    })
+    await saveAdminNote(repo, orgId, content)
     log.audit('org.admin_note_saved', { orgId, by: session.user.email, charCount: content.length })
     return { ok: true }
   } catch (err) {
@@ -215,7 +212,7 @@ export async function setOrgStatusAction(
     await setOrgStatus(repo, orgId, status)
     log.audit('org.status_changed', { orgId, status, by: session.user.email })
     if (orgRow) updateTag(`tenant:${orgRow.slug}`)
-    revalidatePath('/admin')
+    updateTag('admin-orgs')
     return { ok: true }
   } catch (err) {
     log.error('setOrgStatusAction', { orgId, status, err: String(err) })
@@ -230,28 +227,11 @@ export async function deleteOrgAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireSuperAdmin()
   try {
-    const { slug, memberUserIds } = await deleteOrganization(repo, orgId)
+    const { slug } = await deleteOrganization(repo, orgId)
     log.audit('org.deleted', { orgId, slug, by: session.user.email })
 
-    // Best-effort: limpiar usuarios huérfanos (sin otras membresías ni rol de barbero).
-    // Nunca se borra al super-admin. Si esto falla, la barbería ya fue eliminada.
-    if (memberUserIds.length > 0) {
-      try {
-        const orphans = await db.user.findMany({
-          where:  { id: { in: memberUserIds }, members: { none: {} }, barbers: { none: {} } },
-          select: { id: true, email: true },
-        })
-        const orphanIds = orphans.filter((u) => !isSuperAdmin(u.email)).map((u) => u.id)
-        if (orphanIds.length > 0) {
-          await db.user.deleteMany({ where: { id: { in: orphanIds } } })
-        }
-      } catch {
-        // ignorado a propósito
-      }
-    }
-
     updateTag(`tenant:${slug}`)
-    revalidatePath('/admin')
+    updateTag('admin-orgs')
     return { ok: true }
   } catch (err) {
     if (err instanceof OrgHasAppointmentsError) {
