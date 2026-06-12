@@ -19,7 +19,7 @@ const TEST_USERS = [
   {
     name:     'Kevin Rodríguez (Admin)',
     email:    process.env.SUPER_ADMIN_EMAIL ?? 'nivek9922@gmail.com',
-    password: 'Admin2024!',
+    password: process.env.SUPER_ADMIN_PASSWORD ?? 'Admin2024!',
     slug:     null, // super-admin, no pertenece a ninguna barbería
   },
   {
@@ -348,7 +348,7 @@ async function main() {
   console.log('\n─── Usuarios de prueba ─────────────────────────────────────')
   console.log('  Super-admin:')
   console.log(`    Email:     ${process.env.SUPER_ADMIN_EMAIL ?? 'nivek9922@gmail.com'}`)
-  console.log(`    Password:  Admin2024!`)
+  console.log(`    Password:  ${process.env.SUPER_ADMIN_PASSWORD ?? 'Admin2024!'}`)
   console.log(`    Acceso:    /admin`)
   console.log('\n  Dueños de barberías (password: Demo2024!):')
   for (const u of TEST_USERS.filter((u) => u.slug)) {
