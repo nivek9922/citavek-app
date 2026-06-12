@@ -13,7 +13,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // La URL la inyecta prisma.config.ts desde .env (DATABASE_URL).
 }
 
 // ───────────────────────── Enums ─────────────────────────
