@@ -9,6 +9,7 @@
     "predev": "node scripts/check-node.mjs",
     "dev": "next dev",
     "build": "npm run db:deploy && next build",
+    "build:dev": "next build",
     "db:deploy": "DATABASE_URL=$DIRECT_URL prisma migrate deploy && prisma generate",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",

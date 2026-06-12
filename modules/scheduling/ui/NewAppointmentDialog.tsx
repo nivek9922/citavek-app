@@ -26,14 +26,12 @@ interface Props {
 export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDate }: Props) {
   const [open,      setOpen]      = useState(false)
   const [isPending, setIsPending] = useState(false)
-  const [error,     setError]     = useState('')
   const [dateValue, setDateValue] = useState<Date | undefined>(
     () => new Date(`${defaultDate}T00:00:00`),
   )
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError('')
     setIsPending(true)
     const fd    = new FormData(e.currentTarget)
     const phone = `+57${String(fd.get('phone') ?? '').replace(/\D/g, '').slice(0, 10)}`
@@ -52,9 +50,10 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
         if (res.offHours) {
           toast.warning('Nota: Esta cita se registra fuera del horario habitual')
         }
+        toast.success('Cita creada correctamente.')
         setOpen(false)
       } else {
-        setError(res.error)
+        toast.error(res.error)
       }
     } finally {
       setIsPending(false)
@@ -141,10 +140,6 @@ export function NewAppointmentDialog({ tenantSlug, services, barbers, defaultDat
             <Label htmlFor="notes">Notas (opcional)</Label>
             <Textarea id="notes" name="notes" rows={2} maxLength={300} placeholder="Cualquier detalle…" />
           </div>
-
-          {error && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
-          )}
 
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Creando…</> : 'Crear cita'}
