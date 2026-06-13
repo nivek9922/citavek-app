@@ -12,6 +12,7 @@ import {
   getOnboardingFunnel,
 } from '@/modules/tenancy/queries'
 import { getBarberLoginAdoptionStats } from '@/modules/analytics/queries'
+import { FunnelBar, HealthStat } from '@/modules/analytics/ui/admin-widgets'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 
 function formatCOP(cop: number): string {
@@ -304,50 +305,6 @@ function KPI({
       </div>
       <p className={`mt-2 text-3xl font-bold tabular-nums ${accent}`}>{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
-    </div>
-  )
-}
-
-function FunnelBar({
-  label, count, total, color,
-}: {
-  label:  string
-  count:  number
-  total:  number
-  color:  string
-}) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium tabular-nums">{count}/{total} <span className="text-muted-foreground">({pct}%)</span></span>
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-muted/50">
-        <div
-          className={`h-1.5 rounded-full ${color} transition-all`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function HealthStat({
-  count, label, sub, color, bg, border,
-}: {
-  count:  number
-  label:  string
-  sub:    string
-  color:  string
-  bg:     string
-  border: string
-}) {
-  return (
-    <div className={`rounded-xl border ${border} ${bg} p-4`}>
-      <p className={`text-2xl font-bold tabular-nums ${color}`}>{count}</p>
-      <p className={`mt-0.5 text-sm font-medium ${color}`}>{label}</p>
-      <p className="mt-1 text-xs text-muted-foreground/70">{sub}</p>
     </div>
   )
 }

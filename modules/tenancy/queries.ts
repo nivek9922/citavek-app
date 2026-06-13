@@ -22,6 +22,29 @@ export async function getOrgSettings(organizationId: string) {
 }
 
 /**
+ * Super-admin: identidad + branding + estado de UNA barbería por id.
+ * Alimenta el header del drill-down (`/admin/negocios/[id]`). Devuelve `null`
+ * si el id no existe → el layout llama `notFound()` (valida el id de la URL
+ * contra la BD antes de renderizar cualquier query). Tag `admin-orgs` para que
+ * suspender/reactivar (que ya hace `updateTag('admin-orgs')`) refresque el header.
+ */
+export async function getOrgForAdmin(orgId: string) {
+  'use cache'
+  cacheTag('admin-orgs')
+  cacheLife('minutes')
+  return db.organization.findUnique({
+    where:  { id: orgId },
+    select: {
+      id: true, name: true, slug: true, phone: true, status: true,
+      createdAt: true, timezone: true,
+      branding: { select: { primaryColor: true, logoUrl: true } },
+    },
+  })
+}
+
+export type AdminOrgHeader = NonNullable<Awaited<ReturnType<typeof getOrgForAdmin>>>
+
+/**
  * Super-admin: todas las barberías (activas y suspendidas). NO tenant-scoped.
  * Las suspendidas se muestran con su badge para poder reactivarlas, no se ocultan.
  */

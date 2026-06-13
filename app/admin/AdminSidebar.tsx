@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { AdminNavLinks } from './AdminNavLinks'
 
 export function AdminSidebar() {
@@ -8,7 +9,21 @@ export function AdminSidebar() {
           Plataforma
         </p>
       </div>
-      <AdminNavLinks />
+      {/* usePathname() es dato de request en rutas dinámicas ([id]); con Cache
+          Components debe ir dentro de un <Suspense> para prerenderizar el shell. */}
+      <Suspense fallback={<NavFallback />}>
+        <AdminNavLinks />
+      </Suspense>
     </aside>
+  )
+}
+
+function NavFallback() {
+  return (
+    <nav className="flex flex-col gap-1 p-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="h-9 animate-pulse rounded-lg bg-muted/30" />
+      ))}
+    </nav>
   )
 }

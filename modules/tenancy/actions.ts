@@ -192,6 +192,7 @@ export async function saveAdminNoteAction(
   try {
     await saveAdminNote(repo, orgId, content)
     log.audit('org.admin_note_saved', { orgId, by: session.user.email, charCount: content.length })
+    updateTag(`org-stats:${orgId}`)
     return { ok: true }
   } catch (err) {
     log.error('saveAdminNoteAction', { orgId, err: String(err) })
@@ -213,6 +214,7 @@ export async function setOrgStatusAction(
     log.audit('org.status_changed', { orgId, status, by: session.user.email })
     if (orgRow) updateTag(`tenant:${orgRow.slug}`)
     updateTag('admin-orgs')
+    updateTag(`org-stats:${orgId}`)
     return { ok: true }
   } catch (err) {
     log.error('setOrgStatusAction', { orgId, status, err: String(err) })
