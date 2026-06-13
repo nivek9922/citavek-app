@@ -8,6 +8,7 @@ function createFakeRepo(opts: { barberActive?: boolean } = {}) {
   const repo: SchedulingRepository = {
     isActiveBarber:  vi.fn(async () => opts.barberActive ?? true),
     listActiveBarberIds:         vi.fn(async () => []),
+    findActiveBarberIdByUserId:  vi.fn(async () => null),
     blockDate:       vi.fn(async (orgId, barberId, dateStr, reason) => { blocked.push({ orgId, barberId, dateStr, reason }) }),
     // stubs
     getBookableService:          vi.fn(async () => null),

@@ -56,6 +56,14 @@ export interface SchedulingRepository {
   /** ¿El barbero pertenece al tenant y está activo? */
   isActiveBarber(organizationId: string, barberId: string): Promise<boolean>
 
+  /**
+   * barberId activo vinculado a un userId dentro del tenant.
+   * Permite forzar que un usuario con rol `barber` solo agende en su propia
+   * agenda (no se confía en el barberId enviado por el cliente). null si el
+   * usuario no tiene un perfil de barbero activo en la org.
+   */
+  findActiveBarberIdByUserId(organizationId: string, userId: string): Promise<string | null>
+
   /** IDs de los barberos activos del tenant, ordenados por sortOrder. */
   listActiveBarberIds(organizationId: string): Promise<string[]>
 

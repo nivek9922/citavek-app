@@ -117,11 +117,12 @@ export async function bookAppointmentAction(
 
 // ── Alta manual de cita (panel) ─────────────────────────────────────────────
 
+// El horario llega como ISO (el slot exacto que devolvió el motor), igual que la
+// reserva pública. Nada de hora libre: solo slots reales calculados por scheduling.
 const manualSchema = z.object({
   serviceId:     z.string().min(1),
   barberId:      z.string().min(1),
-  dateStr:       z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  timeStr:       z.string().regex(/^\d{2}:\d{2}$/),
+  startAtISO:    z.string().datetime(),
   customerName:  z.string().trim().min(2).max(80),
   customerPhone: z.string().regex(/^\+57\d{10}$/, 'Teléfono inválido'),
   notes:         z.string().trim().max(300).optional(),
@@ -132,22 +133,45 @@ export type ManualAppointmentInput = z.infer<typeof manualSchema>
 export async function createManualAppointmentAction(
   slug: string,
   input: ManualAppointmentInput,
-): Promise<{ ok: true; offHours: boolean } | { ok: false; error: string }> {
+): Promise<{ ok: true } | { ok: false; error: string }> {
   // Guards fuera del try: notFound()/redirect() lanzan errores de control de flujo
   // de Next.js que un catch silenciaría (sesión expirada → "No se pudo crear" en
   // vez de ir a login).
   const ctx = await getTenantContext(slug)
-  const { session } = await requirePermission(ctx.id, 'appointment:create')
+  const { session, member } = await requirePermission(ctx.id, 'appointment:create')
   try {
-    const parsed = manualSchema.parse(input)
+    const parsed  = manualSchema.parse(input)
+    const startAt = new Date(parsed.startAtISO)
 
-    // Combinar fecha + hora local del tenant → instante UTC (en el borde).
-    const startAt = fromZonedTime(`${parsed.dateStr}T${parsed.timeStr}:00`, ctx.timezone)
+    // Un barbero solo puede agendar en SU propia agenda: ignoramos el barberId
+    // del cliente y lo forzamos al barbero vinculado a su usuario. El owner sí
+    // puede elegir cualquier barbero (validado como activo por el use case).
+    let barberId = parsed.barberId
+    if (member.role === 'barber') {
+      const ownBarberId = await repo.findActiveBarberIdByUserId(ctx.id, session.user.id)
+      if (!ownBarberId) return { ok: false, error: 'Tu usuario no está vinculado a un barbero activo.' }
+      barberId = ownBarberId
+    }
+
+    // El horario debe ser un slot REAL que el motor considere disponible (respeta
+    // turno, días bloqueados y citas existentes). Cierra el hueco de enviar una
+    // hora arbitraria desde el cliente: la disponibilidad es la misma que ve el
+    // booking público.
+    const availability = await getAvailableSlots(repo, {
+      organizationId: ctx.id,
+      barberId,
+      serviceId:      parsed.serviceId,
+      date:           startAt,
+    })
+    const isRealSlot = availability.ok && availability.slots.some((s) => s.getTime() === startAt.getTime())
+    if (!isRealSlot) {
+      return { ok: false, error: 'Ese horario ya no está disponible.' }
+    }
 
     const result = await createManualAppointment(repo, {
       organizationId:  ctx.id,
       serviceId:       parsed.serviceId,
-      barberId:        parsed.barberId,
+      barberId,
       startAt,
       customerName:    parsed.customerName,
       customerPhone:   parsed.customerPhone,
@@ -156,7 +180,7 @@ export async function createManualAppointmentAction(
     })
 
     if (result.ok) revalidatePath(`/${slug}/panel`)
-    return result.ok ? { ok: true, offHours: result.offHours } : result
+    return result.ok ? { ok: true } : result
   } catch (err) {
     if (err instanceof SlotConflictError) {
       return { ok: false, error: 'Ese barbero ya tiene una cita en ese horario.' }

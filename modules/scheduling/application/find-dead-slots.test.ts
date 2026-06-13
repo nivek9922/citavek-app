@@ -39,6 +39,7 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
   return {
     getOrgTimezone:                vi.fn(async () => timezone),
     listActiveBarberIds:           vi.fn(async () => barberIds),
+    findActiveBarberIdByUserId:    vi.fn(async () => null),
     getBarberWorkingHours:         vi.fn(async () => workingHours),
     getBarberBusySlots:            vi.fn(async () => busySlots),
     isDateBlocked:                 vi.fn(async () => isBlocked),

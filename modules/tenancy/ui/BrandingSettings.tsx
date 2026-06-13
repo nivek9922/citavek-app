@@ -118,7 +118,7 @@ function InfoForm({ tenantSlug, org }: { tenantSlug: string; org: Props['org'] }
         <Field label="Nombre de la barbería" name="name" defaultValue={org.name} required />
         <Field label="Ciudad"   name="city"    defaultValue={org.city    ?? ''} />
         <Field label="Dirección" name="address" defaultValue={org.address ?? ''} />
-        <Field label="Teléfono / WhatsApp" name="phone" defaultValue={org.phone ?? ''} />
+        <Field label="Teléfono / WhatsApp" name="phone" defaultValue={org.phone ?? ''} placeholder="3187654321" />
       </div>
       <SaveBtn isPending={isPending} saved={saved} />
     </form>

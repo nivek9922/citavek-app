@@ -21,6 +21,10 @@ export async function createManualAppointment(
   repo: SchedulingRepository,
   input: CreateManualAppointmentInput,
 ): Promise<CreateManualAppointmentResult> {
+  if (input.startAt.getTime() < Date.now() - 5 * 60_000) {
+    return { ok: false, error: 'No se pueden crear citas en el pasado.' }
+  }
+
   const service = await repo.getBookableService(input.organizationId, input.serviceId)
   if (!service) return { ok: false, error: 'El servicio no está disponible.' }
 

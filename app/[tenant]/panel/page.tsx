@@ -20,7 +20,7 @@ import { StatCard }   from '@/modules/analytics/ui/StatCard'
 import { AgendaBoard }    from '@/modules/scheduling/ui/AgendaBoard'
 import { AgendaDateNav }  from '@/modules/scheduling/ui/AgendaDateNav'
 import { AgendaWeekView } from '@/modules/scheduling/ui/AgendaWeekView'
-import { NewAppointmentDialog } from '@/modules/scheduling/ui/NewAppointmentDialog'
+import { ManualAppointmentModal } from '@/modules/scheduling/ui/ManualAppointmentModal'
 import { OnboardingWidget, OnboardingSuccessStrip } from '@/modules/onboarding/ui/OnboardingWidget'
 import { OnboardingWizard } from '@/modules/onboarding/ui/OnboardingWizardClient'
 
@@ -139,11 +139,13 @@ export default async function PanelPage({
         title="Agenda"
         description={capitalize(format(parseISO(today), "EEEE d 'de' MMMM", { locale: es }))}
         action={
-          <NewAppointmentDialog
+          <ManualAppointmentModal
             tenantSlug={slug}
             services={services}
             barbers={barbers}
-            defaultDate={selectedDate}
+            todayStr={today}
+            timezone={ctx.timezone}
+            currentBarberId={currentBarberId}
           />
         }
       />

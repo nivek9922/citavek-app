@@ -25,6 +25,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
     getBookableService:      vi.fn(async () => service),
     isActiveBarber:          vi.fn(async () => activeBarber),
     listActiveBarberIds:         vi.fn(async () => []),
+    findActiveBarberIdByUserId:  vi.fn(async () => null),
     hasConflict:             vi.fn(async () => conflict),
     upsertCustomer:          vi.fn(async () => ({ id: 'cust-1' })),
     createAppointment:       vi.fn(async (data: NewAppointment) => { created.push(data); return { id: 'apt-1' } }),
@@ -78,16 +79,17 @@ describe('createManualAppointment', () => {
     expect(apt.endAt.getTime()).toBe(baseInput.startAt.getTime() + 75 * 60_000)
   })
 
-  it('permite horarios en el pasado (a diferencia de la reserva pública)', async () => {
+  it('rechaza citas en el pasado (más de 5 min antes de ahora)', async () => {
     const { repo, created } = createFakeRepo()
 
     const res = await createManualAppointment(repo, {
       ...baseInput,
-      startAt: new Date(Date.now() - 60 * 60_000),
+      startAt: new Date(Date.now() - 10 * 60_000),
     })
 
-    expect(res.ok).toBe(true)
-    expect(created).toHaveLength(1)
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error).toMatch(/pasado/)
+    expect(created).toHaveLength(0)
   })
 
   it('rechaza si el servicio no existe', async () => {

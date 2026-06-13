@@ -10,6 +10,7 @@ function createFakeRepo() {
     // stubs
     isActiveBarber:              vi.fn(async () => true),
     listActiveBarberIds:         vi.fn(async () => []),
+    findActiveBarberIdByUserId:  vi.fn(async () => null),
     getBookableService:          vi.fn(async () => null),
     hasConflict:                 vi.fn(async () => false),
     upsertCustomer:              vi.fn(async () => ({ id: 'c' })),

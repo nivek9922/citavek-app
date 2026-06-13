@@ -37,7 +37,7 @@ const selfRegisterSchema = z.object({
   name:         z.string().min(2).max(80),
   slug:         z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Solo letras minúsculas, números y guiones'),
   city:         z.enum(COLOMBIA_CITIES),
-  phone:        z.string().min(7).max(20),
+  phone:        z.string().regex(/^\d{10}$/, 'Ingresa 10 dígitos sin +57 (ej. 3187654321)'),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#E0A300'),
   accessCode:   z.string().min(1, 'El código de acceso es obligatorio'),
   // userId enviado por el cliente como fallback si la cookie aún no propagó al SA.

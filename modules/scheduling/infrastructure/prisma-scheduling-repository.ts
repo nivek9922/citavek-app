@@ -54,6 +54,14 @@ export const prismaSchedulingRepository: SchedulingRepository = {
     return barber !== null
   },
 
+  async findActiveBarberIdByUserId(organizationId, userId) {
+    const barber = await db.barber.findFirst({
+      where:  { organizationId, userId, active: true },
+      select: { id: true },
+    })
+    return barber?.id ?? null
+  },
+
   async listActiveBarberIds(organizationId) {
     const barbers = await db.barber.findMany({
       where:   { organizationId, active: true },

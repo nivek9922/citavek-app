@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
@@ -26,8 +27,15 @@ export function DatePicker({
   className,
   modal,
 }: DatePickerProps) {
+  const [open, setOpen] = useState(false)
+
+  function handleSelect(date: Date | undefined) {
+    onChange(date)
+    if (date) setOpen(false)
+  }
+
   return (
-    <Popover modal={modal}>
+    <Popover modal={modal} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -50,7 +58,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={value}
-          onSelect={onChange}
+          onSelect={handleSelect}
           disabled={min ? (d: Date) => d < min : undefined}
           autoFocus
         />

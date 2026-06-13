@@ -179,7 +179,8 @@ export function SignUpForm() {
               </SelectContent>
             </Select>
           </div>
-          <Field label="WhatsApp / Teléfono" name="phone" placeholder="+573187654321" disabled={isPending} />
+          <Field label="WhatsApp / Teléfono" name="phone" placeholder="3187654321" disabled={isPending} />
+          <p className="text-[11px] text-muted-foreground col-span-2 -mt-2">10 dígitos sin +57</p>
         </div>
 
         {/* Color de marca */}
