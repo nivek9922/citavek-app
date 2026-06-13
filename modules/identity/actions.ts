@@ -1,6 +1,6 @@
 'use server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { auth } from '@/server/auth'
@@ -92,6 +92,9 @@ export async function createBarberiaForSelfAction(
     if (result.ok) {
       const email = session?.user.email ?? data._userId ?? 'unknown'
       await repo.consumeAccessCode(data.accessCode.trim().toUpperCase(), email)
+      // Invalida la lista cacheada del Super Admin (`admin-orgs`) para que la
+      // barbería recién registrada aparezca de inmediato en /admin/negocios.
+      updateTag('admin-orgs')
     }
 
     return result
@@ -143,7 +146,8 @@ export async function createBarberiaAction(
       primaryColor: data.primaryColor,
     })
 
-    if (result.ok) revalidatePath('/admin')
+    // Invalida `admin-orgs` (no `revalidatePath`, que no toca entradas 'use cache').
+    if (result.ok) updateTag('admin-orgs')
     return result
   } catch (err) {
     return { ok: false, error: handlePrismaError(err) }
