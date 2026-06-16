@@ -70,6 +70,63 @@ If yes → reject the implementation.
 
 ---
 
+## CRITICAL: Prisma Query Rules — Performance & Scalability
+
+### 1. ⛔ CERO AGREGACIONES EN MEMORIA (NODE.JS)
+
+NUNCA uses `findMany` para descargar registros a la RAM si el único propósito es contarlos,
+sumarlos, buscar el máximo/mínimo o agruparlos en JavaScript (usando `.length`, `.reduce`,
+`for`, o `new Map`). Delega todo el trabajo pesado al motor de BD:
+
+- Count → `db.[model].count()`
+- Sum / Max / Avg → `db.[model].aggregate({ _sum, _max, _avg })`
+- Group + count → `db.[model].groupBy({ by, _count, orderBy, take })`
+- Group with relations or HAVING → `db.$queryRaw` con SQL puro
+
+**EXCEPCIÓN aceptada:** si Prisma no soporta la operación necesaria (ej. `HAVING COUNT >= N`
+en `groupBy`, o JOINs complejos con agregaciones), usa `db.$queryRaw`. Nunca JS.
+
+**Nombres de tabla en `$queryRaw`** (convención `@@map` del schema):
+`appointment`, `appointment_service`, `barber`, `service`, `organization`, `customer`.
+Columnas: camelCase sin `@map`, SIEMPRE entre comillas dobles: `"organizationId"`, `"startAt"`.
+
+### 2. ⛔ PROHIBIDAS LAS CONSULTAS SIN LÍMITES (UNBOUNDED QUERIES)
+
+NUNCA ejecutes un `findMany()` sin `take` en tablas que crecen dinámicamente:
+`Appointment`, `Organization`, `Customer`, `AppointmentService`, `User`.
+
+- Dashboards de admin global → `take: 1000` mínimo de seguridad, o paginación por cursor.
+- Vistas de tenant → siempre acotadas por `organizationId` + rango de fechas + `take`.
+
+### 3. ✅ PREVENCIÓN DE N+1
+
+NUNCA coloques una query dentro de un loop (`for`, `map`, `forEach`). Patrón correcto:
+
+```ts
+// ❌ N+1
+for (const id of ids) {
+  const item = await db.thing.findUnique({ where: { id } })
+}
+
+// ✅ Una query con IN
+const items = await db.thing.findMany({ where: { id: { in: ids } } })
+
+// ✅ Paralelo para sets finitos e independientes
+const results = await Promise.all(finiteIds.map((id) => db.thing.findUnique({ where: { id } })))
+```
+
+### 4. ✅ ANTI-PATRON: findMany().length
+
+```ts
+// ❌ Trae todas las filas solo para contar
+const n = (await db.thing.findMany({ where })).length
+
+// ✅
+const n = await db.thing.count({ where })
+```
+
+---
+
 ## Cache Strategy
 
 - **Reads:** `'use cache'` directive inside `queries.ts` with `cacheTag('resource:${organizationId}')` and `cacheLife('max')`.

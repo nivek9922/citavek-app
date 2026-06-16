@@ -163,6 +163,13 @@ These are explicitly forbidden. If you find existing code that violates these ru
 ### Guards
 - **Never place `getTenantContext` or `requirePermission` inside a try/catch block** — they must be outside so `redirect()` and `notFound()` can throw correctly.
 
+### Database Queries
+- **Never use `findMany` to count** — use `.count()`. Example: `(await db.thing.findMany({ where })).length` → `await db.thing.count({ where })`.
+- **Never iterate `findMany` results to aggregate in JS** (sum, group, max) — use `groupBy`, `aggregate`, or `$queryRaw` with SQL.
+- **Never run `findMany()` without `take`** on unbounded tables (`Appointment`, `Organization`, `Customer`, `AppointmentService`) — add `take` or paginate.
+- **Never place a DB query inside a loop** — use `{ in: ids }` or `Promise.all` for finite independent sets.
+- **`$queryRaw` table names** follow `@@map` (snake_case): `appointment`, `appointment_service`, `barber`, `service`, `organization`, `customer`. Column names are camelCase and must be quoted: `"organizationId"`, `"startAt"`, `"priceCop"`.
+
 ---
 
 ## Testing

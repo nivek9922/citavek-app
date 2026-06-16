@@ -59,7 +59,7 @@ export async function getTeamStats(organizationId: string) {
   monthStart.setUTCDate(1)
   monthStart.setUTCHours(0, 0, 0, 0)
 
-  const [weekByBarber, monthByBarber, barbers] = await Promise.all([
+  const [weekByBarber, monthByBarber, barbers, withAccount, total] = await Promise.all([
     db.appointment.groupBy({
       by:     ['barberId'],
       where:  { organizationId, startAt: { gte: weekStart }, status: { not: 'cancelled' } },
@@ -77,6 +77,8 @@ export async function getTeamStats(organizationId: string) {
       select:  { id: true, displayName: true, nickname: true, userId: true },
       orderBy: [{ sortOrder: 'asc' }, { displayName: 'asc' }],
     }),
+    db.barber.count({ where: { organizationId, active: true, userId: { not: null } } }),
+    db.barber.count({ where: { organizationId, active: true } }),
   ])
 
   const barberMap = new Map(barbers.map((b) => [b.id, b]))
@@ -90,10 +92,7 @@ export async function getTeamStats(organizationId: string) {
     ? { barber: barberMap.get(monthByBarber[0].barberId), count: monthByBarber[0]._count._all }
     : null
 
-  const withAccount    = barbers.filter((b) => b.userId != null).length
-  const withoutAccount = barbers.filter((b) => b.userId == null).length
-
-  return { weekStats, topThisMonth, withAccount, withoutAccount, total: barbers.length }
+  return { weekStats, topThisMonth, withAccount, withoutAccount: total - withAccount, total }
 }
 
 export type BarberDTO       = Awaited<ReturnType<typeof listActiveBarbers>>[number]

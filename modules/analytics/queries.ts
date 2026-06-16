@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { cacheTag, cacheLife } from 'next/cache'
 import { addDays, format, parseISO } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
@@ -83,41 +84,41 @@ export async function getAppointmentsForDate(
 // ── Telemetría de login de barberos (Super Admin — B5) ───────────────────────
 
 export async function getBarberLoginAdoptionStats() {
-  const [total, withLogin] = await Promise.all([
-    db.barber.count({ where: { active: true } }),
-    db.barber.count({ where: { active: true, userId: { not: null } } }),
-  ])
+  const [row] = await db.$queryRaw<[{
+    total_barbers:        number
+    barbers_with_login:   number
+    tenants_fully_linked: number
+    tenants_partial:      number
+    tenants_total:        number
+  }]>`
+    SELECT
+      SUM(total_count)::int       AS total_barbers,
+      SUM(linked_count)::int      AS barbers_with_login,
+      COUNT(CASE WHEN linked_count = total_count THEN 1 END)::int AS tenants_fully_linked,
+      COUNT(CASE WHEN linked_count < total_count THEN 1 END)::int AS tenants_partial,
+      COUNT(*)::int               AS tenants_total
+    FROM (
+      SELECT
+        "organizationId",
+        COUNT(*)        AS total_count,
+        COUNT("userId") AS linked_count
+      FROM barber
+      WHERE active = true
+      GROUP BY "organizationId"
+    ) org_stats
+  `
 
-  // Tenants con todos los barberos vinculados vs tenants con al menos uno sin vincular
-  const allOrgs = await db.barber.groupBy({
-    by:     ['organizationId'],
-    where:  { active: true },
-    _count: { _all: true },
-  })
-  const linkedOrgs = await db.barber.groupBy({
-    by:     ['organizationId'],
-    where:  { active: true, userId: { not: null } },
-    _count: { _all: true },
-  })
-
-  const linkedMap = new Map(linkedOrgs.map((r) => [r.organizationId, r._count._all]))
-
-  let tenantsFullyLinked = 0
-  let tenantsPartial     = 0
-  for (const org of allOrgs) {
-    const linked = linkedMap.get(org.organizationId) ?? 0
-    if (linked === org._count._all) tenantsFullyLinked++
-    else tenantsPartial++
-  }
+  const totalBarbers     = Number(row.total_barbers)
+  const barbersWithLogin = Number(row.barbers_with_login)
 
   return {
-    totalBarbers:        total,
-    barbersWithLogin:    withLogin,
-    barbersWithoutLogin: total - withLogin,
-    loginRatioPct:       total > 0 ? Math.round((withLogin / total) * 100) : 0,
-    tenantsFullyLinked,
-    tenantsPartial,
-    tenantsTotal: allOrgs.length,
+    totalBarbers,
+    barbersWithLogin,
+    barbersWithoutLogin: totalBarbers - barbersWithLogin,
+    loginRatioPct:       totalBarbers > 0 ? Math.round((barbersWithLogin / totalBarbers) * 100) : 0,
+    tenantsFullyLinked:  Number(row.tenants_fully_linked),
+    tenantsPartial:      Number(row.tenants_partial),
+    tenantsTotal:        Number(row.tenants_total),
   }
 }
 
@@ -179,6 +180,7 @@ export async function getTenantsPerformance() {
   const [orgs, volume, revenue, barbers] = await Promise.all([
     db.organization.findMany({
       select: { id: true, name: true, slug: true, status: true, createdAt: true },
+      take:   1000,
     }),
     db.appointment.groupBy({                       // Citas (30d): no canceladas
       by:     ['organizationId'],
@@ -262,7 +264,7 @@ export interface OrgStats {
  * tenant) para mantener las queries acotadas. `pending` pliega `pending + confirmed`
  * (citas futuras/activas) ya que el spec no separa `confirmed`.
  */
-export async function getOrgStats(organizationId: string): Promise<OrgStats> {
+export const getOrgStats = cache(async function getOrgStats(organizationId: string): Promise<OrgStats> {
   'use cache'
   cacheTag(`org-stats:${organizationId}`)
   cacheLife('minutes')
@@ -293,9 +295,9 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
   const [
     todayCount, weekCount, byStatus,
     totalServices, activeServices,
-    uniquePhones, newClients, returningRows,
+    uniqueClientsThisMonth, newClients, returningClientsThisMonth,
     created7, cancelled7, created30, created90,
-    lastApt, activeBarbers, onlineApt, topServiceRows,
+    lastApt, activeBarbers, onlineApt, topServiceThisMonth,
   ] = await Promise.all([
     db.appointment.count({ where: { organizationId, startAt: { gte: todayStart, lt: todayEnd }, status: notCancelled } }),
     db.appointment.count({ where: { organizationId, startAt: { gte: weekStart,  lt: weekEnd  }, status: notCancelled } }),
@@ -306,17 +308,28 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
     }),
     db.service.count({ where: { organizationId } }),
     db.service.count({ where: { organizationId, active: true } }),
-    db.appointment.findMany({
-      where:    { organizationId, startAt: { gte: monthStart }, status: notCancelled },
-      select:   { customerPhone: true },
-      distinct: ['customerPhone'],
-    }),
+    // Fix A: COUNT(DISTINCT) en BD — elimina findMany + .length en JS
+    db.$queryRaw<[{ count: number }]>`
+      SELECT COUNT(DISTINCT "customerPhone")::int AS count
+      FROM appointment
+      WHERE "organizationId" = ${organizationId}
+        AND "startAt" >= ${monthStart}
+        AND status != 'cancelled'
+    `.then(([r]) => Number(r.count)),
     db.customer.count({ where: { organizationId, createdAt: { gte: weekStart } } }),
-    db.appointment.groupBy({
-      by:     ['customerPhone'],
-      where:  { organizationId, startAt: { gte: since30 }, status: notCancelled },
-      _count: { _all: true },
-    }),
+    // Fix C: HAVING COUNT(*) >= 2 en BD — elimina groupBy + .filter().length en JS
+    db.$queryRaw<[{ count: number }]>`
+      SELECT COUNT(*)::int AS count
+      FROM (
+        SELECT "customerPhone"
+        FROM appointment
+        WHERE "organizationId" = ${organizationId}
+          AND "startAt" >= ${since30}
+          AND status != 'cancelled'
+        GROUP BY "customerPhone"
+        HAVING COUNT(*) >= 2
+      ) sub
+    `.then(([r]) => Number(r.count)),
     db.appointment.count({ where: { organizationId, createdAt:   { gte: since7  } } }),
     db.appointment.count({ where: { organizationId, cancelledAt: { gte: since7  } } }),
     db.appointment.count({ where: { organizationId, createdAt:   { gte: since30 } } }),
@@ -324,13 +337,19 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
     db.appointment.findFirst({ where: { organizationId }, orderBy: { startAt: 'desc' }, select: { startAt: true } }),
     db.barber.count({ where: { organizationId, active: true } }),
     db.appointment.findFirst({ where: { organizationId, source: 'online' }, select: { id: true } }),
-    db.appointmentService.groupBy({
-      by:      ['serviceId'],
-      where:   { appointment: { organizationId, startAt: { gte: monthStart }, status: notCancelled } },
-      _count:  { _all: true },
-      orderBy: { _count: { serviceId: 'desc' } },
-      take:    1,
-    }),
+    // Fix B: JOIN + GROUP BY + ORDER BY + LIMIT 1 en BD — elimina findMany + Map + sort en JS
+    db.$queryRaw<{ name: string; appointment_count: number }[]>`
+      SELECT s.name, COUNT(*)::int AS appointment_count
+      FROM appointment_service aps
+      JOIN service s ON s.id = aps."serviceId"
+      JOIN appointment a ON a.id = aps."appointmentId"
+      WHERE a."organizationId" = ${organizationId}
+        AND a."startAt" >= ${monthStart}
+        AND a.status != 'cancelled'
+      GROUP BY s.id, s.name
+      ORDER BY appointment_count DESC
+      LIMIT 1
+    `.then(([r]) => r ? { name: r.name, appointmentCount: Number(r.appointment_count) } : null),
   ])
 
   const statusBy   = new Map(byStatus.map((r) => [r.status, r._count._all]))
@@ -338,14 +357,6 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
   const noShow     = statusBy.get('no_show')   ?? 0
   const cancelled  = statusBy.get('cancelled') ?? 0
   const pending    = (statusBy.get('pending') ?? 0) + (statusBy.get('confirmed') ?? 0)
-
-  const topRow = topServiceRows[0]
-  const topServiceThisMonth = topRow
-    ? {
-        name: (await db.service.findUnique({ where: { id: topRow.serviceId }, select: { name: true } }))?.name ?? 'Servicio',
-        appointmentCount: topRow._count._all,
-      }
-    : null
 
   return {
     appointmentsToday:     todayCount,
@@ -356,9 +367,9 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
     totalServices,
     activeServices,
 
-    uniqueClientsThisMonth:    uniquePhones.length,
+    uniqueClientsThisMonth,
     newClientsThisWeek:        newClients,
-    returningClientsThisMonth: returningRows.filter((r) => r._count._all >= 2).length,
+    returningClientsThisMonth,
 
     health: computeHealthScore(created7, cancelled7, ageInDays),
     churn:  computeChurnScore(created7, created30, created90),
@@ -374,4 +385,4 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
 
     topServiceThisMonth,
   }
-}
+})

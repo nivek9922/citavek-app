@@ -124,24 +124,31 @@ export async function getCustomerDetail(organizationId: string, customerId: stri
   })
   if (!customer) return null
 
-  const rows = await db.appointment.findMany({
-    where:   { organizationId, customerId },
-    orderBy: { startAt: 'desc' },
-    take:    100,
-    select: {
-      id: true, startAt: true, status: true, priceCop: true,
-      appointmentServices: { select: { service: { select: { name: true } } } },
-      barber:  { select: { displayName: true, nickname: true } },
-    },
-  })
+  const [rows, stats] = await Promise.all([
+    db.appointment.findMany({
+      where:   { organizationId, customerId },
+      orderBy: { startAt: 'desc' },
+      take:    100,
+      select: {
+        id: true, startAt: true, status: true, priceCop: true,
+        appointmentServices: { select: { service: { select: { name: true } } } },
+        barber:  { select: { displayName: true, nickname: true } },
+      },
+    }),
+    db.appointment.aggregate({
+      where:  { organizationId, customerId, status: 'completed' },
+      _sum:   { priceCop: true },
+      _count: { _all: true },
+    }),
+  ])
 
   const appointments = rows.map(({ appointmentServices, ...rest }) => ({
     ...rest,
     services: appointmentServices.map((s) => ({ name: s.service.name })),
   }))
 
-  const totalSpent = appointments.filter((a) => a.status === 'completed').reduce((s, a) => s + a.priceCop, 0)
-  const completed  = appointments.filter((a) => a.status === 'completed').length
+  const totalSpent = stats._sum.priceCop ?? 0
+  const completed  = stats._count._all
 
   return { customer, appointments, totalSpent, completed }
 }
