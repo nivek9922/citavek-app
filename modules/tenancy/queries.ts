@@ -62,8 +62,9 @@ export async function listOrganizationsForAdmin() {
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], // activas primero
       select: {
         id: true, name: true, slug: true, city: true, status: true, createdAt: true,
-        branding: { select: { primaryColor: true } },
-        _count:   { select: { barbers: true, appointments: true } },
+        branding:     { select: { primaryColor: true } },
+        subscription: { select: { plan: true, status: true, trialEndsAt: true, currentPeriodEnd: true } },
+        _count:       { select: { barbers: true, appointments: true } },
         appointments: {
           take:    1,
           orderBy: { startAt: 'desc' },

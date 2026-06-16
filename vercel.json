@@ -1,4 +1,8 @@
 {
+  "crons": [
+    { "path": "/api/cron/check-subscriptions", "schedule": "0 14 * * *" },
+    { "path": "/api/cron/fill-dead-slots",     "schedule": "0 13 * * *" }
+  ],
   "headers": [
     {
       "source": "/_next/static/(.*)",

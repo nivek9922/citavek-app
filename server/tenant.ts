@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import { cacheTag, cacheLife } from 'next/cache'
 import { db } from '@/server/db'
+import type { SubscriptionSnapshot } from '@/modules/subscriptions/domain/subscription'
 
 export interface TenantContext {
   id: string
@@ -69,7 +70,8 @@ export const getTenantContext = cache(async (slug: string): Promise<TenantContex
 })
 
 export interface TenantContextWithStatus extends TenantContext {
-  status: 'active' | 'suspended'
+  status:       'active' | 'suspended'
+  subscription: SubscriptionSnapshot | null
 }
 
 // Igual que fetchTenantData pero sin filtrar por status: 'active'.
@@ -98,6 +100,14 @@ async function fetchTenantDataPermissive(slug: string) {
           coverUrl: true,
         },
       },
+      subscription: {
+        select: {
+          status:           true,
+          trialEndsAt:      true,
+          currentPeriodEnd: true,
+          graceStartedAt:   true,
+        },
+      },
     },
   })
 }
@@ -112,6 +122,7 @@ export const getTenantContextPermissive = cache(
     return {
       ...org,
       status: org.status as 'active' | 'suspended',
+      subscription: org.subscription,
       branding: org.branding ?? {
         primaryColor: '#E0A300',
         logoUrl: null,

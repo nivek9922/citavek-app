@@ -28,6 +28,12 @@ export function AdminOrgsSection({ initialOrgs }: Props) {
       status:       'active',
       createdAt:    new Date(),
       branding:     { primaryColor: data.primaryColor },
+      subscription: {
+        plan:             'basic',
+        status:           'trial',
+        trialEndsAt:      new Date(Date.now() + 30 * 86_400_000),
+        currentPeriodEnd: null,
+      },
       _count:        { barbers: 0, appointments: 0 },
       appointments: [],
       health:       { created: 0, cancelled: 0, score: 0, level: 'red' },

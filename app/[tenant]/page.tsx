@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Star, Clock, Scissors, Users } from 'lucide-react'
 import { getTenantContextPermissive } from '@/server/tenant'
+import { canOperate } from '@/modules/subscriptions/domain/subscription'
 import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers }  from '@/modules/staff/queries'
 import { getTopReviews }      from '@/modules/reviews/queries'
@@ -43,6 +44,22 @@ export default async function TenantPage({
         <p className="max-w-xs text-sm text-muted-foreground">
           Este negocio no está disponible por el momento. Si eres el dueño,
           contacta a soporte para reactivar tu cuenta.
+        </p>
+      </div>
+    )
+  }
+
+  // La suscripción (pago/trial) es una compuerta independiente del status manual.
+  if (!canOperate(ctx.subscription, new Date())) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <Scissors className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <h1 className="font-display text-3xl">{ctx.name}</h1>
+        <p className="text-lg font-semibold">No disponible temporalmente</p>
+        <p className="max-w-xs text-sm text-muted-foreground">
+          Este negocio no está disponible temporalmente. Vuelve a intentarlo más tarde.
         </p>
       </div>
     )

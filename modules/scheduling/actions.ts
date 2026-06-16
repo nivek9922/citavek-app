@@ -3,7 +3,8 @@ import { revalidatePath, updateTag } from 'next/cache'
 import { fromZonedTime } from 'date-fns-tz'
 import { z } from 'zod'
 import { getTenantContext } from '@/server/tenant'
-import { requirePermission } from '@/server/auth-guards'
+import { requirePermission, requireActiveSubscription } from '@/server/auth-guards'
+import { SubscriptionInactiveError } from '@/modules/subscriptions/domain/subscription'
 import { headers } from 'next/headers'
 import { rateLimit, clientIpFrom } from '@/server/rate-limit'
 import log from '@/server/logger'
@@ -84,6 +85,7 @@ export async function bookAppointmentAction(
     }
 
     const ctx    = await getTenantContext(slug)
+    await requireActiveSubscription(ctx.id)
     const parsed = bookSchema.parse(input)
 
     let barberId = parsed.barberId
@@ -108,6 +110,9 @@ export async function bookAppointmentAction(
 
     return result
   } catch (err) {
+    if (err instanceof SubscriptionInactiveError) {
+      return { ok: false, error: err.message }
+    }
     if (err instanceof SlotConflictError) {
       return { ok: false, error: 'Este horario ya no está disponible.' }
     }
@@ -141,6 +146,7 @@ export async function createManualAppointmentAction(
   const ctx = await getTenantContext(slug)
   const { session, member } = await requirePermission(ctx.id, 'appointment:create')
   try {
+    await requireActiveSubscription(ctx.id)
     const parsed  = manualSchema.parse(input)
     const startAt = new Date(parsed.startAtISO)
 
@@ -183,6 +189,9 @@ export async function createManualAppointmentAction(
     if (result.ok) revalidatePath(`/${slug}/panel`)
     return result.ok ? { ok: true } : result
   } catch (err) {
+    if (err instanceof SubscriptionInactiveError) {
+      return { ok: false, error: err.message }
+    }
     if (err instanceof SlotConflictError) {
       return { ok: false, error: 'Ese barbero ya tiene una cita en ese horario.' }
     }
