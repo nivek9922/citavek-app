@@ -73,7 +73,7 @@ export default async function AdminPage() {
       </div>
 
       {/* ── KPI Strip — 6 cards ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <KPI icon={Building2}  label="Negocios activos" value={kpis.activeCount}        sub="cuentas activas" />
         <KPI icon={ShieldAlert} label="Suspendidos"      value={kpis.suspendedCount}     sub="requieren atención" warn={kpis.suspendedCount > 0} />
         <KPI icon={CalendarDays} label="Citas hoy"       value={kpis.todayCount}         sub="en curso hoy (UTC)" highlight />

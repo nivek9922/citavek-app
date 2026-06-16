@@ -58,7 +58,7 @@ export function AdminAccessCodesSection({ initialCodes }: Props) {
       </div>
 
       {/* Generador */}
-      <div className="flex items-end gap-3 rounded-2xl border border-border bg-card/60 p-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/60 p-4 sm:flex-row sm:items-end">
         <div className="space-y-1.5">
           <Label htmlFor="expiryDays">Vence en (días)</Label>
           <Input
@@ -68,11 +68,11 @@ export function AdminAccessCodesSection({ initialCodes }: Props) {
             max={365}
             value={expiryDays}
             onChange={(e) => setExpiryDays(Number(e.target.value))}
-            className="w-24"
+            className="w-full sm:w-24"
             disabled={isPending}
           />
         </div>
-        <Button onClick={handleGenerate} disabled={isPending} className="gap-1.5">
+        <Button onClick={handleGenerate} disabled={isPending} className="w-full gap-1.5 sm:w-auto">
           <Plus className="h-4 w-4" />
           Generar código
         </Button>

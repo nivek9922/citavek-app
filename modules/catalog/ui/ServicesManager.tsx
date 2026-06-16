@@ -133,6 +133,16 @@ export function ServicesManager({ services: initial, tenantSlug }: Props) {
         ))}
       </div>
       )}
+
+      {/* FAB móvil — alta de servicio siempre alcanzable al hacer scroll */}
+      <button
+        type="button"
+        onClick={openCreate}
+        aria-label="Añadir servicio"
+        className="fixed bottom-6 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-smooth hover:bg-primary/90 sm:hidden"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   )
 }
@@ -149,53 +159,55 @@ interface RowProps {
 function ServiceRow({ service, isPending, onToggle, onEdit, onMoveUp, onMoveDown }: RowProps) {
   return (
     <div className={cn(
-      'flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth',
+      'flex flex-col gap-2 bg-card px-4 py-3 transition-smooth sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-3.5',
       !service.active && 'opacity-50',
     )}>
-      {service.imageUrl ? (
-        <Image
-          src={service.imageUrl}
-          alt={service.name}
-          width={40} height={40}
-          unoptimized
-          className="h-10 w-10 shrink-0 rounded-lg object-cover"
-        />
-      ) : (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-lg">
-          {service.category === 'corte' ? '✂️' : service.category === 'barba' ? '🪒' : service.category === 'combo' ? '💈' : service.category === 'tratamiento' ? '✨' : '👦'}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-medium">{service.name}</p>
-          <Badge variant="secondary" className="text-[10px]">{service.category}</Badge>
-          {!service.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
-        </div>
-        {service.description && (
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{service.description}</p>
+      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+        {service.imageUrl ? (
+          <Image
+            src={service.imageUrl}
+            alt={service.name}
+            width={40} height={40}
+            unoptimized
+            className="h-10 w-10 shrink-0 rounded-lg object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-lg">
+            {service.category === 'corte' ? '✂️' : service.category === 'barba' ? '🪒' : service.category === 'combo' ? '💈' : service.category === 'tratamiento' ? '✨' : '👦'}
+          </div>
         )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="font-medium wrap-break-word">{service.name}</p>
+            <Badge variant="secondary" className="text-[10px]">{service.category}</Badge>
+            {!service.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
+          </div>
+          {service.description && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{service.description}</p>
+          )}
+        </div>
+        <div className="shrink-0 text-right text-sm">
+          <p className="font-bold text-primary">{formatCop(service.priceCop)}</p>
+          <p className="text-xs text-muted-foreground">{formatDuration(service.durationMin)}</p>
+        </div>
       </div>
-      <div className="shrink-0 text-right text-sm">
-        <p className="font-bold text-primary">{formatCop(service.priceCop)}</p>
-        <p className="text-xs text-muted-foreground">{formatDuration(service.durationMin)}</p>
-      </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-end gap-1 border-t border-border pt-2 sm:border-0 sm:pt-0">
         <div className="flex flex-col">
           <button onClick={onMoveUp} disabled={!onMoveUp || isPending} title="Subir"
-            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed">
+            className="rounded p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed sm:p-0.5">
             <ChevronUp className="h-3.5 w-3.5" />
           </button>
           <button onClick={onMoveDown} disabled={!onMoveDown || isPending} title="Bajar"
-            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed">
+            className="rounded p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth disabled:opacity-30 disabled:cursor-not-allowed sm:p-0.5">
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
         </div>
         <button onClick={onEdit} title="Editar"
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+          className="rounded-lg p-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth sm:p-1.5">
           <Pencil className="h-4 w-4" />
         </button>
         <button onClick={onToggle} disabled={isPending} title={service.active ? 'Desactivar' : 'Activar'}
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+          className="rounded-lg p-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth sm:p-1.5">
           {isPending
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : service.active
@@ -262,7 +274,7 @@ function ServiceForm({
           <div className="space-y-1.5">
             <Label htmlFor="category">Categoría</Label>
             <select name="category" id="category" defaultValue={service?.category ?? 'corte'}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm">
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}

@@ -139,7 +139,7 @@ export function StepDateTime({
           </div>
 
           {isPending ? (
-            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-10 animate-pulse rounded-xl bg-muted" />
               ))}
@@ -157,7 +157,7 @@ export function StepDateTime({
               {/* Indicador de ocupación */}
               <OccupancyBar slots={slots} busyCount={busyCount} />
 
-              <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
                 {slots.map((slot) => {
                   const isSelected = selectedAt && isSameMinute(slot, selectedAt)
                   return (

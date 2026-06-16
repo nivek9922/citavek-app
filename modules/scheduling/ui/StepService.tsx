@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import Image from 'next/image'
 import { Clock, Check } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
@@ -32,6 +33,99 @@ interface Props {
   onContinue:       () => void
 }
 
+/** Tarjeta seleccionable de un servicio. Nombre con wrap a 2 líneas y descripción
+ *  visible con "Ver más" inline (estado local, no afecta la selección). */
+function ServiceSelectCard({
+  svc, selected, onToggle,
+}: {
+  svc: ServiceDTO
+  selected: boolean
+  onToggle: (s: ServiceDTO) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const hasLongDesc = (svc.description?.length ?? 0) > 80
+
+  return (
+    <div
+      className={cn(
+        'rounded-xl border transition-smooth',
+        selected
+          ? 'border-primary bg-primary/10'
+          : 'border-border hover:border-primary/40 hover:bg-accent/30',
+      )}
+    >
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={() => onToggle(svc)}
+        className="flex w-full items-start gap-3 px-4 py-3 text-left"
+      >
+        {/* Checkbox + icono */}
+        <span className={cn(
+          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-smooth',
+          selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+        )}>
+          {selected && <Check className="h-3.5 w-3.5" />}
+        </span>
+        {svc.imageUrl ? (
+          <Image
+            src={svc.imageUrl} alt={svc.name}
+            width={48} height={48}
+            unoptimized
+            className="h-12 w-12 shrink-0 rounded-lg object-cover"
+          />
+        ) : (
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent text-2xl">
+            {CATEGORY_EMOJI[svc.category] ?? '✂️'}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={cn(
+              'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+              CATEGORY_COLOR[svc.category] ?? 'bg-muted text-muted-foreground',
+            )}>
+              {CATEGORY_LABELS[svc.category] ?? svc.category}
+            </span>
+            <span className="font-medium wrap-break-word">{svc.name}</span>
+          </div>
+          {svc.description && (
+            <p className={cn(
+              'mt-1 text-xs text-muted-foreground',
+              !expanded && 'line-clamp-2',
+            )}>
+              {svc.description}
+            </p>
+          )}
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm">
+            <span className={cn('font-bold', selected ? 'text-primary' : 'text-foreground')}>
+              {formatCop(svc.priceCop)}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {formatDuration(svc.durationMin)}
+            </span>
+          </p>
+        </div>
+      </button>
+
+      {/* "Ver más" — control separado, fuera del botón de selección */}
+      {hasLongDesc && (
+        <div className="px-4 pb-2 pl-27">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="py-1 text-xs font-medium text-primary"
+          >
+            {expanded ? 'Ver menos' : 'Ver más'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function StepService({
   services, selectedIds, onToggle, totalPriceCop, totalDurationMin, onContinue,
 }: Props) {
@@ -44,68 +138,14 @@ export function StepService({
       </p>
 
       <div className="space-y-2">
-        {services.map((svc) => {
-          const selected = selectedIds.includes(svc.id)
-          return (
-            <button
-              key={svc.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onToggle(svc)}
-              className={cn(
-                'w-full rounded-xl border px-4 py-3 text-left transition-smooth',
-                selected
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border hover:border-primary/40 hover:bg-accent/30',
-              )}
-            >
-              <div className="flex items-center justify-between gap-3">
-                {/* Checkbox + icono */}
-                <span className={cn(
-                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-smooth',
-                  selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
-                )}>
-                  {selected && <Check className="h-3.5 w-3.5" />}
-                </span>
-                {svc.imageUrl ? (
-                  <Image
-                    src={svc.imageUrl} alt={svc.name}
-                    width={48} height={48}
-                    unoptimized
-                    className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent text-2xl">
-                    {CATEGORY_EMOJI[svc.category] ?? '✂️'}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                      CATEGORY_COLOR[svc.category] ?? 'bg-muted text-muted-foreground',
-                    )}>
-                      {CATEGORY_LABELS[svc.category] ?? svc.category}
-                    </span>
-                    <span className="truncate font-medium">{svc.name}</span>
-                  </div>
-                  {svc.description && (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{svc.description}</p>
-                  )}
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className={cn('font-bold', selected ? 'text-primary' : 'text-foreground')}>
-                    {formatCop(svc.priceCop)}
-                  </p>
-                  <p className="flex items-center justify-end gap-0.5 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {formatDuration(svc.durationMin)}
-                  </p>
-                </div>
-              </div>
-            </button>
-          )
-        })}
+        {services.map((svc) => (
+          <ServiceSelectCard
+            key={svc.id}
+            svc={svc}
+            selected={selectedIds.includes(svc.id)}
+            onToggle={onToggle}
+          />
+        ))}
       </div>
 
       {/* Resumen + avanzar */}

@@ -19,7 +19,7 @@ export function AgendaDateNav({ slug, label, prevDate, nextDate, isToday, count 
         <Link
           href={`${base}?date=${prevDate}`}
           aria-label="Día anterior"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 hover:text-foreground"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 hover:text-foreground sm:h-8 sm:w-8"
         >
           <ChevronLeft className="h-4 w-4" />
         </Link>
@@ -34,7 +34,7 @@ export function AgendaDateNav({ slug, label, prevDate, nextDate, isToday, count 
         <Link
           href={`${base}?date=${nextDate}`}
           aria-label="Día siguiente"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 hover:text-foreground"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 hover:text-foreground sm:h-8 sm:w-8"
         >
           <ChevronRight className="h-4 w-4" />
         </Link>

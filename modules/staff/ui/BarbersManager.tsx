@@ -113,55 +113,57 @@ function BarberRow({
     .join(', ')
 
   return (
-    <div className={cn('flex items-center gap-4 bg-card px-5 py-3.5 transition-smooth', !barber.active && 'opacity-50')}>
-      {barber.avatarUrl ? (
-        <Image
-          src={barber.avatarUrl}
-          alt={barber.displayName}
-          width={40} height={40}
-          unoptimized
-          priority
-          className="h-10 w-10 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-          {barber.displayName.charAt(0)}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-medium">
-            {barber.displayName.split(' ').slice(0, 2).join(' ')}
-            {barber.nickname && <span className="text-muted-foreground"> &ldquo;{barber.nickname}&rdquo;</span>}
-          </p>
-          {!barber.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
-          {hasAccount && (
-            <span title="Cuenta vinculada" className="text-green-400">
-              <UserCheck className="h-3.5 w-3.5" />
+    <div className={cn('flex flex-col gap-2 bg-card px-4 py-3 transition-smooth sm:flex-row sm:items-center sm:gap-4 sm:px-5 sm:py-3.5', !barber.active && 'opacity-50')}>
+      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+        {barber.avatarUrl ? (
+          <Image
+            src={barber.avatarUrl}
+            alt={barber.displayName}
+            width={40} height={40}
+            unoptimized
+            priority
+            className="h-10 w-10 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+            {barber.displayName.charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="font-medium wrap-break-word">
+              {barber.displayName.split(' ').slice(0, 2).join(' ')}
+              {barber.nickname && <span className="text-muted-foreground"> &ldquo;{barber.nickname}&rdquo;</span>}
+            </p>
+            {!barber.active && <Badge variant="outline" className="text-[10px]">Inactivo</Badge>}
+            {hasAccount && (
+              <span title="Cuenta vinculada" className="text-green-400">
+                <UserCheck className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Star className="h-3 w-3 fill-primary text-primary" />
+              {barber.rating.toFixed(1)}
             </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Star className="h-3 w-3 fill-primary text-primary" />
-            {barber.rating.toFixed(1)}
-          </span>
-          {barber.specialties.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {barber.specialties.slice(0, 3).join(' · ')}
-            </span>
-          )}
-          {workDays && (
-            <span className="text-xs text-muted-foreground">{workDays}</span>
-          )}
+            {barber.specialties.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {barber.specialties.slice(0, 3).join(' · ')}
+              </span>
+            )}
+            {workDays && (
+              <span className="text-xs text-muted-foreground">{workDays}</span>
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-end gap-1 border-t border-border pt-2 sm:border-0 sm:pt-0">
         {reviews.length > 0 && (
           <Dialog>
             <DialogTrigger asChild>
               <button title="Ver reseñas"
-                className="rounded-lg p-1.5 text-yellow-400 hover:bg-yellow-500/10 transition-smooth">
+                className="rounded-lg p-2.5 text-yellow-400 hover:bg-yellow-500/10 transition-smooth sm:p-1.5">
                 <MessageCircle className="h-4 w-4" />
               </button>
             </DialogTrigger>
@@ -199,13 +201,13 @@ function BarberRow({
         )}
         {isOwner && (
           <button onClick={onEdit} title="Editar"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+            className="rounded-lg p-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth sm:p-1.5">
             <Pencil className="h-4 w-4" />
           </button>
         )}
         {isOwner && (
           <button onClick={toggle} disabled={isPending}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth">
+            className="rounded-lg p-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth sm:p-1.5">
             {isPending
               ? <Loader2 className="h-4 w-4 animate-spin" />
               : barber.active
@@ -353,7 +355,7 @@ function BarberForm({
                       value={day.start}
                       disabled={!day.active}
                       onChange={(e) => setDayTime(value, 'start', e.target.value)}
-                      className="w-24 rounded-md border border-input bg-background px-2 py-1 text-xs disabled:cursor-not-allowed"
+                      className="w-full min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-base disabled:cursor-not-allowed sm:w-24 sm:flex-none sm:text-xs"
                     />
                     <span className="text-muted-foreground">—</span>
                     <input
@@ -361,7 +363,7 @@ function BarberForm({
                       value={day.end}
                       disabled={!day.active}
                       onChange={(e) => setDayTime(value, 'end', e.target.value)}
-                      className="w-24 rounded-md border border-input bg-background px-2 py-1 text-xs disabled:cursor-not-allowed"
+                      className="w-full min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-base disabled:cursor-not-allowed sm:w-24 sm:flex-none sm:text-xs"
                     />
                   </div>
 

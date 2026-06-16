@@ -160,7 +160,7 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
 
       {/* Acciones */}
       {apt.status === 'confirmed' && (
-        <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
+        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
           {isFuture && apt.customerPhone && (
             <ActionBtn
               onClick={sendReminder}
@@ -198,7 +198,7 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
         </div>
       )}
       {apt.status === 'pending' && (
-        <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
+        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
           <ActionBtn
             onClick={() => update('confirmed')}
             icon={<Clock className="h-3.5 w-3.5" />}
@@ -214,7 +214,7 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
         </div>
       )}
       {apt.status === 'completed' && apt.customerPhone && (
-        <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
+        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
           <ActionBtn
             onClick={sendReviewInvite}
             icon={<Star className="h-3.5 w-3.5" />}
@@ -244,7 +244,7 @@ function ActionBtn({
       disabled={disabled}
       title={title}
       className={cn(
-        'flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-smooth',
+        'flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-medium transition-smooth',
         'disabled:cursor-not-allowed disabled:opacity-40',
         className,
       )}

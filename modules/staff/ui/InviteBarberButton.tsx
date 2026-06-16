@@ -50,7 +50,7 @@ export function InviteBarberButton({ tenantSlug, barberId, barberName }: Props) 
         onClick={handleGenerate}
         disabled={isPending}
         title="Invitar barbero"
-        className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth"
+        className="rounded-lg p-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth sm:p-1.5"
       >
         {isPending
           ? <Loader2 className="h-4 w-4 animate-spin" />

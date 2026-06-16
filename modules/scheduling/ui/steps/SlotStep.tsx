@@ -76,7 +76,7 @@ export function SlotStep({ tenantSlug, barber, serviceIds, selectedAt, onSelect,
             Selecciona una fecha para ver los horarios.
           </p>
         ) : isPending ? (
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-10 animate-pulse rounded-xl bg-muted" />
             ))}
@@ -93,7 +93,7 @@ export function SlotStep({ tenantSlug, barber, serviceIds, selectedAt, onSelect,
               <span>{slots.length} horarios libres</span>
               {busyCount > 0 && <span>{pct}% ocupado</span>}
             </div>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
               {slots.map((slot) => {
                 const selected = selectedAt?.getTime() === slot.getTime()
                 return (

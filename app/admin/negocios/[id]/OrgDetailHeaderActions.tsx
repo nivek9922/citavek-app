@@ -25,7 +25,7 @@ interface Props {
   slug:   string
 }
 
-const BTN = 'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50'
+const BTN = 'inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors disabled:opacity-50 sm:w-auto sm:justify-start sm:py-1.5'
 
 export function OrgDetailHeaderActions({ orgId, status, phone }: Props) {
   const router = useRouter()
@@ -49,7 +49,7 @@ export function OrgDetailHeaderActions({ orgId, status, phone }: Props) {
   const waHref = phone ? `https://wa.me/${sanitizePhoneForWa(phone)}` : null
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {status === 'active' ? (
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger asChild>

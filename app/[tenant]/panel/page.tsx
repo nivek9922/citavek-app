@@ -223,8 +223,9 @@ export default async function PanelPage({
 
       {/* Agenda con toggle día / semana */}
       <section>
-        {/* Toggle */}
-        <div className="mb-4 flex items-center gap-2">
+        {/* Toggle — solo desktop/tablet; en móvil la vista diaria es la única (la semanal
+            requiere scroll horizontal). Si se llega a ?view=week en móvil aún se renderiza. */}
+        <div className="mb-4 hidden items-center gap-2 sm:flex">
           <div className="flex rounded-lg border border-border p-0.5 text-sm">
             <Link
               href={`${base}?date=${selectedDate}`}

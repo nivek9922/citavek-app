@@ -33,9 +33,9 @@ export function AdminFilters({ total, filtered }: Props) {
   )
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {/* Búsqueda por nombre o slug */}
-      <div className="relative min-w-48 flex-1">
+      <div className="relative w-full sm:min-w-48 sm:flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar por nombre o slug…"
@@ -50,7 +50,7 @@ export function AdminFilters({ total, filtered }: Props) {
         defaultValue={params.get('status') ?? 'all'}
         onValueChange={(v) => push('status', v)}
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-full sm:w-44">
           <SelectValue placeholder="Estado" />
         </SelectTrigger>
         <SelectContent>
@@ -65,7 +65,7 @@ export function AdminFilters({ total, filtered }: Props) {
         defaultValue={params.get('city') ?? 'all'}
         onValueChange={(v) => push('city', v)}
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-full sm:w-44">
           <SelectValue placeholder="Ciudad" />
         </SelectTrigger>
         <SelectContent>

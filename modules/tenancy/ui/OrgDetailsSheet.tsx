@@ -3,8 +3,9 @@
 import { useState }       from 'react'
 import { Phone, Mail, MessageCircle, Loader2, Check } from 'lucide-react'
 import {
-  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
-} from '@/shared/ui/sheet'
+  ResponsiveSheet, ResponsiveSheetContent, ResponsiveSheetDescription,
+  ResponsiveSheetHeader, ResponsiveSheetTitle, ResponsiveSheetTrigger,
+} from '@/shared/ui/responsive-sheet'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { getOrgDetailsAction, saveAdminNoteAction, type OrgDetails } from '@/modules/tenancy/actions'
 
@@ -60,18 +61,18 @@ export function OrgDetailsSheet({ orgId, orgName, branding }: Props) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger asChild>
+    <ResponsiveSheet open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveSheetTrigger asChild>
         <button
           type="button"
           className="rounded-lg border border-border px-3 py-1.5 text-xs transition-smooth hover:border-primary/50 hover:text-primary"
         >
           Detalles
         </button>
-      </SheetTrigger>
+      </ResponsiveSheetTrigger>
 
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader className="mb-6">
+      <ResponsiveSheetContent className="w-full overflow-y-auto sm:max-w-md">
+        <ResponsiveSheetHeader className="mb-6">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 rounded-xl border border-border">
               <AvatarFallback
@@ -81,12 +82,12 @@ export function OrgDetailsSheet({ orgId, orgName, branding }: Props) {
                 {orgName[0]?.toUpperCase() ?? '?'}
               </AvatarFallback>
             </Avatar>
-            <SheetTitle className="text-base">{orgName}</SheetTitle>
+            <ResponsiveSheetTitle className="text-base">{orgName}</ResponsiveSheetTitle>
           </div>
-          <SheetDescription className="sr-only">
+          <ResponsiveSheetDescription className="sr-only">
             Detalles, contacto y notas internas del negocio {orgName}.
-          </SheetDescription>
-        </SheetHeader>
+          </ResponsiveSheetDescription>
+        </ResponsiveSheetHeader>
 
         {loading && (
           <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -196,7 +197,7 @@ export function OrgDetailsSheet({ orgId, orgName, branding }: Props) {
                 placeholder="Ej: Llamar el viernes para confirmar suscripción…"
                 rows={5}
                 maxLength={1000}
-                className="w-full resize-none rounded-xl border border-border bg-card/60 px-3 py-2.5 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-full resize-none rounded-xl border border-border bg-card/60 px-3 py-2.5 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 sm:text-sm"
               />
 
               {error && (
@@ -221,7 +222,7 @@ export function OrgDetailsSheet({ orgId, orgName, branding }: Props) {
 
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </ResponsiveSheetContent>
+    </ResponsiveSheet>
   )
 }

@@ -36,14 +36,14 @@ export function ServiceStep({ services, selectedIds, onToggle, onContinue }: Pro
               aria-pressed={isSelected}
               onClick={() => onToggle(svc)}
               className={cn(
-                'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-smooth',
+                'flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-smooth',
                 isSelected
                   ? 'border-primary bg-primary/10'
                   : 'border-border hover:border-primary/40 hover:bg-accent/30',
               )}
             >
               <span className={cn(
-                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-smooth',
+                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-smooth',
                 isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
               )}>
                 {isSelected && <Check className="h-3.5 w-3.5" />}
@@ -61,13 +61,13 @@ export function ServiceStep({ services, selectedIds, onToggle, onContinue }: Pro
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{svc.name}</p>
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <p className="line-clamp-2 font-medium wrap-break-word">{svc.name}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {formatDuration(svc.durationMin)}
                 </p>
               </div>
-              <p className={cn('shrink-0 font-bold', isSelected ? 'text-primary' : 'text-foreground')}>
+              <p className={cn('mt-0.5 shrink-0 font-bold', isSelected ? 'text-primary' : 'text-foreground')}>
                 {formatCop(svc.priceCop)}
               </p>
             </button>

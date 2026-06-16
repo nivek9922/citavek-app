@@ -77,14 +77,19 @@ export default async function PanelLayout({
         {/* Top bar (mobile) */}
         <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm lg:hidden">
           <div className="flex h-14 items-center justify-between px-4">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <TenantAvatar
                 name={ctx.name}
                 logoUrl={ctx.branding.logoUrl}
                 className="h-7 w-7 rounded-lg"
                 fallbackClassName="rounded-lg text-xs"
               />
-              <span className="font-semibold">{ctx.name}</span>
+              <span className="truncate font-semibold">{ctx.name}</span>
+              {member.role === 'barber' && (
+                <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  Barbero
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle className="h-8 w-8" />

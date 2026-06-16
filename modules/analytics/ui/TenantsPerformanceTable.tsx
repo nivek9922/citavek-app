@@ -48,7 +48,45 @@ export function TenantsPerformanceTable({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card">
+    <>
+      {/* Móvil: cards (la tabla de 7 columnas es ilegible < 640px) */}
+      <div className="space-y-2 sm:hidden">
+        {rows.map((row) => {
+          const churn = churnByOrg.get(row.id)
+          const badge = churn ? CHURN_BADGE[churn.trend] : null
+          return (
+            <Link
+              key={row.id}
+              href={`/admin/negocios/${row.id}`}
+              className="block rounded-2xl border border-border bg-card p-4 transition-smooth hover:border-primary/40"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium wrap-break-word">{row.name}</p>
+                  <span className="text-xs text-muted-foreground">/{row.slug}</span>
+                </div>
+                {row.status === 'suspended'
+                  ? <Badge variant="destructive" className="shrink-0">Suspendida</Badge>
+                  : <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatDistanceToNow(row.createdAt, { locale: es })}
+                    </span>}
+              </div>
+              <p className="mt-2 text-sm tabular-nums text-muted-foreground">
+                {row.appointments30d} citas · {formatCop(row.revenue30dCop)} · {row.barberCount} {row.barberCount === 1 ? 'barbero' : 'barberos'}
+              </p>
+              <div className="mt-2 flex items-center justify-between">
+                {badge
+                  ? <Badge variant="outline" className={`text-[10px] font-medium px-2 py-0 ${badge.cls}`}>{badge.label}</Badge>
+                  : <span />}
+                <span className="text-xs font-medium text-primary">Ver detalle →</span>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Desktop: data table completa */}
+      <div className="hidden rounded-2xl border border-border bg-card sm:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -99,6 +137,7 @@ export function TenantsPerformanceTable({
           })}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </>
   )
 }

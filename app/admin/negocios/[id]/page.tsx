@@ -155,14 +155,14 @@ async function TeamSection({ orgId }: { orgId: string }) {
           <div className="mt-4 divide-y divide-border rounded-xl border border-border overflow-hidden">
             {active.map((b) => (
               <div key={b.id} className="flex items-center gap-3 bg-card/40 px-4 py-2.5">
-                <span className="flex-1 truncate text-sm font-medium">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {b.displayName}
                   {b.nickname && <span className="ml-1 text-xs text-muted-foreground">· {b.nickname}</span>}
                 </span>
                 {b.userId
-                  ? <span className="inline-flex items-center gap-1 text-xs text-green-400"><Check className="h-3.5 w-3.5" /> cuenta</span>
-                  : <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><X className="h-3.5 w-3.5" /> sin cuenta</span>}
-                <span className="w-20 text-right text-xs text-muted-foreground tabular-nums">
+                  ? <span className="inline-flex shrink-0 items-center gap-1 text-xs text-green-400"><Check className="h-3.5 w-3.5" /> cuenta</span>
+                  : <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground"><X className="h-3.5 w-3.5" /> sin cuenta</span>}
+                <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
                   {weekByBarber.get(b.id) ?? 0} citas/sem
                 </span>
               </div>
