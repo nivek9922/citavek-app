@@ -43,17 +43,17 @@ function lastArg(mockFn: ReturnType<typeof vi.fn>): MockCall | undefined {
 beforeEach(() => { vi.clearAllMocks() })
 
 describe('PrismaTenancyRepository — delete cascade', () => {
-  it('deleteWithCascade corre appointment.deleteMany y organization.delete en $transaction', async () => {
+  it('deleteWithCascade borra la organización (las hijas caen por FK onDelete: Cascade)', async () => {
     await repo.deleteWithCascade('org-1')
-    expect(mockDb.$transaction).toHaveBeenCalledOnce()
-    expect(mockDb.appointment.deleteMany).toHaveBeenCalled()
-    expect(mockDb.organization.delete).toHaveBeenCalled()
+    // El borrado en cascada lo resuelve Postgres vía las FKs (Organization es el
+    // padre de Service/Appointment/… con onDelete: Cascade), no la aplicación.
+    expect(mockDb.organization.delete).toHaveBeenCalledOnce()
   })
 
-  it('deleteWithCascade: appointment.deleteMany filtra por organizationId', async () => {
+  it('deleteWithCascade: organization.delete filtra por id (aislamiento por tenant)', async () => {
     await repo.deleteWithCascade('org-1')
-    const arg = lastArg(mockDb.appointment.deleteMany)
-    expect(arg?.where).toMatchObject({ organizationId: 'org-1' })
+    const arg = lastArg(mockDb.organization.delete)
+    expect(arg?.where).toMatchObject({ id: 'org-1' })
   })
 
   it('deleteWithCascade devuelve el slug correcto', async () => {

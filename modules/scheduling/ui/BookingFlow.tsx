@@ -1,5 +1,6 @@
 'use client'
 import { useTransition, useState } from 'react'
+import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { useBookingFlow } from './useBookingFlow'
@@ -27,7 +28,6 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
   const flow = useBookingFlow()
   const [isPending, startTransition] = useTransition()
   const [confirmed, setConfirmed] = useState<{ startAt: Date; priceCop: number; appointmentId: string } | null>(null)
-  const [error, setError] = useState('')
 
   if (confirmed && flow.draft.services.length > 0 && flow.draft.barber) {
     return (
@@ -51,7 +51,6 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
     const { services, barber, startAt, customerName, customerPhone } = flow.draft
     if (services.length === 0 || !barber || !startAt) return
 
-    setError('')
     startTransition(async () => {
       // Nota: precio y duración TOTALES los deriva el servidor desde serviceIds.
       const res = await bookAppointmentAction(tenantSlug, {
@@ -64,7 +63,7 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
       if (res.ok) {
         setConfirmed({ startAt, priceCop: flow.totalPriceCop, appointmentId: res.appointmentId })
       } else {
-        setError(res.error)
+        toast.error(res.error)
       }
     })
   }
@@ -127,7 +126,6 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
           onConfirm={handleConfirm}
           isPending={isPending}
           canConfirm={flow.canConfirm}
-          error={error}
         />
       )}
     </div>

@@ -2,6 +2,10 @@ import { z } from 'zod'
 
 const envSchema = z.object({
   DATABASE_URL:        z.string().min(1),
+  // Conexión directa sin pooler. La usa SOLO el build (`db:deploy` → prisma
+  // migrate deploy), no el runtime → opcional para no romper `next start`/local
+  // donde no haga falta. En Vercel debe existir o el build falla.
+  DIRECT_URL:          z.string().min(1).optional(),
   NODE_ENV:            z.enum(['development', 'test', 'production']).default('development'),
   BETTER_AUTH_SECRET:  z.string().min(32),
   NEXT_PUBLIC_APP_URL: z.string().min(1),
