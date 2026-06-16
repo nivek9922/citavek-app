@@ -29,10 +29,11 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
   const [confirmed, setConfirmed] = useState<{ startAt: Date; priceCop: number; appointmentId: string } | null>(null)
   const [error, setError] = useState('')
 
-  if (confirmed && flow.draft.service && flow.draft.barber) {
+  if (confirmed && flow.draft.services.length > 0 && flow.draft.barber) {
     return (
       <BookingSuccess
-        service={flow.draft.service}
+        services={flow.draft.services}
+        totalDurationMin={flow.totalDurationMin}
         barber={flow.draft.barber}
         startAt={confirmed.startAt}
         priceCop={confirmed.priceCop}
@@ -47,21 +48,21 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
   }
 
   const handleConfirm = () => {
-    const { service, barber, startAt, customerName, customerPhone } = flow.draft
-    if (!service || !barber || !startAt) return
+    const { services, barber, startAt, customerName, customerPhone } = flow.draft
+    if (services.length === 0 || !barber || !startAt) return
 
     setError('')
     startTransition(async () => {
-      // Nota: precio y duración los deriva el servidor desde el serviceId.
+      // Nota: precio y duración TOTALES los deriva el servidor desde serviceIds.
       const res = await bookAppointmentAction(tenantSlug, {
-        serviceId:     service.id,
+        serviceIds:    services.map((s) => s.id),
         barberId:      barber.id,
         startAtISO:    startAt.toISOString(),
         customerName:  customerName.trim(),
         customerPhone: customerPhone,
       })
       if (res.ok) {
-        setConfirmed({ startAt, priceCop: service.priceCop, appointmentId: res.appointmentId })
+        setConfirmed({ startAt, priceCop: flow.totalPriceCop, appointmentId: res.appointmentId })
       } else {
         setError(res.error)
       }
@@ -81,8 +82,11 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
       {flow.step === 1 && (
         <StepService
           services={services}
-          selectedId={flow.draft.service?.id}
-          onSelect={flow.setService}
+          selectedIds={flow.draft.services.map((s) => s.id)}
+          onToggle={flow.toggleService}
+          totalPriceCop={flow.totalPriceCop}
+          totalDurationMin={flow.totalDurationMin}
+          onContinue={flow.goToBarber}
         />
       )}
 
@@ -94,23 +98,27 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
         />
       )}
 
-      {flow.step === 3 && flow.draft.barber && flow.draft.service && (
-        // key = barbero + servicio → React resetea el componente automáticamente
-        // cuando cambia cualquiera de los dos. Patrón correcto para evitar setState en effect.
+      {flow.step === 3 && flow.draft.barber && flow.draft.services.length > 0 && (
+        // key = barbero + servicios → React resetea el componente automáticamente
+        // cuando cambia cualquiera. Patrón correcto para evitar setState en effect.
         <StepDateTime
-          key={`${flow.draft.barber.id}-${flow.draft.service.id}`}
+          key={`${flow.draft.barber.id}-${flow.draft.services.map((s) => s.id).join(',')}`}
           tenantSlug={tenantSlug}
           barber={flow.draft.barber}
-          serviceId={flow.draft.service.id}
+          services={flow.draft.services}
+          totalDurationMin={flow.totalDurationMin}
+          totalPriceCop={flow.totalPriceCop}
           selectedAt={flow.draft.startAt}
           onSelect={flow.setStartAt}
           timezone={timezone}
         />
       )}
 
-      {flow.step === 4 && flow.draft.service && flow.draft.barber && flow.draft.startAt && (
+      {flow.step === 4 && flow.draft.services.length > 0 && flow.draft.barber && flow.draft.startAt && (
         <StepConfirm
-          service={flow.draft.service}
+          services={flow.draft.services}
+          totalPriceCop={flow.totalPriceCop}
+          totalDurationMin={flow.totalDurationMin}
           barber={flow.draft.barber}
           startAt={flow.draft.startAt}
           customerName={flow.draft.customerName}

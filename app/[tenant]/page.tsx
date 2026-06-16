@@ -11,6 +11,7 @@ import { Badge }             from '@/shared/ui/badge'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/shared/ui/avatar'
 import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
+import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
 import { EmptyState }        from '@/shared/ui/empty-state'
 
@@ -94,6 +95,7 @@ export default async function TenantPage({
               className="object-cover object-center"
             />
           )}
+          <ThemeToggle className="absolute right-3 top-3 z-10 border-transparent bg-background/70 backdrop-blur-sm hover:bg-background/90" />
         </div>
 
         {/* Identidad — avatar superpuesto + info */}

@@ -11,20 +11,21 @@ import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
 
 interface Props {
-  service:       ServiceDTO
-  barber:        BarberDTO
-  startAt:       Date
-  priceCop:      number
-  appointmentId: string
-  shopName:      string
-  shopPhone:     string | null
-  shopAddress:   string | null
-  timezone:      string
-  onNew:         () => void
+  services:         ServiceDTO[]
+  totalDurationMin: number
+  barber:           BarberDTO
+  startAt:          Date
+  priceCop:         number
+  appointmentId:    string
+  shopName:         string
+  shopPhone:        string | null
+  shopAddress:      string | null
+  timezone:         string
+  onNew:            () => void
 }
 
 export function BookingSuccess({
-  service, barber, startAt, priceCop, appointmentId, shopName, shopPhone, shopAddress, timezone, onNew,
+  services, totalDurationMin, barber, startAt, priceCop, appointmentId, shopName, shopPhone, shopAddress, timezone, onNew,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const citaUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/cita/${appointmentId}`
@@ -35,7 +36,8 @@ export function BookingSuccess({
       setTimeout(() => setCopied(false), 2000)
     })
   }
-  const endAt     = new Date(startAt.getTime() + service.durationMin * 60_000)
+  const servicesLabel = services.map((s) => s.name).join(' + ')
+  const endAt     = new Date(startAt.getTime() + totalDurationMin * 60_000)
   const whenLabel = formatInTimeZone(startAt, timezone, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
 
   const barberLabel = isAnyBarber(barber.id) ? 'el primer barbero disponible' : barber.displayName
@@ -44,12 +46,12 @@ export function BookingSuccess({
   const waLink = shopPhone
     ? buildWhatsAppLink(
         shopPhone,
-        `Hola ${shopName} 👋, confirmo mi cita:\n• ${service.name}\n• Con ${barberLabel}\n• ${whenLabel}`,
+        `Hola ${shopName} 👋, confirmo mi cita:\n• ${servicesLabel}\n• Con ${barberLabel}\n• ${whenLabel}`,
       )
     : null
 
   const icsUri = buildIcsDataUri({
-    title:       `${service.name} — ${shopName}`,
+    title:       `${servicesLabel} — ${shopName}`,
     description: `Cita con ${barberLabel}`,
     location:    shopAddress ?? shopName,
     start:       startAt,
@@ -71,7 +73,7 @@ export function BookingSuccess({
       </div>
 
       <div className="w-full rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
-        <p className="font-semibold">{service.name}</p>
+        <p className="font-semibold">{servicesLabel}</p>
         <p className="text-muted-foreground">{formatCop(priceCop)}</p>
       </div>
 

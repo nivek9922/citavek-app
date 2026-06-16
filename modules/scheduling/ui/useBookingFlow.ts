@@ -6,7 +6,7 @@ import type { BarberDTO }  from '@/modules/staff/queries'
 export type BookingStep = 1 | 2 | 3 | 4 | 5
 
 export interface BookingDraft {
-  service?:      ServiceDTO
+  services:      ServiceDTO[]
   barber?:       BarberDTO
   date?:         Date
   startAt?:      Date
@@ -14,15 +14,30 @@ export interface BookingDraft {
   customerPhone: string
 }
 
-const initial: BookingDraft = { customerName: '', customerPhone: '' }
+const initial: BookingDraft = { services: [], customerName: '', customerPhone: '' }
 
 export function useBookingFlow() {
   const [step,  setStep]  = useState<BookingStep>(1)
   const [draft, setDraft] = useState<BookingDraft>(initial)
 
-  const setService  = useCallback((service: ServiceDTO) => {
-    setDraft((d) => ({ ...d, service }))
-    setStep(2)
+  // Multi-selección: alterna un servicio dentro/fuera. NO auto-avanza (el avance
+  // al paso 2 lo dispara el botón "Siguiente"). Cambiar la selección invalida el
+  // slot elegido (la duración total cambió) → se limpia startAt.
+  const toggleService = useCallback((service: ServiceDTO) => {
+    setDraft((d) => {
+      const exists = d.services.some((s) => s.id === service.id)
+      const services = exists
+        ? d.services.filter((s) => s.id !== service.id)
+        : [...d.services, service]
+      return { ...d, services, startAt: undefined }
+    })
+  }, [])
+
+  const goToBarber = useCallback(() => {
+    setDraft((d) => {
+      if (d.services.length >= 1) setStep(2)
+      return d
+    })
   }, [])
 
   const setBarber   = useCallback((barber: BarberDTO) => {
@@ -47,15 +62,22 @@ export function useBookingFlow() {
   const goTo  = useCallback((s: BookingStep) => setStep(s), [])
   const reset = useCallback(() => { setDraft(initial); setStep(1) }, [])
 
+  const totalPriceCop    = useMemo(() => draft.services.reduce((sum, s) => sum + s.priceCop, 0),    [draft.services])
+  const totalDurationMin = useMemo(() => draft.services.reduce((sum, s) => sum + s.durationMin, 0), [draft.services])
+
   const canConfirm = useMemo(() =>
     Boolean(
-      draft.service &&
+      draft.services.length >= 1 &&
       draft.barber  &&
       draft.startAt &&
       draft.customerName.trim().length >= 2 &&
-      /^\+57\d{10}$/.test(draft.customerPhone.replace(/\s/g, '')),
+      /^\+\d{7,15}$/.test(draft.customerPhone.replace(/\s/g, '')),
     ),
   [draft])
 
-  return { step, draft, setService, setBarber, setDate, setStartAt, setCustomer, back, goTo, reset, canConfirm }
+  return {
+    step, draft, totalPriceCop, totalDurationMin,
+    toggleService, goToBarber, setBarber, setDate, setStartAt, setCustomer,
+    back, goTo, reset, canConfirm,
+  }
 }

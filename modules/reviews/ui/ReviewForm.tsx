@@ -72,7 +72,7 @@ export function ReviewForm({ data }: Props) {
         )}
         <div className="text-center">
           <p className="text-lg font-semibold">{data.barber.displayName}</p>
-          <p className="text-sm text-muted-foreground">{data.service.name}</p>
+          <p className="text-sm text-muted-foreground">{data.serviceName}</p>
         </div>
       </div>
 

@@ -11,7 +11,7 @@ import type { BarberDTO } from '@/modules/staff/queries'
 interface Props {
   tenantSlug: string
   barber:     BarberDTO
-  serviceId:  string
+  serviceIds: string[]
   selectedAt: Date | undefined
   onSelect:   (startAt: Date) => void
   timezone:   string
@@ -27,7 +27,7 @@ interface Props {
  * que StepDateTime del flujo público (la regla react-hooks/set-state-in-effect
  * prohíbe setState al montar).
  */
-export function SlotStep({ tenantSlug, barber, serviceId, selectedAt, onSelect, timezone, todayStr }: Props) {
+export function SlotStep({ tenantSlug, barber, serviceIds, selectedAt, onSelect, timezone, todayStr }: Props) {
   const [date,      setDate]      = useState<Date | undefined>(undefined)
   const [slots,     setSlots]     = useState<Date[]>([])
   const [busyCount, setBusyCount] = useState(0)
@@ -40,9 +40,9 @@ export function SlotStep({ tenantSlug, barber, serviceId, selectedAt, onSelect, 
     if (!d) return
     startTransition(async () => {
       const res = await getAvailableSlotsAction(tenantSlug, {
-        barberId:  barber.id,
-        serviceId,
-        dateISO:   d.toISOString(),
+        barberId:   barber.id,
+        serviceIds,
+        dateISO:    d.toISOString(),
       })
       setSlots(res.slots.map((s) => new Date(s)))
       setBusyCount(res.busyCount)

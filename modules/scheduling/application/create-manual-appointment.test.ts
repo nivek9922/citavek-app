@@ -8,7 +8,7 @@ import type {
 } from '../domain/ports/scheduling-repository'
 
 interface FakeOptions {
-  service?:      BookableService | null
+  services?:     BookableService[]
   activeBarber?: boolean
   conflict?:     boolean
   workingHours?: WorkingHourInput[]
@@ -16,13 +16,13 @@ interface FakeOptions {
 
 function createFakeRepo(opts: FakeOptions = {}) {
   const created: NewAppointment[] = []
-  const service      = opts.service === undefined ? { priceCop: 25000, durationMin: 30 } : opts.service
+  const services     = opts.services ?? [{ id: 'svc-1', priceCop: 25000, durationMin: 30 }]
   const activeBarber = opts.activeBarber ?? true
   const conflict     = opts.conflict ?? false
   const workingHours = opts.workingHours ?? []
 
   const repo: SchedulingRepository = {
-    getBookableService:      vi.fn(async () => service),
+    getBookableServices:     vi.fn(async () => services),
     isActiveBarber:          vi.fn(async () => activeBarber),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),
@@ -46,7 +46,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
 
 const baseInput: CreateManualAppointmentInput = {
   organizationId:  'org-1',
-  serviceId:       'svc-1',
+  serviceIds:      ['svc-1'],
   barberId:        'brb-1',
   startAt:         new Date('2027-06-07T14:00:00.000Z'),
   customerName:    'Ana Gómez',
@@ -69,7 +69,7 @@ describe('createManualAppointment', () => {
   })
 
   it('deriva precio y duración del servicio', async () => {
-    const { repo, created } = createFakeRepo({ service: { priceCop: 65000, durationMin: 75 } })
+    const { repo, created } = createFakeRepo({ services: [{ id: 'svc-1', priceCop: 65000, durationMin: 75 }] })
 
     await createManualAppointment(repo, baseInput)
 
@@ -93,7 +93,7 @@ describe('createManualAppointment', () => {
   })
 
   it('rechaza si el servicio no existe', async () => {
-    const { repo, created } = createFakeRepo({ service: null })
+    const { repo, created } = createFakeRepo({ services: [] })
     const res = await createManualAppointment(repo, baseInput)
     expect(res.ok).toBe(false)
     expect(created).toHaveLength(0)

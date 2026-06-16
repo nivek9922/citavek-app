@@ -5,22 +5,28 @@ import { format, addDays, isSameDay, isSameMinute } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import { cn } from '@/shared/ui/utils'
+import { formatCop, formatDuration } from '@/shared/format'
 import { getAvailableSlotsAction } from '../actions'
 import type { BarberDTO } from '@/modules/staff/queries'
+import type { ServiceDTO } from '@/modules/catalog/queries'
 
 // Días a mostrar por página. Valor inicial y avance por página.
 const PAGE_SIZE = 7
 
 interface Props {
-  tenantSlug: string
-  barber:     BarberDTO
-  serviceId:  string
-  selectedAt: Date | undefined
-  onSelect:   (startAt: Date) => void
-  timezone:   string
+  tenantSlug:       string
+  barber:           BarberDTO
+  services:         ServiceDTO[]
+  totalDurationMin: number
+  totalPriceCop:    number
+  selectedAt:       Date | undefined
+  onSelect:         (startAt: Date) => void
+  timezone:         string
 }
 
-export function StepDateTime({ tenantSlug, barber, serviceId, selectedAt, onSelect, timezone }: Props) {
+export function StepDateTime({
+  tenantSlug, barber, services, totalDurationMin, totalPriceCop, selectedAt, onSelect, timezone,
+}: Props) {
   const [offset,       setOffset]       = useState(0)  // cuántos días desde hoy empieza la página
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [slots,        setSlots]        = useState<Date[]>([])
@@ -40,9 +46,9 @@ export function StepDateTime({ tenantSlug, barber, serviceId, selectedAt, onSele
     setBusyCount(0)
     startTransition(async () => {
       const res = await getAvailableSlotsAction(tenantSlug, {
-        barberId:  barber.id,
-        serviceId,
-        dateISO:   day.toISOString(),
+        barberId:   barber.id,
+        serviceIds: services.map((s) => s.id),
+        dateISO:    day.toISOString(),
       })
       setSlots(res.slots.map((s) => new Date(s)))
       setBusyCount(res.busyCount)
@@ -51,6 +57,14 @@ export function StepDateTime({ tenantSlug, barber, serviceId, selectedAt, onSele
 
   return (
     <div className="space-y-5">
+      {/* ── Resumen de servicios seleccionados ── */}
+      <div className="rounded-xl border border-border bg-card/60 px-4 py-2.5 text-sm">
+        <span className="font-medium">{services.map((s) => s.name).join(' + ')}</span>
+        <span className="ml-1.5 text-muted-foreground">
+          · {formatDuration(totalDurationMin)} · {formatCop(totalPriceCop)}
+        </span>
+      </div>
+
       {/* ── Selector de día ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">

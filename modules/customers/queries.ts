@@ -124,16 +124,21 @@ export async function getCustomerDetail(organizationId: string, customerId: stri
   })
   if (!customer) return null
 
-  const appointments = await db.appointment.findMany({
+  const rows = await db.appointment.findMany({
     where:   { organizationId, customerId },
     orderBy: { startAt: 'desc' },
     take:    100,
     select: {
       id: true, startAt: true, status: true, priceCop: true,
-      service: { select: { name: true } },
+      appointmentServices: { select: { service: { select: { name: true } } } },
       barber:  { select: { displayName: true, nickname: true } },
     },
   })
+
+  const appointments = rows.map(({ appointmentServices, ...rest }) => ({
+    ...rest,
+    services: appointmentServices.map((s) => ({ name: s.service.name })),
+  }))
 
   const totalSpent = appointments.filter((a) => a.status === 'completed').reduce((s, a) => s + a.priceCop, 0)
   const completed  = appointments.filter((a) => a.status === 'completed').length

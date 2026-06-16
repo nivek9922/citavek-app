@@ -11,7 +11,7 @@ function createFakeRepo() {
     isActiveBarber:              vi.fn(async () => true),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),
-    getBookableService:          vi.fn(async () => null),
+    getBookableServices:     vi.fn(async () => []),
     hasConflict:                 vi.fn(async () => false),
     upsertCustomer:              vi.fn(async () => ({ id: 'c' })),
     createAppointment:           vi.fn(async () => ({ id: 'a' })),

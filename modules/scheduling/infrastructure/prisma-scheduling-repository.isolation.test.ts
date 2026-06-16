@@ -17,6 +17,7 @@ import type { NewAppointment } from '../domain/ports/scheduling-repository'
 const mockDb = vi.hoisted(() => ({
   service: {
     findFirst: vi.fn(async () => null),
+    findMany:  vi.fn(async () => []),
   },
   barber: {
     findFirst: vi.fn(async () => null),
@@ -77,9 +78,9 @@ beforeEach(() => { vi.clearAllMocks() })
 
 describe('PrismaSchedulingRepository — tenant isolation', () => {
 
-  it('getBookableService filtra por organizationId', async () => {
-    await repo.getBookableService(ORG_A, 'svc-1')
-    const where = lastWhere(mockDb.service.findFirst)
+  it('getBookableServices filtra por organizationId', async () => {
+    await repo.getBookableServices(ORG_A, ['svc-1'])
+    const where = lastWhere(mockDb.service.findMany)
     expect(where).toMatchObject({ organizationId: ORG_A })
     expect(where?.organizationId).not.toBe(ORG_B)
   })
@@ -160,11 +161,11 @@ describe('PrismaSchedulingRepository — tenant isolation', () => {
   })
 
   it('dos orgs diferentes no comparten queries — ORG_A y ORG_B producen wheres distintos', async () => {
-    await repo.getBookableService(ORG_A, 'svc-x')
-    const whereA = lastWhere(mockDb.service.findFirst)?.organizationId
+    await repo.getBookableServices(ORG_A, ['svc-x'])
+    const whereA = lastWhere(mockDb.service.findMany)?.organizationId
 
-    await repo.getBookableService(ORG_B, 'svc-x')
-    const whereB = lastWhere(mockDb.service.findFirst)?.organizationId
+    await repo.getBookableServices(ORG_B, ['svc-x'])
+    const whereB = lastWhere(mockDb.service.findMany)?.organizationId
 
     expect(whereA).toBe(ORG_A)
     expect(whereB).toBe(ORG_B)
@@ -196,7 +197,7 @@ describe('PrismaSchedulingRepository — tenant isolation', () => {
 describe('PrismaSchedulingRepository — atomicidad de reservas', () => {
   const baseAppointment: NewAppointment = {
     organizationId: ORG_A,
-    serviceId:      'svc-1',
+    services:       [{ serviceId: 'svc-1', priceCop: 25000, durationMin: 30 }],
     barberId:       'brb-1',
     customerId:     'cust-1',
     customerName:   'Ana',

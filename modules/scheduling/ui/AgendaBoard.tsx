@@ -127,7 +127,7 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
             </span>
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {apt.service.name} · {apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]}
+            {apt.services.map((s) => s.name).join(' + ')} · {apt.barber.nickname ?? apt.barber.displayName.split(' ')[0]}
           </p>
           <div className="flex items-center gap-2">
             <p className="text-xs text-muted-foreground">{apt.customerPhone}</p>

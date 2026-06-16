@@ -19,7 +19,7 @@ import type { BarberDTO }  from '@/modules/staff/queries'
 type Step = 1 | 2 | 3 | 4
 
 interface Selection {
-  service?: ServiceDTO
+  services: ServiceDTO[]
   barber?:  BarberDTO
   startAt?: Date
 }
@@ -43,7 +43,7 @@ export function ManualAppointmentModal({
 }: Props) {
   const [open,      setOpen]      = useState(false)
   const [step,      setStep]      = useState<Step>(1)
-  const [selection, setSelection] = useState<Selection>({})
+  const [selection, setSelection] = useState<Selection>({ services: [] })
   const [isPending, startTransition] = useTransition()
 
   const isBarber  = !!currentBarberId
@@ -51,7 +51,7 @@ export function ManualAppointmentModal({
 
   function reset() {
     setStep(1)
-    setSelection({})
+    setSelection({ services: [] })
   }
 
   function handleOpenChange(next: boolean) {
@@ -59,19 +59,31 @@ export function ManualAppointmentModal({
     if (!next) reset()
   }
 
-  function selectService(service: ServiceDTO) {
+  // Multi-selección: alterna un servicio. Cambiar la selección invalida el slot
+  // elegido (la duración total cambió) → se limpia startAt.
+  function toggleService(service: ServiceDTO) {
+    setSelection((s) => {
+      const exists = s.services.some((x) => x.id === service.id)
+      const services = exists
+        ? s.services.filter((x) => x.id !== service.id)
+        : [...s.services, service]
+      return { ...s, services, startAt: undefined }
+    })
+  }
+
+  function continueFromServices() {
+    if (selection.services.length === 0) return
     // El barbero se auto-asigna y salta el paso 2.
     if (isBarber && ownBarber) {
-      setSelection({ service, barber: ownBarber })
+      setSelection((s) => ({ ...s, barber: ownBarber }))
       setStep(3)
     } else {
-      setSelection({ service })
       setStep(2)
     }
   }
 
   function selectBarber(barber: BarberDTO) {
-    setSelection((s) => ({ service: s.service, barber }))
+    setSelection((s) => ({ ...s, barber }))
     setStep(3)
   }
 
@@ -89,11 +101,11 @@ export function ManualAppointmentModal({
   }
 
   function handleConfirm(customer: ManualCustomer) {
-    const { service, barber, startAt } = selection
-    if (!service || !barber || !startAt) return
+    const { services, barber, startAt } = selection
+    if (services.length === 0 || !barber || !startAt) return
     startTransition(async () => {
       const res = await createManualAppointmentAction(tenantSlug, {
-        serviceId:     service.id,
+        serviceIds:    services.map((s) => s.id),
         barberId:      barber.id,
         startAtISO:    startAt.toISOString(),
         customerName:  customer.name,
@@ -143,8 +155,9 @@ export function ManualAppointmentModal({
           {step === 1 && (
             <ServiceStep
               services={services}
-              selectedId={selection.service?.id}
-              onSelect={selectService}
+              selectedIds={selection.services.map((s) => s.id)}
+              onToggle={toggleService}
+              onContinue={continueFromServices}
             />
           )}
 
@@ -156,13 +169,13 @@ export function ManualAppointmentModal({
             />
           )}
 
-          {step === 3 && selection.service && selection.barber && (
-            // key = barbero + servicio → SlotStep se remonta limpio si cambian.
+          {step === 3 && selection.services.length > 0 && selection.barber && (
+            // key = barbero + servicios → SlotStep se remonta limpio si cambian.
             <SlotStep
-              key={`${selection.barber.id}-${selection.service.id}`}
+              key={`${selection.barber.id}-${selection.services.map((s) => s.id).join(',')}`}
               tenantSlug={tenantSlug}
               barber={selection.barber}
-              serviceId={selection.service.id}
+              serviceIds={selection.services.map((s) => s.id)}
               selectedAt={selection.startAt}
               onSelect={selectSlot}
               timezone={timezone}
@@ -170,9 +183,9 @@ export function ManualAppointmentModal({
             />
           )}
 
-          {step === 4 && selection.service && selection.barber && selection.startAt && (
+          {step === 4 && selection.services.length > 0 && selection.barber && selection.startAt && (
             <ClientStep
-              service={selection.service}
+              services={selection.services}
               barber={selection.barber}
               startAt={selection.startAt}
               timezone={timezone}

@@ -92,7 +92,7 @@ function genAppointments(params: {
 
   const appointments: Array<{
     organizationId: string
-    serviceId: string
+    services: Array<{ serviceId: string; priceCop: number; durationMin: number }>
     barberId: string
     customerName: string
     customerPhone: string
@@ -134,14 +134,14 @@ function genAppointments(params: {
 
       appointments.push({
         organizationId: params.orgId,
-        serviceId: svc.id,
+        services: [{ serviceId: svc.id, priceCop: svc.priceCop, durationMin: svc.durationMin }],
         barberId,
         customerName: name,
         customerPhone: phone,
         startAt,
         endAt,
-        durationMin: svc.durationMin,
-        priceCop: svc.priceCop,
+        durationMin: svc.durationMin, // total = suma de las líneas
+        priceCop: svc.priceCop,       // total = suma de las líneas
         status,
         source: 'online',
         cancelledAt,
@@ -275,8 +275,13 @@ async function main() {
         update: {},
         create: { organizationId: org.id, name: appt.customerName, phone: appt.customerPhone },
       })
+      const { services, ...apptData } = appt
       await db.appointment.create({
-        data: { ...appt, customerId: customer.id },
+        data: {
+          ...apptData,
+          customerId: customer.id,
+          appointmentServices: { create: services },
+        },
       })
     }
 

@@ -6,6 +6,7 @@ import { requireMembership }          from '@/server/auth-guards'
 import { signOutAction }     from '@/modules/identity/actions'
 import { PanelNav }          from '@/modules/identity/ui/PanelNav'
 import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
+import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 
 export default async function PanelLayout({
   children,
@@ -31,10 +32,11 @@ export default async function PanelLayout({
             className="h-9 w-9 rounded-xl"
             fallbackClassName="rounded-xl text-base"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate font-semibold leading-tight">{ctx.name}</p>
             <p className="text-xs text-muted-foreground">Panel de gestión</p>
           </div>
+          <ThemeToggle />
         </div>
 
         <PanelNav slug={slug} role={member.role} variant="sidebar" />
@@ -84,11 +86,14 @@ export default async function PanelLayout({
               />
               <span className="font-semibold">{ctx.name}</span>
             </div>
-            <form action={signOutAction}>
-              <button type="submit" className="text-xs text-muted-foreground transition-smooth hover:text-foreground">
-                Salir
-              </button>
-            </form>
+            <div className="flex items-center gap-2">
+              <ThemeToggle className="h-8 w-8" />
+              <form action={signOutAction}>
+                <button type="submit" className="text-xs text-muted-foreground transition-smooth hover:text-foreground">
+                  Salir
+                </button>
+              </form>
+            </div>
           </div>
           <div className="px-2">
             <PanelNav slug={slug} role={member.role} variant="tabs" />

@@ -49,9 +49,17 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 }
 
+// Script anti-flash (FOUC): fija la clase `.dark` ANTES de pintar, leyendo la
+// preferencia de localStorage. Default del producto = dark (solo 'light' la
+// quita). Contenido 100% estático, sin input de usuario → no es riesgo XSS.
+const themeScript = `(function(){try{var t=localStorage.getItem('citavek-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" data-scroll-behavior="smooth" className={`${bebas.variable} ${inter.variable}`}>
+    <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning className={`${bebas.variable} ${inter.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         {children}
         {/* Vercel Analytics: pageviews, eventos y Core Web Vitals.

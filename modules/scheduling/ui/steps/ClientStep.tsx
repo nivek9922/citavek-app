@@ -8,6 +8,7 @@ import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { Button } from '@/shared/ui/button'
 import { Separator } from '@/shared/ui/separator'
+import { PhoneInput } from '@/shared/ui/phone-input'
 import { formatCop, formatDuration } from '@/shared/format'
 import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
@@ -19,7 +20,7 @@ export interface ManualCustomer {
 }
 
 interface Props {
-  service:   ServiceDTO
+  services:  ServiceDTO[]
   barber:    BarberDTO
   startAt:   Date
   timezone:  string
@@ -28,18 +29,21 @@ interface Props {
 }
 
 /** Paso 4 — datos del cliente + resumen + confirmación. */
-export function ClientStep({ service, barber, startAt, timezone, isPending, onConfirm }: Props) {
+export function ClientStep({ services, barber, startAt, timezone, isPending, onConfirm }: Props) {
   const [name,  setName]  = useState('')
-  const [phone, setPhone] = useState('') // solo 10 dígitos, sin prefijo
+  const [phone, setPhone] = useState('') // E.164 completo (+57…)
   const [notes, setNotes] = useState('')
 
-  const phoneOk   = /^\d{10}$/.test(phone)
+  const phoneOk   = /^\+\d{7,15}$/.test(phone)
   const canConfirm = name.trim().length >= 2 && phoneOk
+
+  const totalPriceCop    = services.reduce((sum, s) => sum + s.priceCop, 0)
+  const totalDurationMin = services.reduce((sum, s) => sum + s.durationMin, 0)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!canConfirm || isPending) return
-    onConfirm({ name: name.trim(), phone: `+57${phone}`, notes })
+    onConfirm({ name: name.trim(), phone, notes })
   }
 
   const barberName = barber.nickname
@@ -53,8 +57,24 @@ export function ClientStep({ service, barber, startAt, timezone, isPending, onCo
         <h3 className="font-semibold">Resumen de la cita</h3>
         <Separator />
         <div className="space-y-2 text-sm">
-          <Row icon={<Scissors className="h-4 w-4 text-primary" />} label={service.name}
-            sub={`${formatDuration(service.durationMin)} · ${formatCop(service.priceCop)}`} />
+          <div className="space-y-1.5">
+            {services.map((svc) => (
+              <div key={svc.id} className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Scissors className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{svc.name}</span>
+                  <span className="text-xs text-muted-foreground">{formatDuration(svc.durationMin)}</span>
+                </div>
+                <span className="tabular-nums text-muted-foreground">{formatCop(svc.priceCop)}</span>
+              </div>
+            ))}
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between font-semibold">
+            <span>Total · {formatDuration(totalDurationMin)}</span>
+            <span className="tabular-nums text-primary">{formatCop(totalPriceCop)}</span>
+          </div>
+          <Separator />
           <Row icon={<User className="h-4 w-4 text-primary" />} label={barberName} />
           <Row icon={<Calendar className="h-4 w-4 text-primary" />}
             label={formatInTimeZone(startAt, timezone, "EEEE d 'de' MMMM", { locale: es })} />
@@ -76,21 +96,8 @@ export function ClientStep({ service, barber, startAt, timezone, isPending, onCo
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="phone">WhatsApp (10 dígitos)</Label>
-        <div className="flex gap-2">
-          <span className="flex items-center rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground">
-            +57
-          </span>
-          <Input
-            id="phone"
-            inputMode="numeric"
-            maxLength={10}
-            placeholder="3104567890"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-            required
-          />
-        </div>
+        <Label htmlFor="phone">WhatsApp</Label>
+        <PhoneInput id="phone" value={phone} onChange={setPhone} />
       </div>
 
       <div className="space-y-1.5">

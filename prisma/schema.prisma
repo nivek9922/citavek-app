@@ -153,7 +153,7 @@ model Service {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  appointments Appointment[]
+  appointmentServices AppointmentService[]
 
   @@index([organizationId, active, sortOrder])
   @@map("service")
@@ -262,12 +262,14 @@ model Appointment {
   branchId String?
   branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
-  serviceId  String
-  service    Service   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   barberId   String
   barber     Barber    @relation(fields: [barberId], references: [id], onDelete: Restrict)
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Servicios de la cita (1 o más). El precio/duración por línea son snapshot;
+  // Appointment.priceCop / durationMin son los TOTALES (suma de las líneas).
+  appointmentServices AppointmentService[]
 
   // Snapshot del cliente (resiliente aunque se borre el Customer)
   customerName  String
@@ -299,6 +301,28 @@ model Appointment {
   @@index([organizationId, customerId, startAt])
   @@index([branchId, startAt])
   @@map("appointment")
+}
+
+// Línea de servicio de una cita (relación N:M Appointment↔Service).
+// Snapshot de precio/duración por línea: el desglose nunca deriva aunque el
+// owner edite el servicio después. La suma de las líneas = Appointment total.
+model AppointmentService {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceId     String
+  // Cascade (no Restrict): los servicios se borran en duro solo al desmantelar
+  // toda la org (Organization→Service es Cascade); en el flujo normal se
+  // desactivan (active=false), no se borran. Cascade evita que el borrado de la
+  // org choque con esta FK al eliminar servicios y citas en paralelo.
+  service       Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  priceCop    Int // snapshot (pesos enteros COP)
+  durationMin Int // snapshot
+
+  @@unique([appointmentId, serviceId])
+  @@index([serviceId])
+  @@map("appointment_service")
 }
 
 model User {

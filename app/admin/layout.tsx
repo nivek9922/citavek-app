@@ -1,6 +1,7 @@
 import { Suspense }        from 'react'
 import { requireSuperAdmin } from '@/server/super-admin'
 import { signOutAction }     from '@/modules/identity/actions'
+import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 import { AdminSidebar }      from './AdminSidebar'
 import { AdminMobileNav }    from './AdminMobileNav'
 
@@ -19,6 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           <Suspense fallback={<span className="text-xs text-muted-foreground">…</span>}>
             <AdminUserBar />
           </Suspense>

@@ -2,17 +2,20 @@ import 'server-only'
 import { db } from '@/server/db'
 
 export async function getReviewPageData(appointmentId: string) {
-  return db.appointment.findUnique({
+  const apt = await db.appointment.findUnique({
     where:  { id: appointmentId },
     select: {
       id:             true,
       status:         true,
       organizationId: true,
       review:  { select: { id: true } },
-      service: { select: { name: true } },
+      appointmentServices: { select: { service: { select: { name: true } } } },
       barber:  { select: { id: true, displayName: true, nickname: true, avatarUrl: true } },
     },
   })
+  if (!apt) return null
+  const { appointmentServices, ...rest } = apt
+  return { ...rest, serviceName: appointmentServices.map((s) => s.service.name).join(' + ') }
 }
 export type ReviewPageData = NonNullable<Awaited<ReturnType<typeof getReviewPageData>>>
 
@@ -82,7 +85,7 @@ export async function listReviewsByBarber(
       appointment: {
         select: {
           customerName: true,
-          service: { select: { name: true } },
+          appointmentServices: { select: { service: { select: { name: true } } } },
         },
       },
     },
@@ -94,7 +97,7 @@ export async function listReviewsByBarber(
       comment:      r.comment,
       createdAt:    r.createdAt,
       customerName: r.appointment.customerName,
-      serviceName:  r.appointment.service.name,
+      serviceName:  r.appointment.appointmentServices.map((s) => s.service.name).join(' + '),
     })
     return acc
   }, {})

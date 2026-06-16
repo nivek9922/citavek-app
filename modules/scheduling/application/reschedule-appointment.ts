@@ -17,9 +17,13 @@ export type RescheduleAppointmentResult =
  * Reglas:
  * - Solo citas pending/confirmed son reprogramables.
  * - El nuevo horario debe estar en el futuro (margen 5 min).
- * - El servicio y el barbero deben seguir activos.
+ * - El barbero debe seguir activo.
  * - No puede haber conflicto con otra cita del barbero en el nuevo slot
  *   (la propia cita se excluye del chequeo para no detectarse como conflicto).
+ *
+ * La duración total es el snapshot ya guardado en la cita (suma de sus
+ * servicios); no se re-deriva del catálogo, así reprogramar es estable aunque
+ * el owner edite precios/duración después.
  */
 export async function rescheduleAppointment(
   repo: SchedulingRepository,
@@ -39,15 +43,11 @@ export async function rescheduleAppointment(
     return { ok: false, error: 'El nuevo horario seleccionado ya pasó.' }
   }
 
-  const [service, isBarberActive] = await Promise.all([
-    repo.getBookableService(input.organizationId, appointment.serviceId),
-    repo.isActiveBarber(input.organizationId, appointment.barberId),
-  ])
+  if (!(await repo.isActiveBarber(input.organizationId, appointment.barberId))) {
+    return { ok: false, error: 'El barbero ya no está disponible.' }
+  }
 
-  if (!service)        return { ok: false, error: 'El servicio asociado ya no está disponible.' }
-  if (!isBarberActive) return { ok: false, error: 'El barbero ya no está disponible.' }
-
-  const newEndAt = new Date(input.newStartAt.getTime() + service.durationMin * 60_000)
+  const newEndAt = new Date(input.newStartAt.getTime() + appointment.durationMin * 60_000)
 
   const conflict = await repo.hasConflict(
     input.organizationId,

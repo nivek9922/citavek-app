@@ -39,10 +39,11 @@ async function overlapsInTx(
 
 // Adapter: implementación Prisma del Port SchedulingRepository.
 export const prismaSchedulingRepository: SchedulingRepository = {
-  async getBookableService(organizationId, serviceId) {
-    return db.service.findFirst({
-      where:  { id: serviceId, organizationId, active: true },
-      select: { priceCop: true, durationMin: true },
+  async getBookableServices(organizationId, serviceIds) {
+    if (serviceIds.length === 0) return []
+    return db.service.findMany({
+      where:  { id: { in: serviceIds }, organizationId, active: true },
+      select: { id: true, priceCop: true, durationMin: true },
     })
   },
 
@@ -106,7 +107,6 @@ export const prismaSchedulingRepository: SchedulingRepository = {
       return tx.appointment.create({
         data: {
           organizationId:  data.organizationId,
-          serviceId:       data.serviceId,
           barberId:        data.barberId,
           customerId:      data.customerId,
           customerName:    data.customerName,
@@ -120,6 +120,7 @@ export const prismaSchedulingRepository: SchedulingRepository = {
           createdByUserId: data.createdByUserId ?? null,
           notes:           data.notes ?? null,
           isOffHours:      data.isOffHours ?? false,
+          appointmentServices: { create: data.services },
         },
         select: { id: true },
       })
@@ -160,13 +161,13 @@ export const prismaSchedulingRepository: SchedulingRepository = {
   async getAppointmentForReschedule(organizationId, appointmentId) {
     const apt = await db.appointment.findFirst({
       where:  { id: appointmentId, organizationId },
-      select: { status: true, serviceId: true, barberId: true },
+      select: { status: true, durationMin: true, barberId: true },
     })
     if (!apt) return null
     return {
-      status:    apt.status as import('../domain/appointment').AppointmentStatusValue,
-      serviceId: apt.serviceId,
-      barberId:  apt.barberId,
+      status:      apt.status as import('../domain/appointment').AppointmentStatusValue,
+      durationMin: apt.durationMin,
+      barberId:    apt.barberId,
     }
   },
 
@@ -219,7 +220,11 @@ export const prismaSchedulingRepository: SchedulingRepository = {
         endAt:          true,
         customerName:   true,
         notes:          true,
-        service:  { select: { name: true, durationMin: true, priceCop: true } },
+        durationMin:    true,
+        priceCop:       true,
+        appointmentServices: {
+          select: { durationMin: true, priceCop: true, service: { select: { name: true } } },
+        },
         barber:   { select: { displayName: true, nickname: true } },
         organization: {
           select: { name: true, slug: true, timezone: true, phone: true },
@@ -235,7 +240,11 @@ export const prismaSchedulingRepository: SchedulingRepository = {
       endAt:          apt.endAt,
       customerName:   apt.customerName,
       notes:          apt.notes ?? null,
-      service:        apt.service,
+      durationMin:    apt.durationMin,
+      priceCop:       apt.priceCop,
+      services:       apt.appointmentServices.map((s) => ({
+        name: s.service.name, durationMin: s.durationMin, priceCop: s.priceCop,
+      })),
       barber:         apt.barber,
       organization:   { ...apt.organization, phone: apt.organization.phone ?? null },
     }

@@ -1,9 +1,10 @@
 import { computeSlotsForBarber } from './get-available-slots'
+import { resolveSelectedServices } from '../domain/service-selection'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
 export interface AnyBarberInput {
   organizationId: string
-  serviceId:      string
+  serviceIds:     string[]
   /** Cualquier Date que represente el día deseado (año/mes/día en la TZ del tenant). */
   date:           Date
 }
@@ -19,13 +20,14 @@ async function getSlotsPerActiveBarber(
   repo: SchedulingRepository,
   input: AnyBarberInput,
 ): Promise<{ ok: true; perBarber: PerBarberSlots[] } | { ok: false; error: string }> {
-  const [service, timezone, barberIds] = await Promise.all([
-    repo.getBookableService(input.organizationId, input.serviceId),
+  const [services, timezone, barberIds] = await Promise.all([
+    repo.getBookableServices(input.organizationId, input.serviceIds),
     repo.getOrgTimezone(input.organizationId),
     repo.listActiveBarberIds(input.organizationId),
   ])
 
-  if (!service) return { ok: false, error: 'El servicio no está disponible.' }
+  const resolved = resolveSelectedServices(input.serviceIds, services)
+  if (!resolved) return { ok: false, error: 'Alguno de los servicios no está disponible.' }
 
   const perBarber = await Promise.all(
     barberIds.map(async (barberId) => {
@@ -34,7 +36,7 @@ async function getSlotsPerActiveBarber(
         barberId,
         date:           input.date,
         timezone,
-        durationMin:    service.durationMin,
+        durationMin:    resolved.totalDurationMin,
       })
       return { barberId, slots }
     }),
@@ -70,11 +72,11 @@ export async function getAnyBarberSlots(
  */
 export async function pickBarberForSlot(
   repo: SchedulingRepository,
-  input: { organizationId: string; serviceId: string; startAt: Date },
+  input: { organizationId: string; serviceIds: string[]; startAt: Date },
 ): Promise<string | null> {
   const result = await getSlotsPerActiveBarber(repo, {
     organizationId: input.organizationId,
-    serviceId:      input.serviceId,
+    serviceIds:     input.serviceIds,
     date:           input.startAt,
   })
   if (!result.ok) return null

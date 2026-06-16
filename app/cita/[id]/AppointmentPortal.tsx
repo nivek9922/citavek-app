@@ -157,7 +157,7 @@ export function AppointmentPortal({ appointmentId }: { appointmentId: string }) 
         <div className="flex items-start gap-3">
           <Scissors className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <div>
-            <p className="font-medium">{apt.service.name}</p>
+            <p className="font-medium">{apt.services.map((s) => s.name).join(' + ')}</p>
             <p className="text-muted-foreground">
               con {apt.barber.nickname ?? apt.barber.displayName}
             </p>
@@ -173,12 +173,21 @@ export function AppointmentPortal({ appointmentId }: { appointmentId: string }) 
           <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
           <p>
             {fmtTime(apt.startAt, tz)} – {fmtTime(apt.endAt, tz)}
-            <span className="ml-2 text-muted-foreground">({apt.service.durationMin} min)</span>
+            <span className="ml-2 text-muted-foreground">({apt.durationMin} min)</span>
           </p>
         </div>
 
-        <div className="rounded-lg bg-muted/50 px-3 py-2 text-right font-medium">
-          {fmtCop(apt.service.priceCop)}
+        <div className="space-y-1 rounded-lg bg-muted/50 px-3 py-2 text-sm">
+          {apt.services.length > 1 && apt.services.map((s, i) => (
+            <div key={i} className="flex items-center justify-between text-muted-foreground">
+              <span>{s.name}</span>
+              <span className="tabular-nums">{fmtCop(s.priceCop)}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between font-medium">
+            <span>Total</span>
+            <span className="tabular-nums">{fmtCop(apt.priceCop)}</span>
+          </div>
         </div>
 
         {apt.notes && (

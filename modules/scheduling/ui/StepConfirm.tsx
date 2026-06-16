@@ -6,26 +6,29 @@ import { Separator } from '@/shared/ui/separator'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
+import { PhoneInput } from '@/shared/ui/phone-input'
 import { formatCop, formatDuration } from '@/shared/format'
 import { isAnyBarber } from '@/modules/scheduling/domain/any-barber'
 import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
 
 interface Props {
-  service:      ServiceDTO
-  barber:       BarberDTO
-  startAt:      Date
-  customerName:  string
-  customerPhone: string
-  onCustomer:   (name: string, phone: string) => void
-  onConfirm:    () => void
-  isPending:    boolean
-  canConfirm:   boolean
-  error?:       string
+  services:         ServiceDTO[]
+  totalPriceCop:    number
+  totalDurationMin: number
+  barber:           BarberDTO
+  startAt:          Date
+  customerName:     string
+  customerPhone:    string
+  onCustomer:       (name: string, phone: string) => void
+  onConfirm:        () => void
+  isPending:        boolean
+  canConfirm:       boolean
+  error?:           string
 }
 
 export function StepConfirm({
-  service, barber, startAt, customerName, customerPhone,
+  services, totalPriceCop, totalDurationMin, barber, startAt, customerName, customerPhone,
   onCustomer, onConfirm, isPending, canConfirm, error,
 }: Props) {
   return (
@@ -35,8 +38,25 @@ export function StepConfirm({
         <h3 className="font-semibold">Resumen de tu cita</h3>
         <Separator />
         <div className="space-y-2 text-sm">
-          <Row icon={<Scissors className="h-4 w-4 text-primary" />} label={service.name}
-            sub={`${formatDuration(service.durationMin)} · ${formatCop(service.priceCop)}`} />
+          {/* Servicios con precio individual */}
+          <div className="space-y-1.5">
+            {services.map((svc) => (
+              <div key={svc.id} className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Scissors className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{svc.name}</span>
+                  <span className="text-xs text-muted-foreground">{formatDuration(svc.durationMin)}</span>
+                </div>
+                <span className="tabular-nums text-muted-foreground">{formatCop(svc.priceCop)}</span>
+              </div>
+            ))}
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between font-semibold">
+            <span>Total · {formatDuration(totalDurationMin)}</span>
+            <span className="tabular-nums text-primary">{formatCop(totalPriceCop)}</span>
+          </div>
+          <Separator />
           <Row
             icon={<User className="h-4 w-4 text-primary" />}
             label={isAnyBarber(barber.id) ? 'Primer disponible' : barber.displayName}
@@ -62,22 +82,12 @@ export function StepConfirm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">WhatsApp (10 dígitos)</Label>
-          <div className="flex gap-2">
-            <span className="flex items-center rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground">
-              +57
-            </span>
-            <Input
-              id="phone"
-              placeholder="3104567890"
-              maxLength={10}
-              value={customerPhone.replace('+57', '')}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
-                onCustomer(customerName, `+57${digits}`)
-              }}
-            />
-          </div>
+          <Label htmlFor="phone">WhatsApp</Label>
+          <PhoneInput
+            id="phone"
+            value={customerPhone}
+            onChange={(phone) => onCustomer(customerName, phone)}
+          />
         </div>
       </div>
 

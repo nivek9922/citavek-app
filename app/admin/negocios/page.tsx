@@ -76,10 +76,6 @@ export default async function NegociosPage({
         </Suspense>
 
         <AdminOrgsSection
-          // `filtered.length` en el key re-monta la sección (re-siembra su estado
-          // cliente) cuando una barbería se crea/elimina por otra ruta y el RSC se
-          // refresca; sin esto el snapshot de `useState` quedaba obsoleto (la nueva
-          // org salía en la tabla de arriba pero no en esta lista).
           key={`${q ?? ''}-${status ?? ''}-${city ?? ''}-${filtered.length}`}
           initialOrgs={filtered}
         />

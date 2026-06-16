@@ -9,15 +9,13 @@ import type {
 
 interface FakeOptions {
   appointment?:  ReschedulableAppointment | null
-  serviceExists?: boolean
   barberActive?:  boolean
   conflict?:      boolean
 }
 
 function createFakeRepo(opts: FakeOptions = {}) {
   const {
-    appointment  = { status: 'confirmed', serviceId: 'svc-1', barberId: 'brb-1' },
-    serviceExists = true,
+    appointment  = { status: 'confirmed', durationMin: 45, barberId: 'brb-1' },
     barberActive  = true,
     conflict      = false,
   } = opts
@@ -26,7 +24,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
 
   const repo: SchedulingRepository = {
     getAppointmentForReschedule: vi.fn(async () => appointment),
-    getBookableService:          vi.fn(async () => serviceExists ? { priceCop: 30000, durationMin: 45 } : null),
+    getBookableServices:         vi.fn(async () => []),
     isActiveBarber:              vi.fn(async () => barberActive),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),
@@ -73,14 +71,14 @@ describe('rescheduleAppointment', () => {
   })
 
   it('reprograma con éxito una cita pending', async () => {
-    const { repo } = createFakeRepo({ appointment: { status: 'pending', serviceId: 'svc-1', barberId: 'brb-1' } })
+    const { repo } = createFakeRepo({ appointment: { status: 'pending', durationMin: 45, barberId: 'brb-1' } })
 
     const res = await rescheduleAppointment(repo, baseInput)
 
     expect(res.ok).toBe(true)
   })
 
-  it('deriva el nuevo endAt desde la duración del SERVICIO (no del input)', async () => {
+  it('deriva el nuevo endAt desde la duración TOTAL snapshot de la cita (no del input)', async () => {
     const { repo, updates } = createFakeRepo() // durationMin: 45
     const newStartAt = inFuture()
 
@@ -112,7 +110,7 @@ describe('rescheduleAppointment', () => {
 
   it('rechaza si la cita está completed (estado no reprogramable)', async () => {
     const { repo, updates } = createFakeRepo({
-      appointment: { status: 'completed', serviceId: 'svc-1', barberId: 'brb-1' },
+      appointment: { status: 'completed', durationMin: 45, barberId: 'brb-1' },
     })
 
     const res = await rescheduleAppointment(repo, baseInput)
@@ -124,7 +122,7 @@ describe('rescheduleAppointment', () => {
 
   it('rechaza si la cita está cancelled (estado no reprogramable)', async () => {
     const { repo } = createFakeRepo({
-      appointment: { status: 'cancelled', serviceId: 'svc-1', barberId: 'brb-1' },
+      appointment: { status: 'cancelled', durationMin: 45, barberId: 'brb-1' },
     })
 
     const res = await rescheduleAppointment(repo, baseInput)
@@ -142,16 +140,6 @@ describe('rescheduleAppointment', () => {
 
     expect(res.ok).toBe(false)
     expect((res as { ok: false; error: string }).error).toContain('pasó')
-    expect(updates).toHaveLength(0)
-  })
-
-  it('rechaza si el servicio ya fue desactivado', async () => {
-    const { repo, updates } = createFakeRepo({ serviceExists: false })
-
-    const res = await rescheduleAppointment(repo, baseInput)
-
-    expect(res.ok).toBe(false)
-    expect((res as { ok: false; error: string }).error).toContain('servicio')
     expect(updates).toHaveLength(0)
   })
 

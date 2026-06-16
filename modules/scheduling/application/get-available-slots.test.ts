@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { getAvailableSlots, type GetAvailableSlotsInput } from './get-available-slots'
 import type {
   SchedulingRepository,
+  BookableService,
   WorkingHourInput,
   BusySlot,
 } from '../domain/ports/scheduling-repository'
@@ -19,6 +20,7 @@ const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60_000)
 // ── Fake repo ────────────────────────────────────────────────────────────────
 
 interface FakeOptions {
+  services?:      BookableService[] // si se pasa, anula serviceExists/durationMin
   serviceExists?: boolean
   durationMin?:   number
   barberActive?:  boolean
@@ -39,8 +41,11 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
     dateBlocked   = false,
   } = opts
 
+  const services: BookableService[] = opts.services
+    ?? (serviceExists ? [{ id: 'svc-1', priceCop: 25000, durationMin }] : [])
+
   return {
-    getBookableService:      vi.fn(async () => serviceExists ? { priceCop: 25000, durationMin } : null),
+    getBookableServices:     vi.fn(async () => services),
     isActiveBarber:          vi.fn(async () => barberActive),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),
@@ -65,7 +70,7 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
 const baseInput: GetAvailableSlotsInput = {
   organizationId: 'org-1',
   barberId:       'brb-1',
-  serviceId:      'svc-1',
+  serviceIds:     ['svc-1'],
   date:           futureDate,
 }
 
@@ -95,6 +100,26 @@ describe('getAvailableSlots', () => {
     if (!res.ok) return
     expect(res.slots).toHaveLength(21)
     expect(res.busyCount).toBe(0)
+  })
+
+  it('suma la duración de varios servicios para calcular los slots', async () => {
+    const repo = createFakeRepo({ services: [
+      { id: 'svc-1', priceCop: 25000, durationMin: 30 },
+      { id: 'svc-2', priceCop: 15000, durationMin: 30 },
+    ] })
+    const res = await getAvailableSlots(repo, { ...baseInput, serviceIds: ['svc-1', 'svc-2'] })
+
+    // 30 + 30 = 60 min → 21 slots (igual que un único servicio de 60 min)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.slots).toHaveLength(21)
+  })
+
+  it('si un serviceId pedido no es reservable → ok: false', async () => {
+    const repo = createFakeRepo({ services: [{ id: 'svc-1', priceCop: 25000, durationMin: 30 }] })
+    const res  = await getAvailableSlots(repo, { ...baseInput, serviceIds: ['svc-1', 'svc-x'] })
+
+    expect(res.ok).toBe(false)
   })
 
   it('servicio no disponible → ok: false', async () => {
@@ -148,7 +173,7 @@ describe('getAvailableSlots', () => {
     await getAvailableSlots(repo, baseInput)
 
     // cada método del repo debe haberse llamado exactamente una vez
-    expect(repo.getBookableService).toHaveBeenCalledTimes(1)
+    expect(repo.getBookableServices).toHaveBeenCalledTimes(1)
     expect(repo.isActiveBarber).toHaveBeenCalledTimes(1)
     expect(repo.getOrgTimezone).toHaveBeenCalledTimes(1)
     expect(repo.getBarberWorkingHours).toHaveBeenCalledTimes(1)

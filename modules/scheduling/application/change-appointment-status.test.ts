@@ -10,7 +10,7 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null, startAt: D
   const updates: Array<{ id: string; status: AppointmentStatusValue; cancelledAt: Date | null }> = []
 
   const repo: SchedulingRepository = {
-    getBookableService:      vi.fn(async () => null),
+    getBookableServices:     vi.fn(async () => []),
     isActiveBarber:          vi.fn(async () => true),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),

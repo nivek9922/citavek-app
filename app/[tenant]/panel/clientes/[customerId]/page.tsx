@@ -85,7 +85,7 @@ export default async function ClienteDetailPage({
                   <p className="text-xs text-muted-foreground">{format(new Date(a.startAt), 'HH:mm')}</p>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{a.service.name}</p>
+                  <p className="truncate text-sm font-medium">{a.services.map((s) => s.name).join(' + ')}</p>
                   <p className="text-xs text-muted-foreground">
                     {a.barber.nickname ?? a.barber.displayName.split(' ')[0]}
                   </p>

@@ -20,13 +20,14 @@ import { blockBarberDate }           from './application/block-barber-date'
 import { unblockBarberDate }         from './application/unblock-barber-date'
 
 // ── Slots disponibles (lectura pública / read side) ─────────────────────────
-// serviceId viene del cliente (el usuario eligió el servicio), pero la duración
-// la deriva el servidor desde la DB — el cliente nunca puede manipularla.
+// serviceIds vienen del cliente (el usuario eligió los servicios), pero la
+// duración TOTAL la deriva el servidor desde la DB — el cliente nunca puede
+// manipularla.
 
 const getSlotsSchema = z.object({
-  barberId:  z.string().min(1),
-  serviceId: z.string().min(1),
-  dateISO:   z.string().datetime(),
+  barberId:   z.string().min(1),
+  serviceIds: z.array(z.string().min(1)).min(1),
+  dateISO:    z.string().datetime(),
 })
 
 export async function getAvailableSlotsAction(
@@ -40,7 +41,7 @@ export async function getAvailableSlotsAction(
   if (isAnyBarber(parsed.barberId)) {
     const result = await getAnyBarberSlots(repo, {
       organizationId: ctx.id,
-      serviceId:      parsed.serviceId,
+      serviceIds:     parsed.serviceIds,
       date,
     })
     if (!result.ok) return { slots: [], busyCount: 0 }
@@ -51,7 +52,7 @@ export async function getAvailableSlotsAction(
   const result = await getAvailableSlots(repo, {
     organizationId: ctx.id,
     barberId:       parsed.barberId,
-    serviceId:      parsed.serviceId,
+    serviceIds:     parsed.serviceIds,
     date,
   })
 
@@ -62,11 +63,11 @@ export async function getAvailableSlotsAction(
 // ── Reservar cita (pública) ─────────────────────────────────────────────────
 
 const bookSchema = z.object({
-  serviceId:     z.string().min(1),
+  serviceIds:    z.array(z.string().min(1)).min(1),
   barberId:      z.string().min(1),
   startAtISO:    z.string().datetime(),
   customerName:  z.string().trim().min(2).max(80),
-  customerPhone: z.string().regex(/^\+57\d{10}$/, 'Número de WhatsApp inválido'),
+  customerPhone: z.string().regex(/^\+\d{7,15}$/, 'Número de WhatsApp inválido'),
 })
 
 export type BookInput = z.infer<typeof bookSchema>
@@ -89,7 +90,7 @@ export async function bookAppointmentAction(
     if (isAnyBarber(barberId)) {
       const assigned = await pickBarberForSlot(repo, {
         organizationId: ctx.id,
-        serviceId:      parsed.serviceId,
+        serviceIds:     parsed.serviceIds,
         startAt:        new Date(parsed.startAtISO),
       })
       if (!assigned) return { ok: false, error: 'No hay barberos disponibles en ese horario.' }
@@ -98,7 +99,7 @@ export async function bookAppointmentAction(
 
     const result = await bookAppointment(repo, {
       organizationId: ctx.id,
-      serviceId:      parsed.serviceId,
+      serviceIds:     parsed.serviceIds,
       barberId,
       startAt:        new Date(parsed.startAtISO),
       customerName:   parsed.customerName,
@@ -120,11 +121,11 @@ export async function bookAppointmentAction(
 // El horario llega como ISO (el slot exacto que devolvió el motor), igual que la
 // reserva pública. Nada de hora libre: solo slots reales calculados por scheduling.
 const manualSchema = z.object({
-  serviceId:     z.string().min(1),
+  serviceIds:    z.array(z.string().min(1)).min(1),
   barberId:      z.string().min(1),
   startAtISO:    z.string().datetime(),
   customerName:  z.string().trim().min(2).max(80),
-  customerPhone: z.string().regex(/^\+57\d{10}$/, 'Teléfono inválido'),
+  customerPhone: z.string().regex(/^\+\d{7,15}$/, 'Teléfono inválido'),
   notes:         z.string().trim().max(300).optional(),
 })
 
@@ -160,7 +161,7 @@ export async function createManualAppointmentAction(
     const availability = await getAvailableSlots(repo, {
       organizationId: ctx.id,
       barberId,
-      serviceId:      parsed.serviceId,
+      serviceIds:     parsed.serviceIds,
       date:           startAt,
     })
     const isRealSlot = availability.ok && availability.slots.some((s) => s.getTime() === startAt.getTime())
@@ -170,7 +171,7 @@ export async function createManualAppointmentAction(
 
     const result = await createManualAppointment(repo, {
       organizationId:  ctx.id,
-      serviceId:       parsed.serviceId,
+      serviceIds:      parsed.serviceIds,
       barberId,
       startAt,
       customerName:    parsed.customerName,

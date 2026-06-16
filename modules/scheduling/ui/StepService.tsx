@@ -1,7 +1,8 @@
 'use client'
 import Image from 'next/image'
-import { Clock } from 'lucide-react'
+import { Clock, Check } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
+import { Button } from '@/shared/ui/button'
 import { formatCop, formatDuration } from '@/shared/format'
 import type { ServiceDTO } from '@/modules/catalog/queries'
 
@@ -23,67 +24,106 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 interface Props {
-  services:   ServiceDTO[]
-  selectedId: string | undefined
-  onSelect:   (s: ServiceDTO) => void
+  services:         ServiceDTO[]
+  selectedIds:      string[]
+  onToggle:         (s: ServiceDTO) => void
+  totalPriceCop:    number
+  totalDurationMin: number
+  onContinue:       () => void
 }
 
-export function StepService({ services, selectedId, onSelect }: Props) {
+export function StepService({
+  services, selectedIds, onToggle, totalPriceCop, totalDurationMin, onContinue,
+}: Props) {
+  const count = selectedIds.length
+
   return (
-    <div className="space-y-2">
-      {services.map((svc) => {
-        const selected = selectedId === svc.id
-        return (
-          <button
-            key={svc.id}
-            onClick={() => onSelect(svc)}
-            className={cn(
-              'w-full rounded-xl border px-4 py-3 text-left transition-smooth',
-              selected
-                ? 'border-primary bg-primary/10'
-                : 'border-border hover:border-primary/40 hover:bg-accent/30',
-            )}
-          >
-            <div className="flex items-center justify-between gap-3">
-              {svc.imageUrl ? (
-                <Image
-                  src={svc.imageUrl} alt={svc.name}
-                  width={48} height={48}
-                  unoptimized
-                  className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent text-2xl">
-                  {CATEGORY_EMOJI[svc.category] ?? '✂️'}
-                </span>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Selecciona uno o más servicios. El precio y la duración se suman.
+      </p>
+
+      <div className="space-y-2">
+        {services.map((svc) => {
+          const selected = selectedIds.includes(svc.id)
+          return (
+            <button
+              key={svc.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onToggle(svc)}
+              className={cn(
+                'w-full rounded-xl border px-4 py-3 text-left transition-smooth',
+                selected
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/40 hover:bg-accent/30',
               )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                    CATEGORY_COLOR[svc.category] ?? 'bg-muted text-muted-foreground',
-                  )}>
-                    {CATEGORY_LABELS[svc.category] ?? svc.category}
+            >
+              <div className="flex items-center justify-between gap-3">
+                {/* Checkbox + icono */}
+                <span className={cn(
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-smooth',
+                  selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                )}>
+                  {selected && <Check className="h-3.5 w-3.5" />}
+                </span>
+                {svc.imageUrl ? (
+                  <Image
+                    src={svc.imageUrl} alt={svc.name}
+                    width={48} height={48}
+                    unoptimized
+                    className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent text-2xl">
+                    {CATEGORY_EMOJI[svc.category] ?? '✂️'}
                   </span>
-                  <span className="truncate font-medium">{svc.name}</span>
-                </div>
-                {svc.description && (
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{svc.description}</p>
                 )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                      CATEGORY_COLOR[svc.category] ?? 'bg-muted text-muted-foreground',
+                    )}>
+                      {CATEGORY_LABELS[svc.category] ?? svc.category}
+                    </span>
+                    <span className="truncate font-medium">{svc.name}</span>
+                  </div>
+                  {svc.description && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{svc.description}</p>
+                  )}
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className={cn('font-bold', selected ? 'text-primary' : 'text-foreground')}>
+                    {formatCop(svc.priceCop)}
+                  </p>
+                  <p className="flex items-center justify-end gap-0.5 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {formatDuration(svc.durationMin)}
+                  </p>
+                </div>
               </div>
-              <div className="shrink-0 text-right">
-                <p className={cn('font-bold', selected ? 'text-primary' : 'text-foreground')}>
-                  {formatCop(svc.priceCop)}
-                </p>
-                <p className="flex items-center justify-end gap-0.5 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {formatDuration(svc.durationMin)}
-                </p>
-              </div>
-            </div>
-          </button>
-        )
-      })}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Resumen + avanzar */}
+      <div className="sticky bottom-0 space-y-2 border-t border-border bg-background/95 pt-3 backdrop-blur-sm">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            {count === 0 ? 'Sin servicios seleccionados' : `${count} ${count === 1 ? 'servicio' : 'servicios'}`}
+          </span>
+          {count > 0 && (
+            <span className="font-semibold">
+              Total: {formatCop(totalPriceCop)} · {formatDuration(totalDurationMin)}
+            </span>
+          )}
+        </div>
+        <Button className="w-full" onClick={onContinue} disabled={count === 0}>
+          Siguiente
+        </Button>
+      </div>
     </div>
   )
 }

@@ -7,14 +7,22 @@ import type { WorkingHourInput, BusySlot } from '../slot-calculator'
 export type { WorkingHourInput, BusySlot }
 
 export interface BookableService {
+  id:          string
   priceCop:    number
   durationMin: number
 }
 
 export interface ReschedulableAppointment {
-  status:    AppointmentStatusValue
-  serviceId: string
-  barberId:  string
+  status:      AppointmentStatusValue
+  durationMin: number // total snapshot de la cita (suma de sus servicios)
+  barberId:    string
+}
+
+/** Línea de servicio de una cita (snapshot de precio/duración + nombre del servicio). */
+export interface AppointmentServiceLine {
+  name:        string
+  durationMin: number
+  priceCop:    number
 }
 
 /** Vista de cita para el portal del cliente (sin datos sensibles del negocio). */
@@ -25,23 +33,32 @@ export interface CustomerAppointment {
   startAt:        Date
   endAt:          Date
   customerName:   string
-  service:        { name: string; durationMin: number; priceCop: number }
+  services:       AppointmentServiceLine[]
+  durationMin:    number // total snapshot
+  priceCop:       number // total snapshot
   barber:         { displayName: string; nickname: string | null }
   organization:   { name: string; slug: string; timezone: string; phone: string | null }
   notes?:         string | null
 }
 
+/** Línea de servicio a persistir (snapshot tomado en el momento de la reserva). */
+export interface NewAppointmentService {
+  serviceId:   string
+  priceCop:    number
+  durationMin: number
+}
+
 export interface NewAppointment {
   organizationId:  string
-  serviceId:       string
+  services:        NewAppointmentService[]
   barberId:        string
   customerId:      string
   customerName:    string
   customerPhone:   string
   startAt:         Date
   endAt:           Date
-  durationMin:     number
-  priceCop:        number
+  durationMin:     number // total (suma de services)
+  priceCop:        number // total (suma de services)
   status:          AppointmentStatusValue
   source:          AppointmentSourceValue
   createdByUserId?: string | null
@@ -50,8 +67,12 @@ export interface NewAppointment {
 }
 
 export interface SchedulingRepository {
-  /** Servicio reservable del tenant (precio/duración los manda el servidor). */
-  getBookableService(organizationId: string, serviceId: string): Promise<BookableService | null>
+  /**
+   * Servicios reservables del tenant (precio/duración los manda el servidor).
+   * Devuelve solo los activos que existen; el caso de uso compara la cantidad
+   * devuelta contra la pedida para detectar servicios inválidos/inactivos.
+   */
+  getBookableServices(organizationId: string, serviceIds: string[]): Promise<BookableService[]>
 
   /** ¿El barbero pertenece al tenant y está activo? */
   isActiveBarber(organizationId: string, barberId: string): Promise<boolean>

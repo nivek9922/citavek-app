@@ -11,7 +11,9 @@ const BASE_APT: CustomerAppointment = {
   startAt:        new Date(Date.now() + 3 * 60 * 60_000), // 3h en el futuro
   endAt:          new Date(Date.now() + 3 * 60 * 60_000 + 30 * 60_000),
   customerName:   'Juan Pérez',
-  service:        { name: 'Corte Clásico', durationMin: 30, priceCop: 25000 },
+  services:       [{ name: 'Corte Clásico', durationMin: 30, priceCop: 25000 }],
+  durationMin:    30,
+  priceCop:       25000,
   barber:         { displayName: 'Carlos Ramírez', nickname: 'Carlitos' },
   organization:   { name: 'San Fernando', slug: 'san-fernando', timezone: 'America/Bogota', phone: '+573187654321' },
 }
@@ -23,7 +25,7 @@ function createFakeRepo(apt: CustomerAppointment | null = BASE_APT) {
     getAppointmentForCustomer: vi.fn(async () => apt),
     updateAppointmentStatus:   vi.fn(async (_org, id) => { cancelled.push(id) }),
     // stubs
-    getBookableService:          vi.fn(async () => null),
+    getBookableServices:     vi.fn(async () => []),
     isActiveBarber:              vi.fn(async () => true),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),

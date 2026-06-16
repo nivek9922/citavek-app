@@ -3,6 +3,7 @@ import { cacheTag, cacheLife } from 'next/cache'
 import { addDays, format, parseISO } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 import { db } from '@/server/db'
+import type { Prisma } from '@/generated/prisma/client'
 import { tenantToday, localDayBoundsUTC, currentWeekBoundsUTC } from './domain/date-utils'
 import { computeKPIs } from './domain/kpi-calculator'
 import { computeHealthScore, type OrgHealth } from '@/modules/tenancy/domain/health-score'
@@ -37,15 +38,36 @@ export async function getDashboardKPIs(organizationId: string, timezone: string)
 
 // ── Citas de un día calendario específico (agenda navegable) ────────────────
 
+// Proyección compartida día/semana. Una cita tiene 1+ servicios: se traen como
+// líneas y se aplanan a `services` en el mapper.
+const agendaSelect = {
+  id: true, startAt: true, endAt: true, status: true,
+  customerName: true, customerPhone: true, priceCop: true, notes: true,
+  appointmentServices: { select: { durationMin: true, service: { select: { name: true } } } },
+  barber: { select: { id: true, displayName: true, nickname: true } },
+} satisfies Prisma.AppointmentSelect
+
+type AgendaRowRaw = Prisma.AppointmentGetPayload<{ select: typeof agendaSelect }>
+
+function mapAgendaRow(a: AgendaRowRaw) {
+  const { appointmentServices, ...rest } = a
+  return {
+    ...rest,
+    services: appointmentServices.map((s) => ({ name: s.service.name, durationMin: s.durationMin })),
+  }
+}
+
+export type AppointmentRow = ReturnType<typeof mapAgendaRow>
+
 export async function getAppointmentsForDate(
   organizationId: string,
   timezone: string,
   dateStr: string,
   barberId?: string,
-) {
+): Promise<AppointmentRow[]> {
   const { start, end } = localDayBoundsUTC(dateStr, timezone)
 
-  return db.appointment.findMany({
+  const rows = await db.appointment.findMany({
     where: {
       organizationId,
       startAt: { gte: start, lt: end },
@@ -53,16 +75,10 @@ export async function getAppointmentsForDate(
       ...(barberId && { barberId }),
     },
     orderBy: { startAt: 'asc' },
-    select: {
-      id: true, startAt: true, endAt: true, status: true,
-      customerName: true, customerPhone: true, priceCop: true, notes: true,
-      service: { select: { name: true, durationMin: true } },
-      barber:  { select: { id: true, displayName: true, nickname: true } },
-    },
+    select: agendaSelect,
   })
+  return rows.map(mapAgendaRow)
 }
-
-export type AppointmentRow = Awaited<ReturnType<typeof getAppointmentsForDate>>[number]
 
 // ── Telemetría de login de barberos (Super Admin — B5) ───────────────────────
 
@@ -126,7 +142,7 @@ export async function getAppointmentsForWeek(
   const { start } = localDayBoundsUTC(weekStartStr, timezone)
   const { end }   = localDayBoundsUTC(lastDayStr, timezone)
 
-  const apts = await db.appointment.findMany({
+  const rows = await db.appointment.findMany({
     where: {
       organizationId,
       startAt: { gte: start, lt: end },
@@ -134,16 +150,11 @@ export async function getAppointmentsForWeek(
       ...(barberId && { barberId }),
     },
     orderBy: { startAt: 'asc' },
-    select: {
-      id: true, startAt: true, endAt: true, status: true,
-      customerName: true, customerPhone: true, priceCop: true, notes: true,
-      service: { select: { name: true, durationMin: true } },
-      barber:  { select: { id: true, displayName: true, nickname: true } },
-    },
+    select: agendaSelect,
   })
 
   const grouped: Record<string, AppointmentRow[]> = Object.fromEntries(days.map((d) => [d, []]))
-  for (const apt of apts) {
+  for (const apt of rows.map(mapAgendaRow)) {
     const localDate = formatInTimeZone(apt.startAt, timezone, 'yyyy-MM-dd')
     grouped[localDate]?.push(apt)
   }
@@ -313,9 +324,9 @@ export async function getOrgStats(organizationId: string): Promise<OrgStats> {
     db.appointment.findFirst({ where: { organizationId }, orderBy: { startAt: 'desc' }, select: { startAt: true } }),
     db.barber.count({ where: { organizationId, active: true } }),
     db.appointment.findFirst({ where: { organizationId, source: 'online' }, select: { id: true } }),
-    db.appointment.groupBy({
+    db.appointmentService.groupBy({
       by:      ['serviceId'],
-      where:   { organizationId, startAt: { gte: monthStart }, status: notCancelled },
+      where:   { appointment: { organizationId, startAt: { gte: monthStart }, status: notCancelled } },
       _count:  { _all: true },
       orderBy: { _count: { serviceId: 'desc' } },
       take:    1,

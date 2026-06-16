@@ -1,9 +1,10 @@
 import { isWithinWorkingHours } from '../domain/working-hours'
+import { resolveSelectedServices } from '../domain/service-selection'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
 export interface CreateManualAppointmentInput {
   organizationId:  string
-  serviceId:       string
+  serviceIds:      string[]
   barberId:        string
   startAt:         Date
   customerName:    string
@@ -25,14 +26,15 @@ export async function createManualAppointment(
     return { ok: false, error: 'No se pueden crear citas en el pasado.' }
   }
 
-  const service = await repo.getBookableService(input.organizationId, input.serviceId)
-  if (!service) return { ok: false, error: 'El servicio no está disponible.' }
+  const services = await repo.getBookableServices(input.organizationId, input.serviceIds)
+  const resolved = resolveSelectedServices(input.serviceIds, services)
+  if (!resolved) return { ok: false, error: 'Alguno de los servicios no está disponible.' }
 
   if (!(await repo.isActiveBarber(input.organizationId, input.barberId))) {
     return { ok: false, error: 'El barbero no está disponible.' }
   }
 
-  const endAt = new Date(input.startAt.getTime() + service.durationMin * 60_000)
+  const endAt = new Date(input.startAt.getTime() + resolved.totalDurationMin * 60_000)
 
   if (await repo.hasConflict(input.organizationId, input.barberId, input.startAt, endAt)) {
     return { ok: false, error: 'Ese barbero ya tiene una cita en ese horario.' }
@@ -45,7 +47,7 @@ export async function createManualAppointment(
   ])
   const offHours = !isWithinWorkingHours({
     startAt:     input.startAt,
-    durationMin: service.durationMin,
+    durationMin: resolved.totalDurationMin,
     timezone,
     workingHours,
   })
@@ -54,15 +56,15 @@ export async function createManualAppointment(
 
   const appointment = await repo.createAppointment({
     organizationId:  input.organizationId,
-    serviceId:       input.serviceId,
+    services:        resolved.lines,
     barberId:        input.barberId,
     customerId:      customer.id,
     customerName:    input.customerName,
     customerPhone:   input.customerPhone,
     startAt:         input.startAt,
     endAt,
-    durationMin:     service.durationMin,
-    priceCop:        service.priceCop,
+    durationMin:     resolved.totalDurationMin,
+    priceCop:        resolved.totalPriceCop,
     status:          'confirmed',
     source:          'manual',
     createdByUserId: input.createdByUserId,

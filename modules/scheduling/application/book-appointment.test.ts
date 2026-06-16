@@ -11,19 +11,19 @@ import type {
 // ni framework, simplemente inyectando una implementación del puerto.
 
 interface FakeOptions {
-  service?:      BookableService | null
+  services?:     BookableService[]
   activeBarber?: boolean
   conflict?:     boolean
 }
 
 function createFakeRepo(opts: FakeOptions = {}) {
   const created: NewAppointment[] = []
-  const service      = opts.service === undefined ? { priceCop: 25000, durationMin: 30 } : opts.service
+  const services     = opts.services ?? [{ id: 'svc-1', priceCop: 25000, durationMin: 30 }]
   const activeBarber = opts.activeBarber ?? true
   const conflict     = opts.conflict ?? false
 
   const repo: SchedulingRepository = {
-    getBookableService:      vi.fn(async () => service),
+    getBookableServices:     vi.fn(async () => services),
     isActiveBarber:          vi.fn(async () => activeBarber),
     listActiveBarberIds:         vi.fn(async () => []),
     findActiveBarberIdByUserId:  vi.fn(async () => null),
@@ -49,7 +49,7 @@ const inFuture = () => new Date(Date.now() + 24 * 60 * 60_000)
 
 const baseInput: BookAppointmentInput = {
   organizationId: 'org-1',
-  serviceId:      'svc-1',
+  serviceIds:     ['svc-1'],
   barberId:       'brb-1',
   startAt:        inFuture(),
   customerName:   'Juan Pérez',
@@ -67,7 +67,7 @@ describe('bookAppointment', () => {
   })
 
   it('deriva precio y duración del SERVICIO, nunca del input (seguridad)', async () => {
-    const { repo, created } = createFakeRepo({ service: { priceCop: 45000, durationMin: 60 } })
+    const { repo, created } = createFakeRepo({ services: [{ id: 'svc-1', priceCop: 45000, durationMin: 60 }] })
     const startAt = inFuture()
 
     await bookAppointment(repo, { ...baseInput, startAt })
@@ -80,8 +80,24 @@ describe('bookAppointment', () => {
     expect(apt.source).toBe('online')
   })
 
+  it('suma precio y duración de VARIOS servicios server-side', async () => {
+    const { repo, created } = createFakeRepo({ services: [
+      { id: 'svc-1', priceCop: 25000, durationMin: 30 },
+      { id: 'svc-2', priceCop: 15000, durationMin: 20 },
+    ] })
+    const startAt = inFuture()
+
+    await bookAppointment(repo, { ...baseInput, serviceIds: ['svc-1', 'svc-2'], startAt })
+
+    const apt = created[0]!
+    expect(apt.priceCop).toBe(40000)
+    expect(apt.durationMin).toBe(50)
+    expect(apt.endAt.getTime()).toBe(startAt.getTime() + 50 * 60_000)
+    expect(apt.services).toHaveLength(2)
+  })
+
   it('rechaza si el servicio no existe (y no crea nada)', async () => {
-    const { repo, created } = createFakeRepo({ service: null })
+    const { repo, created } = createFakeRepo({ services: [] })
 
     const res = await bookAppointment(repo, baseInput)
 

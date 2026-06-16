@@ -1,8 +1,9 @@
+import { resolveSelectedServices } from '../domain/service-selection'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
 export interface BookAppointmentInput {
   organizationId: string
-  serviceId:      string
+  serviceIds:     string[]
   barberId:       string
   startAt:        Date
   customerName:   string
@@ -18,8 +19,9 @@ export async function bookAppointment(
   repo: SchedulingRepository,
   input: BookAppointmentInput,
 ): Promise<BookAppointmentResult> {
-  const service = await repo.getBookableService(input.organizationId, input.serviceId)
-  if (!service) return { ok: false, error: 'El servicio seleccionado no está disponible.' }
+  const services = await repo.getBookableServices(input.organizationId, input.serviceIds)
+  const resolved = resolveSelectedServices(input.serviceIds, services)
+  if (!resolved) return { ok: false, error: 'Alguno de los servicios seleccionados no está disponible.' }
 
   if (!(await repo.isActiveBarber(input.organizationId, input.barberId))) {
     return { ok: false, error: 'El barbero seleccionado no está disponible.' }
@@ -29,7 +31,7 @@ export async function bookAppointment(
     return { ok: false, error: 'El horario seleccionado ya pasó.' }
   }
 
-  const endAt = new Date(input.startAt.getTime() + service.durationMin * 60_000)
+  const endAt = new Date(input.startAt.getTime() + resolved.totalDurationMin * 60_000)
 
   if (await repo.hasConflict(input.organizationId, input.barberId, input.startAt, endAt)) {
     return { ok: false, error: 'Este horario ya no está disponible.' }
@@ -39,15 +41,15 @@ export async function bookAppointment(
 
   const appointment = await repo.createAppointment({
     organizationId: input.organizationId,
-    serviceId:      input.serviceId,
+    services:       resolved.lines,
     barberId:       input.barberId,
     customerId:     customer.id,
     customerName:   input.customerName,
     customerPhone:  input.customerPhone,
     startAt:        input.startAt,
     endAt,
-    durationMin:    service.durationMin,
-    priceCop:       service.priceCop,
+    durationMin:    resolved.totalDurationMin,
+    priceCop:       resolved.totalPriceCop,
     status:         'confirmed',
     source:         'online',
   })

@@ -1,12 +1,13 @@
 import { format } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 import { computeAvailableSlots } from '../domain/slot-calculator'
+import { resolveSelectedServices } from '../domain/service-selection'
 import type { SchedulingRepository } from '../domain/ports/scheduling-repository'
 
 export interface GetAvailableSlotsInput {
   organizationId: string
   barberId:       string
-  serviceId:      string
+  serviceIds:     string[]
   /** Cualquier Date que represente el día deseado (año/mes/día en la TZ del tenant). */
   date:           Date
 }
@@ -27,13 +28,14 @@ export async function getAvailableSlots(
   repo: SchedulingRepository,
   input: GetAvailableSlotsInput,
 ): Promise<GetAvailableSlotsResult> {
-  const [service, isBarberActive, timezone] = await Promise.all([
-    repo.getBookableService(input.organizationId, input.serviceId),
+  const [services, isBarberActive, timezone] = await Promise.all([
+    repo.getBookableServices(input.organizationId, input.serviceIds),
     repo.isActiveBarber(input.organizationId, input.barberId),
     repo.getOrgTimezone(input.organizationId),
   ])
 
-  if (!service)        return { ok: false, error: 'El servicio no está disponible.' }
+  const resolved = resolveSelectedServices(input.serviceIds, services)
+  if (!resolved)       return { ok: false, error: 'Alguno de los servicios no está disponible.' }
   if (!isBarberActive) return { ok: false, error: 'El barbero no está disponible.' }
 
   const { slots, busyCount } = await computeSlotsForBarber(repo, {
@@ -41,7 +43,7 @@ export async function getAvailableSlots(
     barberId:       input.barberId,
     date:           input.date,
     timezone,
-    durationMin:    service.durationMin,
+    durationMin:    resolved.totalDurationMin,
   })
 
   return { ok: true, slots, busyCount }

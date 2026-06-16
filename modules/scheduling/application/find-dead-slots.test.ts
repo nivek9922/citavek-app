@@ -44,7 +44,7 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
     getBarberBusySlots:            vi.fn(async () => busySlots),
     isDateBlocked:                 vi.fn(async () => isBlocked),
     // métodos no usados por este use case
-    getBookableService:            vi.fn(async () => null),
+    getBookableServices:     vi.fn(async () => []),
     isActiveBarber:                vi.fn(async () => true),
     hasConflict:                   vi.fn(async () => false),
     upsertCustomer:                vi.fn(async () => ({ id: 'c' })),
