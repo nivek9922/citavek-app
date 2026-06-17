@@ -6,11 +6,11 @@ export const metadata = { title: 'Iniciar sesión — Citavek' }
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="storefront flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm space-y-6">
         <BrandLogo subtitle="Panel de gestión para barberías" />
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sf-card sm:p-7">
           <h2 className="mb-5 text-lg font-semibold">Iniciar sesión</h2>
           <LoginForm />
         </div>

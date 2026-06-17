@@ -21,7 +21,7 @@ export function HeroSection() {
         className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-150 w-150 -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            'radial-gradient(circle, oklch(0.78 0.16 75 / 0.12) 0%, transparent 70%)',
+            'radial-gradient(circle, color-mix(in oklab, var(--primary) 12%, transparent) 0%, transparent 70%)',
         }}
       />
       {/* Noise texture overlay */}
@@ -80,14 +80,14 @@ export function HeroSection() {
       >
         <Link
           href="/registro"
-          className="group inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:brightness-110 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0"
+          className="sf-hover-lift group inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-sf-selected transition-all hover:brightness-105"
         >
           Registra tu barbería
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Link>
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 rounded-xl border border-border px-7 py-3.5 text-sm font-medium text-foreground transition-all hover:border-primary/40 hover:bg-card hover:-translate-y-0.5 active:translate-y-0"
+          className="sf-hover-lift inline-flex items-center gap-2 rounded-xl border border-border bg-card px-7 py-3.5 text-sm font-medium text-foreground shadow-sf-card transition-all hover:border-primary/40"
         >
           Iniciar sesión
         </Link>

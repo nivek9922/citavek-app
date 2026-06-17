@@ -30,7 +30,7 @@ const items = [
 
 export function DifferentiatorsSection() {
   return (
-    <section className="bg-card/50 px-4 py-24">
+    <section className="bg-card-soft px-4 py-24">
       <div className="mx-auto max-w-5xl">
         <ScrollReveal className="mb-16 text-center">
           <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-primary">
@@ -47,7 +47,7 @@ export function DifferentiatorsSection() {
         <div className="grid gap-6 sm:grid-cols-2">
           {items.map((item, i) => (
             <ScrollReveal key={item.title} delay={i * 100}>
-              <div className="flex gap-4 rounded-2xl border border-border bg-background p-6 transition-all duration-300 hover:border-primary/30 hover:-translate-y-0.5">
+              <div className="sf-hover-lift flex gap-4 rounded-2xl border border-border bg-card p-6 shadow-sf-card transition-smooth hover:border-primary/30">
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
                   <item.icon className="h-5 w-5 text-primary" />
                 </div>

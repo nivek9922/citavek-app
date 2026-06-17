@@ -27,7 +27,7 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section className="bg-card/50 px-4 py-24">
+    <section className="bg-card-soft px-4 py-24">
       <div className="mx-auto max-w-5xl">
         <ScrollReveal className="mb-16 text-center">
           <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-widest text-primary">
@@ -45,7 +45,7 @@ export function HowItWorksSection() {
           {/* Connecting line — desktop only */}
           <div
             aria-hidden
-            className="absolute left-[16.6%] right-[16.6%] top-8 hidden h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent sm:block"
+            className="absolute left-[16.6%] right-[16.6%] top-8 hidden h-px bg-linear-to-r from-transparent via-primary/30 to-transparent sm:block"
           />
 
           {steps.map((step, i) => (

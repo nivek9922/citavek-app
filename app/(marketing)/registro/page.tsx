@@ -6,12 +6,12 @@ export const metadata = { title: 'Registra tu barbería — Citavek' }
 
 export default function RegistroPage() {
   return (
-    <div className="flex min-h-screen items-start justify-center bg-background px-4 py-12">
+    <div className="storefront flex min-h-screen items-start justify-center bg-background px-4 py-12">
       <div className="w-full max-w-lg space-y-6">
 
         <BrandLogo subtitle="Tu barbería con reservas online en minutos" />
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sf-card sm:p-7">
           <h2 className="mb-6 text-lg font-semibold">Crea tu cuenta y barbería</h2>
           <SignUpForm />
         </div>

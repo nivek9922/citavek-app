@@ -12,7 +12,7 @@ export function CtaSection() {
         className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-125 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            'radial-gradient(ellipse, oklch(0.78 0.16 75 / 0.08) 0%, transparent 65%)',
+            'radial-gradient(ellipse, color-mix(in oklab, var(--primary) 8%, transparent) 0%, transparent 65%)',
         }}
       />
 
@@ -33,7 +33,7 @@ export function CtaSection() {
         <ScrollReveal delay={200} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
             href="/registro"
-            className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:brightness-110 hover:shadow-primary/50 hover:-translate-y-0.5 active:translate-y-0 sm:w-auto"
+            className="sf-hover-lift group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-sm font-semibold text-primary-foreground shadow-sf-selected transition-all hover:brightness-105 sm:w-auto"
           >
             Registra tu barbería
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -42,9 +42,9 @@ export function CtaSection() {
             href={`https://wa.me/${WA_NUMBER}?text=Hola%2C%20quiero%20solicitar%20mi%20c%C3%B3digo%20de%20acceso%20a%20Citavek`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border px-8 py-4 text-sm font-medium text-foreground transition-all hover:border-primary/40 hover:bg-card hover:-translate-y-0.5 active:translate-y-0 sm:w-auto"
+            className="sf-hover-lift inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-4 text-sm font-medium text-foreground shadow-sf-card transition-all hover:border-primary/40 sm:w-auto"
           >
-            <MessageCircle className="h-4 w-4 text-green-400" />
+            <MessageCircle className="h-4 w-4 text-green-600" />
             Solicitar código de acceso
           </a>
         </ScrollReveal>

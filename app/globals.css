@@ -132,12 +132,17 @@
   --shadow-card:        0 4px 24px -8px oklch(0 0 0 / 50%);
 }
 
-/* ── Storefront — rediseño premium "barbería cálida" ───────────────────────────
- * Tokens acotados a la reserva pública (app/[tenant]/page.tsx aplica .storefront en
- * su <div> raíz). El panel/admin NO lo usan y conservan sus superficies actuales.
- * --primary y derivados NO se redefinen aquí → heredan el valor inyectado por
- * tenant en :root (ámbar #E0A300 por defecto), así el acento sigue siendo
- * tenant-aware. Solo cambian las SUPERFICIES neutras (base papel cálida).
+/* ── Storefront — tema "barbería cálida" para TODAS las superficies públicas ────
+ * Aunque la clase se llama `.storefront` por su origen (la reserva pública), hoy
+ * denota el tema cálido premium compartido por todo lo que ve el cliente final:
+ * el storefront/booking (app/[tenant]/page.tsx), la landing (app/page.tsx), las
+ * páginas de auth (app/(marketing)/login|registro) y el portal de cita
+ * (app/cita/[id]). El panel/admin NO la usan y conservan sus superficies actuales.
+ *
+ * --primary y derivados NO se redefinen aquí → heredan el valor de :root. En rutas
+ * de tenant ([tenant]/layout.tsx inyecta el color del negocio); en landing/auth/cita
+ * (fuera de [tenant]) queda el ámbar Citavek por defecto (#E0A300). Solo cambian las
+ * SUPERFICIES neutras (base papel cálida).
  *
  * El default de producto sigue siendo oscuro (script en app/layout.tsx), así que
  * el cliente ve `.dark .storefront` primero: por eso ambas variantes son premium. */

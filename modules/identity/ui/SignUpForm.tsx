@@ -1,6 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
 import { authClient }   from '@/lib/auth-client'
 import { Input }        from '@/shared/ui/input'
 import { Label }        from '@/shared/ui/label'
@@ -123,7 +123,7 @@ export function SignUpForm() {
           <div className="relative">
             <Input id="password" name="password" type={showPass ? 'text' : 'password'}
               placeholder="Mínimo 8 caracteres" required minLength={8}
-              disabled={isPending} autoComplete="new-password" className="pr-10" />
+              disabled={isPending} autoComplete="new-password" className="h-11 rounded-xl pr-10" />
             <button type="button" tabIndex={-1}
               onClick={() => setShowPass((s) => !s)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -152,11 +152,11 @@ export function SignUpForm() {
 
         <div className="space-y-1.5">
           <Label htmlFor="slug">URL de tu página</Label>
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+          <div className="flex h-11 items-center gap-1 rounded-xl border border-input bg-muted px-3 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <span className="shrink-0 text-muted-foreground">citavek.co/</span>
             <input id="slug" name="slug" required
               pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Solo letras minúsculas, números y guiones, sin guión al inicio ni al final"
-              className="min-w-0 flex-1 bg-transparent font-medium outline-none placeholder:text-muted-foreground/50"
+              className="min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:text-muted-foreground/50 md:text-sm"
               placeholder="san-fernando-cali"
               disabled={isPending}
               onInput={(e) => { (e.target as HTMLInputElement).dataset.edited = '1' }}
@@ -169,7 +169,7 @@ export function SignUpForm() {
           <div className="space-y-1.5">
             <Label htmlFor="city">Ciudad</Label>
             <Select value={city} onValueChange={(v) => setCity(v as ColombiaCity)} disabled={isPending}>
-              <SelectTrigger id="city">
+              <SelectTrigger id="city" className="h-11 rounded-xl">
                 <SelectValue placeholder="Selecciona tu ciudad" />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +191,7 @@ export function SignUpForm() {
               <button key={c} type="button" onClick={() => setColor(c)}
                 className={cn('h-8 w-8 rounded-lg border-2 transition-all',
                   color.toLowerCase() === c.toLowerCase()
-                    ? 'border-foreground scale-110 shadow-md'
+                    ? 'scale-110 border-foreground'
                     : 'border-transparent hover:scale-105')}
                 style={{ backgroundColor: c }}
                 aria-label={c}
@@ -222,7 +222,7 @@ export function SignUpForm() {
             required
             disabled={isPending}
             autoComplete="off"
-            className="font-mono tracking-widest uppercase"
+            className="h-11 rounded-xl font-mono uppercase tracking-widest"
             onChange={(e) => { e.target.value = e.target.value.toUpperCase() }}
           />
           <p className="text-[11px] text-muted-foreground">
@@ -232,12 +232,13 @@ export function SignUpForm() {
       </fieldset>
 
       {error && (
-        <p className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-          {error}
-        </p>
+        <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="h-11 w-full text-base" disabled={isPending}>
         {isPending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -266,6 +267,7 @@ function Field({
       <Label htmlFor={name}>{label}</Label>
       <Input id={name} name={name} type={type} placeholder={placeholder}
         required disabled={disabled} autoComplete={autoComplete}
+        className="h-11 rounded-xl"
         onChange={onChange ? (e) => onChange(e.target.value, e.target) : undefined}
       />
     </div>

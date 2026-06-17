@@ -18,7 +18,7 @@ export function LandingNav() {
       className={cn(
         'fixed inset-x-0 top-0 z-50 transition-all duration-300',
         scrolled
-          ? 'border-b border-border/60 bg-background/80 backdrop-blur-md'
+          ? 'border-b border-border bg-background/85 shadow-sf-card backdrop-blur-md'
           : 'bg-transparent',
       )}
     >
@@ -39,7 +39,7 @@ export function LandingNav() {
           </Link>
           <Link
             href="/registro"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 hover:-translate-y-0.5"
+            className="sf-hover-lift rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sf-selected transition-all hover:brightness-105"
           >
             Registrarse
           </Link>

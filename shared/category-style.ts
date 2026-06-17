@@ -49,8 +49,11 @@ const CATEGORY_STYLE: Record<string, CategoryStyle> = {
     label: 'Combo',
     short: 'Combo',
     emoji: '💈',
-    chip: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
-    iconTint: 'bg-rose-500/10',
+    // Teal: matiz distinto de las otras 4 categorías y sin chocar con el rojo
+    // --destructive ni con tenants de marca roja (evita el "muro de rojos" en
+    // una card de combo seleccionada).
+    chip: 'bg-teal-500/12 text-teal-700 dark:text-teal-300',
+    iconTint: 'bg-teal-500/12',
   },
   tratamiento: {
     label: 'Tratamiento',

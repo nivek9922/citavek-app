@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <>
+    <div className="storefront">
       <LandingNav />
       <main className="bg-background text-foreground antialiased">
         <HeroSection />
@@ -53,10 +53,10 @@ export default function HomePage() {
         <DifferentiatorsSection />
         <CtaSection />
 
-        <footer className="border-t border-border/40 px-4 py-8 text-center text-xs text-muted-foreground/50">
+        <footer className="border-t border-border px-4 py-10 text-center text-xs text-ink-faint">
           © <Suspense fallback="2026"><FooterYear /></Suspense> Citavek · Software para barberías en Colombia
         </footer>
       </main>
-    </>
+    </div>
   )
 }

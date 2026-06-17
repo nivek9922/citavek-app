@@ -1,11 +1,10 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { Input }  from '@/shared/ui/input'
 import { Label }  from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
-import { cn }     from '@/shared/ui/utils'
 
 export function LoginForm() {
   const [isPending, startTransition] = useTransition()
@@ -46,6 +45,7 @@ export function LoginForm() {
           required
           autoComplete="email"
           disabled={isPending}
+          className="h-11 rounded-xl"
         />
       </div>
 
@@ -60,7 +60,7 @@ export function LoginForm() {
             required
             autoComplete="current-password"
             disabled={isPending}
-            className="pr-10"
+            className="h-11 rounded-xl pr-10"
           />
           <button
             type="button"
@@ -74,12 +74,13 @@ export function LoginForm() {
       </div>
 
       {error && (
-        <p className={cn('rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive')}>
-          {error}
-        </p>
+        <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="h-11 w-full text-base" disabled={isPending}>
         {isPending ? (
           <><Loader2 className="h-4 w-4 animate-spin" /> Entrando…</>
         ) : 'Iniciar sesión'}

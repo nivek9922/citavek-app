@@ -60,8 +60,8 @@ export function FeaturesSection() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, i) => (
             <ScrollReveal key={feature.title} delay={i * 80}>
-              <div className="group rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/40 hover:bg-card/80 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
-                <div className="mb-4 inline-flex rounded-xl border border-border bg-background p-3 transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
+              <div className="sf-hover-lift group rounded-2xl border border-border bg-card p-6 shadow-sf-card transition-smooth hover:border-primary/40">
+                <div className="mb-4 inline-flex rounded-xl bg-muted p-3 transition-colors group-hover:bg-primary/10">
                   <feature.icon className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
                 </div>
                 <h3 className="mb-1.5 font-semibold text-foreground">{feature.title}</h3>
