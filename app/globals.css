@@ -22,6 +22,8 @@
   --color-foreground:           var(--foreground);
   --color-card:                 var(--card);
   --color-card-foreground:      var(--card-foreground);
+  --color-card-soft:            var(--card-soft);
+  --color-ink-faint:            var(--ink-faint);
   --color-popover:              var(--popover);
   --color-popover-foreground:   var(--popover-foreground);
   --color-primary:              var(--primary);
@@ -130,6 +132,68 @@
   --shadow-card:        0 4px 24px -8px oklch(0 0 0 / 50%);
 }
 
+/* ── Storefront — rediseño premium "barbería cálida" ───────────────────────────
+ * Tokens acotados a la reserva pública (app/[tenant]/page.tsx aplica .storefront en
+ * su <div> raíz). El panel/admin NO lo usan y conservan sus superficies actuales.
+ * --primary y derivados NO se redefinen aquí → heredan el valor inyectado por
+ * tenant en :root (ámbar #E0A300 por defecto), así el acento sigue siendo
+ * tenant-aware. Solo cambian las SUPERFICIES neutras (base papel cálida).
+ *
+ * El default de producto sigue siendo oscuro (script en app/layout.tsx), así que
+ * el cliente ve `.dark .storefront` primero: por eso ambas variantes son premium. */
+.storefront {
+  /* Superficies — modo claro cálido (papel) */
+  --background:           #F7F5F1;
+  --foreground:           #1A1A1A;
+  --card:                 #FFFFFF;
+  --card-foreground:      #1A1A1A;
+  --card-soft:            #FCFBF9;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #1A1A1A;
+  --surface:              #FCFBF9;
+  --surface-elevated:     #FFFFFF;
+  --secondary:            #FCFBF9;
+  --secondary-foreground: #1A1A1A;
+  --muted:                #F2EFE9;
+  --muted-foreground:     #8A8175;          /* ink-soft cálido, nunca gris puro */
+  --accent:               #F2EFE9;
+  --accent-foreground:    #1A1A1A;
+  --ink-faint:            #B4ABA0;           /* terciario / placeholders */
+  --border:               rgba(26, 26, 26, 0.06);
+  --input:                rgba(26, 26, 26, 0.10);
+
+  /* Tinte de selección y sombras — derivados de --primary (tenant-aware) */
+  --bg-selected:          color-mix(in oklab, var(--primary) 7%, var(--card));
+  --shadow-sf-card:       0 1px 3px rgba(0, 0, 0, 0.02), 0 8px 40px rgba(0, 0, 0, 0.035);
+  --shadow-sf-selected:   0 4px 20px color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+/* Storefront — modo oscuro cálido (lo que ve el cliente por defecto) */
+.dark .storefront {
+  --background:           #161412;           /* near-black cálido, no negro frío */
+  --foreground:           #F3EFE9;
+  --card:                 #1E1B17;
+  --card-foreground:      #F3EFE9;
+  --card-soft:            #1A1714;
+  --popover:              #1E1B17;
+  --popover-foreground:   #F3EFE9;
+  --surface:              #1A1714;
+  --surface-elevated:     #221E19;
+  --secondary:            #221E19;
+  --secondary-foreground: #F3EFE9;
+  --muted:                #221E19;
+  --muted-foreground:     #A89F92;
+  --accent:               #2A251F;
+  --accent-foreground:    #F3EFE9;
+  --ink-faint:            #6E665B;
+  --border:               rgba(255, 255, 255, 0.07);
+  --input:                rgba(255, 255, 255, 0.12);
+
+  --bg-selected:          color-mix(in oklab, var(--primary) 14%, var(--card));
+  --shadow-sf-card:       0 1px 3px rgba(0, 0, 0, 0.25), 0 12px 40px rgba(0, 0, 0, 0.35);
+  --shadow-sf-selected:   0 4px 24px color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
 @layer base {
   html { scroll-behavior: smooth; }
   * { border-color: var(--color-border); }
@@ -158,5 +222,28 @@
   .bg-gradient-hero    { background: var(--gradient-hero); }
   .shadow-elegant      { box-shadow: var(--shadow-elegant); }
   .shadow-card         { box-shadow: var(--shadow-card); }
+  .shadow-sf-card      { box-shadow: var(--shadow-sf-card); }
+  .shadow-sf-selected  { box-shadow: var(--shadow-sf-selected); }
   .transition-smooth   { transition: var(--transition-smooth); }
+}
+
+/* Elevación sutil al hover SOLO en dispositivos con puntero real (desktop):
+ * en mobile (el caso principal) evita estados de hover "pegados" tras el tap. */
+@media (hover: hover) {
+  .sf-hover-lift:hover { transform: translateY(-2px); }
+}
+
+/* Accesibilidad: respetar prefers-reduced-motion en todo el storefront.
+ * Anula transforms/animaciones de las micro-interacciones del rediseño sin
+ * afectar la usabilidad (los estados se siguen viendo, solo no se animan). */
+@media (prefers-reduced-motion: reduce) {
+  .storefront *,
+  .storefront *::before,
+  .storefront *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .storefront .sf-hover-lift:hover { transform: none !important; }
 }

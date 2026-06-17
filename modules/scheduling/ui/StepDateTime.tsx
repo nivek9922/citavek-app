@@ -58,15 +58,15 @@ export function StepDateTime({
   return (
     <div className="space-y-5">
       {/* ── Resumen de servicios seleccionados ── */}
-      <div className="rounded-xl border border-border bg-card/60 px-4 py-2.5 text-sm">
-        <span className="font-medium">{services.map((s) => s.name).join(' + ')}</span>
+      <div className="rounded-2xl border border-border bg-card-soft px-4 py-3 text-sm shadow-sf-card">
+        <span className="font-semibold">{services.map((s) => s.name).join(' + ')}</span>
         <span className="ml-1.5 text-muted-foreground">
           · {formatDuration(totalDurationMin)} · {formatCop(totalPriceCop)}
         </span>
       </div>
 
       {/* ── Selector de día ── */}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-primary" />
@@ -77,7 +77,7 @@ export function StepDateTime({
             <button
               onClick={() => { setOffset((o) => Math.max(0, o - PAGE_SIZE)); setSelectedDate(undefined); setSlots([]) }}
               disabled={offset === 0}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 disabled:opacity-30"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 hover:text-foreground disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -89,14 +89,14 @@ export function StepDateTime({
             <button
               onClick={() => { setOffset((o) => o + PAGE_SIZE); setSelectedDate(undefined); setSlots([]) }}
               disabled={offset >= 60} // máximo 60 días adelante
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 disabled:opacity-30"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth hover:border-primary/50 hover:text-foreground disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {days.map((day) => {
             const isSelected = selectedDate && isSameDay(day, selectedDate)
             const dayName    = format(day, 'EEE', { locale: es })
@@ -108,10 +108,10 @@ export function StepDateTime({
                 key={day.toISOString()}
                 onClick={() => selectDay(day)}
                 className={cn(
-                  'flex flex-col items-center rounded-xl border py-2 transition-smooth',
+                  'flex flex-col items-center rounded-xl border-[1.5px] py-2.5 transition-smooth',
                   isSelected
-                    ? 'border-primary bg-primary text-primary-foreground shadow-elegant'
-                    : 'border-border hover:border-primary/50 hover:bg-accent/30',
+                    ? 'border-transparent bg-foreground text-background shadow-sf-card'
+                    : 'border-border bg-card-soft hover:border-primary/40',
                 )}
               >
                 <span className="text-[10px] font-medium uppercase leading-none opacity-70">
@@ -127,7 +127,7 @@ export function StepDateTime({
 
       {/* ── Selector de hora ── */}
       {selectedDate && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />
             <h3 className="font-semibold">
@@ -139,13 +139,13 @@ export function StepDateTime({
           </div>
 
           {isPending ? (
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-10 animate-pulse rounded-xl bg-muted" />
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="h-11 animate-pulse rounded-xl bg-muted" />
               ))}
             </div>
           ) : slots.length === 0 ? (
-            <div className="flex flex-col items-center gap-1 rounded-xl border border-border bg-muted/20 py-6 text-center">
+            <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-card-soft py-8 text-center">
               <span className="text-2xl">📅</span>
               <p className="text-sm font-medium">Sin disponibilidad</p>
               <p className="text-xs text-muted-foreground">
@@ -157,7 +157,7 @@ export function StepDateTime({
               {/* Indicador de ocupación */}
               <OccupancyBar slots={slots} busyCount={busyCount} />
 
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {slots.map((slot) => {
                   const isSelected = selectedAt && isSameMinute(slot, selectedAt)
                   return (
@@ -165,10 +165,10 @@ export function StepDateTime({
                       key={slot.toISOString()}
                       onClick={() => onSelect(slot)}
                       className={cn(
-                        'rounded-xl border py-2.5 text-sm font-semibold transition-smooth',
+                        'rounded-xl border-[1.5px] py-3 text-sm font-semibold transition-smooth',
                         isSelected
-                          ? 'border-primary bg-primary text-primary-foreground shadow-elegant'
-                          : 'border-border hover:border-primary/50 hover:bg-accent/30',
+                          ? 'border-transparent bg-foreground text-background shadow-sf-card'
+                          : 'border-border bg-card-soft hover:border-primary/40',
                       )}
                     >
                       {formatInTimeZone(slot, timezone, 'HH:mm')}

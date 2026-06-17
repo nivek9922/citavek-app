@@ -73,61 +73,68 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
       <BookingProgress step={flow.step} />
 
       {flow.step > 1 && (
-        <Button variant="ghost" size="sm" onClick={flow.back} className="-ml-1 text-muted-foreground">
+        <Button variant="ghost" size="sm" onClick={flow.back} className="-ml-2 h-8 gap-1 px-2 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Atrás
         </Button>
       )}
 
-      {flow.step === 1 && (
-        <StepService
-          services={services}
-          selectedIds={flow.draft.services.map((s) => s.id)}
-          onToggle={flow.toggleService}
-          totalPriceCop={flow.totalPriceCop}
-          totalDurationMin={flow.totalDurationMin}
-          onContinue={flow.goToBarber}
-        />
-      )}
+      {/* key={flow.step} → la transición suave se reproduce al cambiar de paso.
+          motion-safe respeta prefers-reduced-motion. */}
+      <div
+        key={flow.step}
+        className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-200"
+      >
+        {flow.step === 1 && (
+          <StepService
+            services={services}
+            selectedIds={flow.draft.services.map((s) => s.id)}
+            onToggle={flow.toggleService}
+            totalPriceCop={flow.totalPriceCop}
+            totalDurationMin={flow.totalDurationMin}
+            onContinue={flow.goToBarber}
+          />
+        )}
 
-      {flow.step === 2 && (
-        <StepBarber
-          barbers={barbers}
-          selectedId={flow.draft.barber?.id}
-          onSelect={flow.setBarber}
-        />
-      )}
+        {flow.step === 2 && (
+          <StepBarber
+            barbers={barbers}
+            selectedId={flow.draft.barber?.id}
+            onSelect={flow.setBarber}
+          />
+        )}
 
-      {flow.step === 3 && flow.draft.barber && flow.draft.services.length > 0 && (
-        // key = barbero + servicios → React resetea el componente automáticamente
-        // cuando cambia cualquiera. Patrón correcto para evitar setState en effect.
-        <StepDateTime
-          key={`${flow.draft.barber.id}-${flow.draft.services.map((s) => s.id).join(',')}`}
-          tenantSlug={tenantSlug}
-          barber={flow.draft.barber}
-          services={flow.draft.services}
-          totalDurationMin={flow.totalDurationMin}
-          totalPriceCop={flow.totalPriceCop}
-          selectedAt={flow.draft.startAt}
-          onSelect={flow.setStartAt}
-          timezone={timezone}
-        />
-      )}
+        {flow.step === 3 && flow.draft.barber && flow.draft.services.length > 0 && (
+          // key = barbero + servicios → React resetea el componente automáticamente
+          // cuando cambia cualquiera. Patrón correcto para evitar setState en effect.
+          <StepDateTime
+            key={`${flow.draft.barber.id}-${flow.draft.services.map((s) => s.id).join(',')}`}
+            tenantSlug={tenantSlug}
+            barber={flow.draft.barber}
+            services={flow.draft.services}
+            totalDurationMin={flow.totalDurationMin}
+            totalPriceCop={flow.totalPriceCop}
+            selectedAt={flow.draft.startAt}
+            onSelect={flow.setStartAt}
+            timezone={timezone}
+          />
+        )}
 
-      {flow.step === 4 && flow.draft.services.length > 0 && flow.draft.barber && flow.draft.startAt && (
-        <StepConfirm
-          services={flow.draft.services}
-          totalPriceCop={flow.totalPriceCop}
-          totalDurationMin={flow.totalDurationMin}
-          barber={flow.draft.barber}
-          startAt={flow.draft.startAt}
-          customerName={flow.draft.customerName}
-          customerPhone={flow.draft.customerPhone}
-          onCustomer={flow.setCustomer}
-          onConfirm={handleConfirm}
-          isPending={isPending}
-          canConfirm={flow.canConfirm}
-        />
-      )}
+        {flow.step === 4 && flow.draft.services.length > 0 && flow.draft.barber && flow.draft.startAt && (
+          <StepConfirm
+            services={flow.draft.services}
+            totalPriceCop={flow.totalPriceCop}
+            totalDurationMin={flow.totalDurationMin}
+            barber={flow.draft.barber}
+            startAt={flow.draft.startAt}
+            customerName={flow.draft.customerName}
+            customerPhone={flow.draft.customerPhone}
+            onCustomer={flow.setCustomer}
+            onConfirm={handleConfirm}
+            isPending={isPending}
+            canConfirm={flow.canConfirm}
+          />
+        )}
+      </div>
     </div>
   )
 }

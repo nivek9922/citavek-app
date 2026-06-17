@@ -31,18 +31,18 @@ export function StepConfirm({
   onCustomer, onConfirm, isPending, canConfirm,
 }: Props) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Resumen */}
-      <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border border-border bg-card-soft p-4 shadow-sf-card">
         <h3 className="font-semibold">Resumen de tu cita</h3>
         <Separator />
-        <div className="space-y-2 text-sm">
+        <div className="space-y-3 text-sm">
           {/* Servicios con precio individual */}
           <div className="space-y-1.5">
             {services.map((svc) => (
               <div key={svc.id} className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Scissors className="h-4 w-4 text-primary" />
+                  <Scissors className="h-4 w-4 shrink-0 text-primary" />
                   <span className="font-medium">{svc.name}</span>
                   <span className="text-xs text-muted-foreground">{formatDuration(svc.durationMin)}</span>
                 </div>
@@ -51,9 +51,14 @@ export function StepConfirm({
             ))}
           </div>
           <Separator />
-          <div className="flex items-center justify-between font-semibold">
-            <span>Total · {formatDuration(totalDurationMin)}</span>
-            <span className="tabular-nums text-primary">{formatCop(totalPriceCop)}</span>
+          {/* Total — el elemento más prominente */}
+          <div className="flex items-end justify-between">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Total · {formatDuration(totalDurationMin)}
+            </span>
+            <span className="font-display text-2xl tracking-wide tabular-nums text-foreground">
+              {formatCop(totalPriceCop)}
+            </span>
           </div>
           <Separator />
           <Row
@@ -78,6 +83,7 @@ export function StepConfirm({
             placeholder="Ej. Juan Pérez"
             value={customerName}
             onChange={(e) => onCustomer(e.target.value, customerPhone)}
+            className="h-12 rounded-xl bg-card"
           />
         </div>
         <div className="space-y-2">
@@ -91,11 +97,11 @@ export function StepConfirm({
       </div>
 
       <Button
-        className="w-full"
+        className="min-h-13 w-full text-base"
         onClick={onConfirm}
         disabled={!canConfirm || isPending}
       >
-        {isPending ? 'Confirmando…' : 'Confirmar cita'}
+        {isPending ? 'Confirmando…' : 'Confirmar reserva'}
       </Button>
     </div>
   )
