@@ -2,6 +2,7 @@ import Link from 'next/link'
 import {
   Building2, AlertTriangle, CalendarDays, TrendingUp,
   ShieldAlert, Activity, Flame, DollarSign, Users, UserCheck,
+  CreditCard, Wallet, Hourglass, Sparkles,
 } from 'lucide-react'
 import { requireSuperAdmin }       from '@/server/super-admin'
 import {
@@ -12,6 +13,7 @@ import {
   getOnboardingFunnel,
 } from '@/modules/tenancy/queries'
 import { getBarberLoginAdoptionStats } from '@/modules/analytics/queries'
+import { getSubscriptionMetrics } from '@/modules/subscriptions/queries'
 import { FunnelBar, HealthStat } from '@/modules/analytics/ui/admin-widgets'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 
@@ -28,13 +30,14 @@ function daysSince(date: Date) {
 export default async function AdminPage() {
   await requireSuperAdmin()
 
-  const [orgs, kpis, branding, monthlyTraffic, funnel, barberLoginStats] = await Promise.all([
+  const [orgs, kpis, branding, monthlyTraffic, funnel, barberLoginStats, subMetrics] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
     getBrandingAdoptionStats(),
     getMonthlyTrafficByOrg(),
     getOnboardingFunnel(),
     getBarberLoginAdoptionStats(),
+    getSubscriptionMetrics(),
   ])
 
   const healthCounts = {
@@ -81,6 +84,24 @@ export default async function AdminPage() {
         <KPI icon={Activity}    label="Este mes"         value={kpis.monthCount}         sub="citas procesadas" />
         <KPI icon={DollarSign}  label="Revenue mes"      value={formatCOP(kpis.monthRevenueCop)} sub="COP facturado" />
       </div>
+
+      {/* ── MRR Manual (suscripciones) ── */}
+      <section className="rounded-2xl border border-border bg-card/40 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">MRR Manual</h2>
+          <span className="ml-auto text-xs text-muted-foreground">cobro manual · plan básico</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <MrrStat icon={Wallet}     label="Cobrado este mes" value={`${formatCOP(subMetrics.collectedThisMonthCop)}`} sub="COP · pagos activos" accent="text-green-400" />
+          <MrrStat icon={Sparkles}   label="En prueba"        value={subMetrics.byStatus.trial}
+            sub={subMetrics.trialsEndingSoon > 0 ? `${subMetrics.trialsEndingSoon} vencen en ≤7 días` : 'sin vencimientos próximos'}
+            accent={subMetrics.trialsEndingSoon > 0 ? 'text-yellow-400' : undefined} />
+          <MrrStat icon={Hourglass}  label="En gracia"        value={subMetrics.byStatus.grace}    sub="acción requerida" accent={subMetrics.byStatus.grace > 0 ? 'text-orange-400' : undefined} />
+          <MrrStat icon={ShieldAlert} label="Suspendidas"     value={subMetrics.byStatus.suspended} sub="sin operar"       accent={subMetrics.byStatus.suspended > 0 ? 'text-destructive' : undefined} />
+          <MrrStat icon={TrendingUp} label="Proyección MRR"   value={`${formatCOP(subMetrics.projectedMrrCop)}`} sub="COP si todas pagan" accent="text-primary" />
+        </div>
+      </section>
 
       {/* ── Torre de Control — 3 columnas ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -305,6 +326,27 @@ function KPI({
       </div>
       <p className={`mt-2 text-3xl font-bold tabular-nums ${accent}`}>{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+    </div>
+  )
+}
+
+function MrrStat({
+  icon: Icon, label, value, sub, accent,
+}: {
+  icon:   React.ComponentType<{ className?: string }>
+  label:  string
+  value:  number | string
+  sub:    string
+  accent?: string
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-background p-4">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <p className={`mt-1.5 text-2xl font-bold tabular-nums ${accent ?? 'text-foreground'}`}>{value}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
     </div>
   )
 }

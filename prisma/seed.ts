@@ -218,6 +218,25 @@ async function main() {
       create: { organizationId: org.id, ...orgData.branding },
     })
 
+    // 2b. Upsert subscription → org demo "pagada" (active) para ver el flujo completo.
+    const now        = new Date()
+    const periodStart = new Date(now.getTime() - 5 * 86_400_000)
+    const periodEnd   = new Date(now.getTime() + 25 * 86_400_000)
+    await db.subscription.upsert({
+      where:  { organizationId: org.id },
+      update: {},
+      create: {
+        organizationId:     org.id,
+        plan:               'basic',
+        status:             'active',
+        currentPeriodStart: periodStart,
+        currentPeriodEnd:   periodEnd,
+        lastPaymentAt:      periodStart,
+        lastPaymentAmount:  79_900,
+        paymentMethod:      'manual',
+      },
+    })
+
     // 3. Upsert services → guardar mapa key→id
     const serviceIds: Record<string, { id: string; priceCop: number; durationMin: number }> = {}
     for (const svc of orgData.services) {

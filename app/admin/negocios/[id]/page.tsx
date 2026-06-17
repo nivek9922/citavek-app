@@ -1,13 +1,17 @@
 import { Suspense } from 'react'
 import {
   CalendarDays, CalendarRange, Users, UserCheck, Activity,
-  TrendingDown, TrendingUp, Scissors, Trophy, Check, X, Sparkles,
+  TrendingDown, TrendingUp, Scissors, Trophy, Check, X, Sparkles, CreditCard,
 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { requireSuperAdmin } from '@/server/super-admin'
 import { getOrgStats, type OrgStats } from '@/modules/analytics/queries'
 import { getTeamStats, listAllBarbersWithHours } from '@/modules/staff/queries'
+import { getSubscriptionForAdmin } from '@/modules/subscriptions/queries'
+import { SubscriptionManager } from '@/modules/subscriptions/ui/SubscriptionManager'
+import { SubscriptionStatusBadge, PlanBadge } from '@/modules/subscriptions/ui/subscription-badges'
+import { formatCop } from '@/shared/format'
 import { StatCard } from '@/modules/analytics/ui/StatCard'
 import { FunnelBar, HealthStat } from '@/modules/analytics/ui/admin-widgets'
 import type { HealthLevel } from '@/modules/tenancy/domain/health-score'
@@ -26,6 +30,10 @@ export default async function NegocioDetallePage({
     <div className="space-y-6">
       <Suspense fallback={<GridSkeleton cards={4} />}>
         <KpiSection orgId={id} />
+      </Suspense>
+
+      <Suspense fallback={<CardSkeleton className="h-56" />}>
+        <SubscriptionSection orgId={id} />
       </Suspense>
 
       <Suspense fallback={<CardSkeleton className="h-56" />}>
@@ -59,6 +67,64 @@ async function KpiSection({ orgId }: { orgId: string }) {
       <StatCard icon={CalendarRange} label="Citas este mes"     value={String(stats.appointmentsThisMonth)}  hint="no canceladas" />
       <StatCard icon={Users}         label="Clientes únicos mes" value={String(stats.uniqueClientsThisMonth)} hint={`${stats.newClientsThisWeek} nuevos esta semana`} />
       <StatCard icon={UserCheck}     label="Barberos activos"   value={String(team.total)}                   hint={`${team.withAccount} con cuenta`} />
+    </div>
+  )
+}
+
+// ── Sección — Suscripción ─────────────────────────────────────────────────────
+
+function fmtDate(d: Date | null): string {
+  return d ? format(d, "d 'de' MMM, yyyy", { locale: es }) : '—'
+}
+
+async function SubscriptionSection({ orgId }: { orgId: string }) {
+  const { record } = await getSubscriptionForAdmin(orgId)
+
+  if (!record) {
+    return (
+      <SectionCard icon={CreditCard} title="Suscripción">
+        <p className="text-sm text-muted-foreground">Este negocio aún no tiene suscripción registrada.</p>
+      </SectionCard>
+    )
+  }
+
+  const periodEnd = record.status === 'trial' ? record.trialEndsAt : record.currentPeriodEnd
+
+  return (
+    <SectionCard icon={CreditCard} title="Suscripción">
+      <div className="flex flex-wrap items-center gap-2">
+        <PlanBadge plan={record.plan} />
+        <SubscriptionStatusBadge status={record.status} />
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <Field label={record.status === 'trial' ? 'Vence la prueba' : 'Vence el período'} value={fmtDate(periodEnd)} />
+        <Field label="Inicio del período" value={fmtDate(record.currentPeriodStart)} />
+        <Field
+          label="Último pago"
+          value={record.lastPaymentAt
+            ? `${fmtDate(record.lastPaymentAt)}${record.lastPaymentAmount ? ` · ${formatCop(record.lastPaymentAmount)}` : ''}`
+            : '—'}
+        />
+        <Field label="Método" value={record.paymentMethod ?? '—'} />
+      </dl>
+
+      {record.status === 'cancelled' && record.cancelReason && (
+        <p className="mt-3 text-xs text-muted-foreground">Motivo: {record.cancelReason}</p>
+      )}
+
+      <div className="mt-5 border-t border-border pt-4">
+        <SubscriptionManager orgId={orgId} status={record.status} />
+      </div>
+    </SectionCard>
+  )
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm font-medium capitalize">{value}</dd>
     </div>
   )
 }

@@ -1,19 +1,16 @@
 /**
- * Tenant Isolation Contract Test — Tenancy
+ * Contract test — Tenancy repository.
  *
- * Verifica que deleteWithCascade usa una transacción atómica y que
- * updateBranding usa upsert (soporta orgs sin branding previo).
+ * Verifica que deleteWithCascade borra la organización dejando que Postgres
+ * propague el borrado por FK (onDelete: Cascade) y devuelve slug + memberUserIds,
+ * y que updateBranding usa upsert (soporta orgs sin branding previo).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockDb = vi.hoisted(() => ({
   organization: {
     findUnique: vi.fn(async () => ({ id: 'org-1', slug: 'test-slug', name: 'Test', status: 'active' })),
-    update:     vi.fn(async () => ({})),
     delete:     vi.fn(async () => ({})),
-  },
-  appointment: {
-    deleteMany: vi.fn(async () => ({ count: 0 })),
   },
   member: {
     findMany: vi.fn(async () => [{ userId: 'u-1' }, { userId: 'u-2' }]),
@@ -21,15 +18,12 @@ const mockDb = vi.hoisted(() => ({
   branding: {
     upsert: vi.fn(async () => ({})),
   },
-  $transaction: vi.fn(async (ops: unknown) => {
-    if (Array.isArray(ops)) {
-      return Promise.all(ops)
-    }
-    return (ops as (tx: unknown) => unknown)(mockDb)
-  }),
 }))
 
 vi.mock('@/server/db', () => ({ db: mockDb }))
+// El repo importa isSuperAdmin (que carga config/env). Lo mockeamos para que la
+// suite sea hermética y no dependa de variables de entorno.
+vi.mock('@/server/super-admin', () => ({ isSuperAdmin: () => false }))
 
 const { prismaTenancyRepository: repo } = await import('./prisma-tenancy-repository')
 

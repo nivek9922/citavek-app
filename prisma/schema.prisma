@@ -43,6 +43,22 @@ enum AppointmentSource {
   manual
 }
 
+// Plan de suscripción. `basic` es el plan actual; `pro` (WhatsApp automatizado) llega después.
+enum PlanType {
+  basic
+  pro
+}
+
+// Ciclo de vida de la suscripción. Independiente de OrganizationStatus:
+// OrganizationStatus es el kill-switch manual del admin; SubscriptionStatus es el acceso por pago.
+enum SubscriptionStatus {
+  trial      // Período de prueba manual
+  active     // Pago confirmado
+  grace      // Vencido, en período de gracia (5 días)
+  suspended  // Sin acceso a crear citas nuevas
+  cancelled  // Cancelado definitivamente
+}
+
 // ──────────────────── Tenant raíz (Barbería) ────────────────────
 // Columnas base compatibles con el plugin `organization` de better-auth
 // (id, name, slug, logo, metadata, createdAt) + additionalFields de dominio.
@@ -75,10 +91,52 @@ model Organization {
   invitations        Invitation[]
   reviews            Review[]
   adminNote          AdminNote?
+  subscription       Subscription?
   barberInvitations  BarberInvitation[]
 
   @@index([status])
   @@map("organization")
+}
+
+// ──────────────────── Suscripción (1:1 con Organization) ────────────────────
+// Patrón AdminNote: organizationId @unique → una org tiene exactamente una suscripción.
+// Fase 1: gestión manual por Super Admin. Fase 2: Mercado Pago llena mp*/pago vía webhook.
+
+model Subscription {
+  id             String             @id @default(cuid())
+  organizationId String             @unique
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  plan   PlanType           @default(basic)
+  status SubscriptionStatus @default(trial)
+
+  // Fechas del ciclo
+  trialEndsAt        DateTime? @db.Timestamptz(6) // Para barberías en prueba
+  currentPeriodStart DateTime? @db.Timestamptz(6) // Inicio del período pagado
+  currentPeriodEnd   DateTime? @db.Timestamptz(6) // Vencimiento del período pagado
+  graceStartedAt     DateTime? @db.Timestamptz(6) // Inicio del período de gracia (lo fija el cron)
+
+  // Pago (manual por ahora — Mercado Pago en Fase 2)
+  lastPaymentAt     DateTime? @db.Timestamptz(6)
+  lastPaymentAmount Int?                          // En COP (pesos, sin centavos)
+  paymentMethod     String?                       // 'manual' | 'card' | 'pse' | 'nequi' — extensible
+
+  // Cancelación
+  cancelledAt  DateTime? @db.Timestamptz(6)
+  cancelReason String?
+
+  // Mercado Pago (vacío en Fase 1; el webhook de Fase 2 lo llena)
+  mpSubscriptionId String?
+  mpCustomerId     String?
+
+  createdAt DateTime @default(now())  @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt       @db.Timestamptz(6)
+
+  @@index([status])
+  @@index([trialEndsAt])
+  @@index([currentPeriodEnd])
+  @@index([status, graceStartedAt])
+  @@map("subscription")
 }
 
 // ──────────────────── Notas internas (solo Super Admin) ────────────────────

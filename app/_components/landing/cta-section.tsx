@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, MessageCircle } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
-
-const WA_NUMBER = '573026889618'
+import { SUPPORT_WHATSAPP as WA_NUMBER } from '@/shared/constants/billing'
 
 export function CtaSection() {
   return (

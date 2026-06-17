@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Badge }                  from '@/shared/ui/badge'
 import { type AdminOrgRow }       from '@/modules/tenancy/queries'
 import { type HealthLevel }       from '@/modules/tenancy/domain/health-score'
+import { SubscriptionStatusBadge, PlanBadge } from '@/modules/subscriptions/ui/subscription-badges'
 import { OrgStatusToggle }        from './OrgStatusToggle'
 import { OrgDeleteButton }        from './OrgDeleteButton'
 import { OrgDetailsSheet }        from './OrgDetailsSheet'
@@ -21,6 +22,18 @@ const HEALTH_BADGE: Record<HealthLevel, { label: string; cls: string }> = {
 
 function daysSince(date: Date) {
   return Math.floor((Date.now() - date.getTime()) / 86_400_000)
+}
+
+type SubInfo = AdminOrgRow['subscription']
+
+/** Fecha de vencimiento relevante: trial → trialEndsAt; resto → currentPeriodEnd. */
+function subExpiry(sub: SubInfo): Date | null {
+  if (!sub) return null
+  return sub.status === 'trial' ? sub.trialEndsAt : sub.currentPeriodEnd
+}
+
+function formatExpiry(d: Date) {
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
 }
 
 interface Props {
@@ -96,11 +109,15 @@ export function OrgList({ orgs, onStatusChange, onDelete }: Props) {
                     >
                       {healthBadge.label}
                     </Badge>
+
+                    {org.subscription && <PlanBadge plan={org.subscription.plan} />}
+                    {org.subscription && <SubscriptionStatusBadge status={org.subscription.status} />}
                   </div>
 
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     /{org.slug}
                     {org.city ? ` · ${org.city}` : ''}
+                    {subExpiry(org.subscription) ? ` · vence ${formatExpiry(subExpiry(org.subscription)!)}` : ''}
                     {daysAgo !== null ? ` · última cita hace ${daysAgo}d` : ' · sin citas aún'}
                   </p>
                 </div>

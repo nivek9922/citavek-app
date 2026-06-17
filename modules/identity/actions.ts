@@ -13,6 +13,8 @@ import { prismaIdentityRepository as repo } from './infrastructure/prisma-identi
 import { createOrganization } from './application/create-organization'
 import { validateAccessCode } from './application/validate-access-code'
 import { getPrimaryMembership } from './queries'
+import { createTrialSubscription } from '@/modules/subscriptions/application/create-trial-subscription'
+import { prismaSubscriptionsRepository as subsRepo } from '@/modules/subscriptions/infrastructure/prisma-subscriptions-repository'
 
 // ── Sign out ──────────────────────────────────────────────────────────────
 
@@ -92,6 +94,8 @@ export async function createBarberiaForSelfAction(
     if (result.ok) {
       const email = session?.user.email ?? data._userId ?? 'unknown'
       await repo.consumeAccessCode(data.accessCode.trim().toUpperCase(), email)
+      // Toda org nueva arranca con un trial de 30 días (idempotente vía upsert).
+      await createTrialSubscription(subsRepo, { organizationId: result.id })
       // Invalida la lista cacheada del Super Admin (`admin-orgs`) para que la
       // barbería recién registrada aparezca de inmediato en /admin/negocios.
       updateTag('admin-orgs')
@@ -147,7 +151,11 @@ export async function createBarberiaAction(
     })
 
     // Invalida `admin-orgs` (no `revalidatePath`, que no toca entradas 'use cache').
-    if (result.ok) updateTag('admin-orgs')
+    if (result.ok) {
+      // Toda org nueva arranca con un trial de 30 días (idempotente vía upsert).
+      await createTrialSubscription(subsRepo, { organizationId: result.id })
+      updateTag('admin-orgs')
+    }
     return result
   } catch (err) {
     return { ok: false, error: handlePrismaError(err) }

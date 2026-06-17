@@ -1,7 +1,6 @@
 import { MessageCircle } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
-
-const WA_NUMBER = '573026889618' // TODO: reemplazar con número real de contacto
+import { SUPPORT_WHATSAPP as WA_NUMBER } from '@/shared/constants/billing'
 
 export function SocialProofSection() {
   return (

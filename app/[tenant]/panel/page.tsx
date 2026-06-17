@@ -120,20 +120,26 @@ export default async function PanelPage({
 
   return (
     <div className="space-y-8">
-      {!wizardSeen && !allDone && (
-        <OnboardingWizard
-          slug={slug}
-          initialColor={ctx.branding.primaryColor}
-          initialLogoUrl={ctx.branding.logoUrl}
-          initialCoverUrl={ctx.branding.coverUrl}
-        />
-      )}
+      {/* Onboarding (marca, equipo, servicios) — solo owner. El barbero no tiene
+          permisos para configurar el negocio, así que va directo a su agenda. */}
+      {!isBarber && (
+        <>
+          {!wizardSeen && !allDone && (
+            <OnboardingWizard
+              slug={slug}
+              initialColor={ctx.branding.primaryColor}
+              initialLogoUrl={ctx.branding.logoUrl}
+              initialCoverUrl={ctx.branding.coverUrl}
+            />
+          )}
 
-      {allDone ? (
-        <OnboardingSuccessStrip slug={slug} />
-      ) : !dismissed ? (
-        <OnboardingWidget steps={onboardingSteps} slug={slug} />
-      ) : null}
+          {allDone ? (
+            <OnboardingSuccessStrip slug={slug} />
+          ) : !dismissed ? (
+            <OnboardingWidget steps={onboardingSteps} slug={slug} />
+          ) : null}
+        </>
+      )}
 
       <PageHeader
         title="Agenda"

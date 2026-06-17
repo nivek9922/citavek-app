@@ -5,6 +5,7 @@ import { getTenantContextPermissive } from '@/server/tenant'
 import { requireMembership }          from '@/server/auth-guards'
 import { signOutAction }     from '@/modules/identity/actions'
 import { PanelNav }          from '@/modules/identity/ui/PanelNav'
+import { PanelSubscriptionBanner } from '@/modules/subscriptions/ui/PanelSubscriptionBanner'
 import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
 import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 
@@ -66,12 +67,17 @@ export default async function PanelLayout({
       {/* ── Columna principal ── */}
       <div className="flex min-h-screen flex-col">
 
-        {/* Banner de cuenta suspendida */}
+        {/* Banner de cuenta suspendida manualmente por el admin (status de la org). */}
         {ctx.status === 'suspended' && (
           <div className="sticky top-0 z-50 bg-destructive px-4 py-2.5 text-center text-sm font-medium text-destructive-foreground">
             Tu cuenta está suspendida por falta de pago. Tus clientes no pueden agendar nuevas citas.{' '}
             <span className="underline underline-offset-2">Contacta a soporte.</span>
           </div>
+        )}
+
+        {/* Banner según el estado de la suscripción (compuerta independiente del status manual). */}
+        {ctx.status === 'active' && (
+          <PanelSubscriptionBanner subscription={ctx.subscription} tenantName={ctx.name} />
         )}
 
         {/* Top bar (mobile) */}
