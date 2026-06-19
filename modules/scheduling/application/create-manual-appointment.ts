@@ -11,10 +11,12 @@ export interface CreateManualAppointmentInput {
   customerPhone:   string
   createdByUserId: string
   notes?:          string | null
+  // Hook de lealtad inyectado por el delivery layer (ver book-appointment).
+  computeRewardDiscount?: (lines: { serviceId: string; priceCop: number }[]) => number
 }
 
 export type CreateManualAppointmentResult =
-  | { ok: true; appointmentId: string; offHours: boolean }
+  | { ok: true; appointmentId: string; offHours: boolean; priceCop: number; discountCop: number; rewardApplied: boolean }
   | { ok: false; error: string }
 
 /** Use case: alta manual de cita desde el panel (staff). */
@@ -52,6 +54,10 @@ export async function createManualAppointment(
     workingHours,
   })
 
+  const discountCop   = input.computeRewardDiscount ? input.computeRewardDiscount(resolved.lines) : 0
+  const priceCop      = Math.max(0, resolved.totalPriceCop - discountCop)
+  const rewardApplied = discountCop > 0
+
   const customer = await repo.upsertCustomer(input.organizationId, input.customerName, input.customerPhone)
 
   const appointment = await repo.createAppointment({
@@ -64,7 +70,7 @@ export async function createManualAppointment(
     startAt:         input.startAt,
     endAt,
     durationMin:     resolved.totalDurationMin,
-    priceCop:        resolved.totalPriceCop,
+    priceCop,
     status:          'confirmed',
     source:          'manual',
     createdByUserId: input.createdByUserId,
@@ -72,5 +78,5 @@ export async function createManualAppointment(
     isOffHours:      offHours,
   })
 
-  return { ok: true, appointmentId: appointment.id, offHours }
+  return { ok: true, appointmentId: appointment.id, offHours, priceCop, discountCop, rewardApplied }
 }

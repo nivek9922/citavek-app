@@ -43,6 +43,14 @@ enum AppointmentSource {
   manual
 }
 
+// Tipo de recompensa del programa de lealtad (configurable por tenant).
+enum RewardType {
+  FREE_NEXT_VISIT // 100% del total de la próxima cita
+  DISCOUNT_PCT    // % configurable
+  DISCOUNT_AMOUNT // monto fijo en COP
+  FREE_SERVICE    // un servicio específico gratis
+}
+
 // Plan de suscripción. `basic` es el plan actual; `pro` (WhatsApp automatizado) llega después.
 enum PlanType {
   basic
@@ -93,6 +101,10 @@ model Organization {
   adminNote          AdminNote?
   subscription       Subscription?
   barberInvitations  BarberInvitation[]
+
+  loyaltyProgram     LoyaltyProgram?
+  loyaltyCards       LoyaltyCard[]
+  loyaltyRedemptions LoyaltyRedemption[]
 
   @@index([status])
   @@map("organization")
@@ -212,6 +224,7 @@ model Service {
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   appointmentServices AppointmentService[]
+  loyaltyPrograms     LoyaltyProgram[] // inversa de LoyaltyProgram.freeService
 
   @@index([organizationId, active, sortOrder])
   @@map("service")
@@ -344,6 +357,10 @@ model Appointment {
 
   // Creada fuera del horario laboral del barbero (informativo, no bloquea)
   isOffHours Boolean @default(false)
+
+  // El descuento de lealtad se aplicó pero redeemReward falló tras crear la cita.
+  // El owner verá un indicador para revisar manualmente la discrepancia.
+  redemptionFailed Boolean @default(false)
 
   createdByUserId String? // quién la creó (alta manual en panel)
 
@@ -533,4 +550,68 @@ model AccessCode {
   @@index([code])
   @@index([isUsed, expiresAt])
   @@map("access_code")
+}
+
+// ──────────────────── Programa de Lealtad ────────────────────
+// Configuración 1:1 con Organization (patrón AdminNote: organizationId @unique +
+// upsert). El dueño define el umbral de visitas y el tipo de recompensa.
+
+model LoyaltyProgram {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  isActive       Boolean  @default(true)
+
+  requiredVisits Int        @default(5) // N citas completadas para activar la recompensa
+  rewardType     RewardType
+  discountPct    Int? // 1-100 si rewardType = DISCOUNT_PCT
+  discountAmount Int? // monto fijo COP si rewardType = DISCOUNT_AMOUNT
+  freeServiceId  String? // serviceId si rewardType = FREE_SERVICE
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  freeService  Service?     @relation(fields: [freeServiceId], references: [id], onDelete: SetNull)
+
+  @@map("loyalty_program")
+}
+
+// Progreso de un cliente (por teléfono) dentro de un tenant.
+model LoyaltyCard {
+  id             String @id @default(cuid())
+  organizationId String
+  customerPhone  String // identificador del cliente (E.164)
+  customerName   String // último nombre conocido, para mostrar
+
+  completedVisits Int     @default(0) // visitas desde el último reset
+  totalVisits     Int     @default(0) // histórico, nunca se resetea
+  rewardsEarned   Int     @default(0) // cuántas veces alcanzó el umbral
+  rewardPending   Boolean @default(false) // tiene una recompensa sin usar
+
+  lastVisitAt DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, customerPhone])
+  @@index([organizationId])
+  @@map("loyalty_card")
+}
+
+// Log de canjes — habilita la métrica "recompensas este mes" (owner + admin) con
+// agregación DB-side y deja traza financiera del descuento aplicado.
+model LoyaltyRedemption {
+  id             String     @id @default(cuid())
+  organizationId String
+  customerPhone  String
+  rewardType     RewardType
+  discountCop    Int
+  appointmentId  String?
+  createdAt      DateTime   @default(now()) @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@map("loyalty_redemption")
 }

@@ -18,7 +18,9 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null, startAt: D
     upsertCustomer:          vi.fn(async () => ({ id: 'c' })),
     createAppointment:       vi.fn(async () => ({ id: 'a' })),
     getAppointmentForStatusChange: vi.fn(async () =>
-      currentStatus ? { status: currentStatus, startAt } : null,
+      currentStatus
+        ? { status: currentStatus, startAt, customerPhone: '+573001112233', customerName: 'Juan' }
+        : null,
     ),
     updateAppointmentStatus: vi.fn(
       async (_org: string, id: string, status: AppointmentStatusValue, cancelledAt: Date | null) => {
@@ -34,6 +36,7 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null, startAt: D
     blockDate:                   vi.fn(async () => undefined),
     unblockDate:                 vi.fn(async () => undefined),
     getAppointmentForCustomer:   vi.fn(async () => null),
+    markRedemptionFailed:        vi.fn(async () => undefined),
   }
   return { repo, updates }
 }
@@ -41,14 +44,15 @@ function createFakeRepo(currentStatus: AppointmentStatusValue | null, startAt: D
 const base = { organizationId: 'org-1', appointmentId: 'apt-1' }
 
 describe('changeAppointmentStatus', () => {
-  it('aplica una transición válida (confirmed → completed)', async () => {
+  it('aplica una transición válida (confirmed → completed) y devuelve el snapshot del cliente', async () => {
     const { repo, updates } = createFakeRepo('confirmed')
 
-    await changeAppointmentStatus(repo, { ...base, newStatus: 'completed' })
+    const res = await changeAppointmentStatus(repo, { ...base, newStatus: 'completed' })
 
     expect(updates).toHaveLength(1)
     expect(updates[0]!.status).toBe('completed')
     expect(updates[0]!.cancelledAt).toBeNull()
+    expect(res).toEqual({ customerPhone: '+573001112233', customerName: 'Juan' })
   })
 
   it('al cancelar registra cancelledAt', async () => {

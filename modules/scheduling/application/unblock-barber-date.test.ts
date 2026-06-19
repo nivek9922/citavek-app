@@ -25,6 +25,7 @@ function createFakeRepo() {
     isDateBlocked:               vi.fn(async () => false),
     blockDate:                   vi.fn(async () => undefined),
     getAppointmentForCustomer:   vi.fn(async () => null),
+    markRedemptionFailed:        vi.fn(async () => undefined),
   }
   return { repo, unblocked }
 }

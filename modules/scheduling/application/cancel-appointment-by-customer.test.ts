@@ -41,6 +41,7 @@ function createFakeRepo(apt: CustomerAppointment | null = BASE_APT) {
     isDateBlocked:               vi.fn(async () => false),
     blockDate:                   vi.fn(async () => undefined),
     unblockDate:                 vi.fn(async () => undefined),
+    markRedemptionFailed:        vi.fn(async () => undefined),
   }
   return { repo, cancelled }
 }

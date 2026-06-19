@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import {
   CalendarDays, CalendarRange, Users, UserCheck, Activity,
-  TrendingDown, TrendingUp, Scissors, Trophy, Check, X, Sparkles, CreditCard,
+  TrendingDown, TrendingUp, Scissors, Trophy, Check, X, Sparkles, CreditCard, Gift,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -46,6 +46,10 @@ export default async function NegocioDetallePage({
 
       <Suspense fallback={<CardSkeleton className="h-56" />}>
         <OnboardingSection orgId={id} />
+      </Suspense>
+
+      <Suspense fallback={<CardSkeleton className="h-28" />}>
+        <LoyaltySection orgId={id} />
       </Suspense>
 
       <Suspense fallback={<GridSkeleton cards={2} />}>
@@ -266,6 +270,32 @@ async function OnboardingSection({ orgId }: { orgId: string }) {
           </li>
         ))}
       </ul>
+    </SectionCard>
+  )
+}
+
+// ── Sección — Fidelidad ──────────────────────────────────────────────────────
+
+async function LoyaltySection({ orgId }: { orgId: string }) {
+  const stats = await getOrgStats(orgId)
+  return (
+    <SectionCard
+      icon={Gift}
+      title="Programa de fidelidad"
+      aside={stats.loyaltyActive ? 'activo' : 'inactivo'}
+    >
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl border border-border bg-background p-4">
+          <p className="text-sm font-medium">Estado</p>
+          <p className={`mt-1 text-sm ${stats.loyaltyActive ? 'text-green-400' : 'text-muted-foreground'}`}>
+            {stats.loyaltyActive ? 'Activo' : 'Sin programa activo'}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-background p-4">
+          <p className="text-sm font-medium">Clientes en el programa</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums">{stats.loyaltyCards}</p>
+        </div>
+      </div>
     </SectionCard>
   )
 }

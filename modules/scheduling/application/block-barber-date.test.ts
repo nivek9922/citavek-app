@@ -25,6 +25,7 @@ function createFakeRepo(opts: { barberActive?: boolean } = {}) {
     isDateBlocked:               vi.fn(async () => false),
     unblockDate:                 vi.fn(async () => undefined),
     getAppointmentForCustomer:   vi.fn(async () => null),
+    markRedemptionFailed:        vi.fn(async () => undefined),
   }
   return { repo, blocked }
 }

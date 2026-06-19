@@ -61,7 +61,8 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
         customerPhone: customerPhone,
       })
       if (res.ok) {
-        setConfirmed({ startAt, priceCop: flow.totalPriceCop, appointmentId: res.appointmentId })
+        // Precio autoritativo del servidor (ya incluye el descuento de lealtad si aplicó).
+        setConfirmed({ startAt, priceCop: res.priceCop, appointmentId: res.appointmentId })
       } else {
         toast.error(res.error)
       }
@@ -121,6 +122,7 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
 
         {flow.step === 4 && flow.draft.services.length > 0 && flow.draft.barber && flow.draft.startAt && (
           <StepConfirm
+            tenantSlug={tenantSlug}
             services={flow.draft.services}
             totalPriceCop={flow.totalPriceCop}
             totalDurationMin={flow.totalDurationMin}

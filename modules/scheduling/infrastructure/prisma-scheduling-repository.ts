@@ -130,10 +130,15 @@ export const prismaSchedulingRepository: SchedulingRepository = {
   async getAppointmentForStatusChange(organizationId, appointmentId) {
     const apt = await db.appointment.findFirst({
       where:  { id: appointmentId, organizationId },
-      select: { status: true, startAt: true },
+      select: { status: true, startAt: true, customerPhone: true, customerName: true },
     })
     if (!apt) return null
-    return { status: apt.status as AppointmentStatusValue, startAt: apt.startAt }
+    return {
+      status:        apt.status as AppointmentStatusValue,
+      startAt:       apt.startAt,
+      customerPhone: apt.customerPhone,
+      customerName:  apt.customerName,
+    }
   },
 
   async updateAppointmentStatus(organizationId, appointmentId, status, cancelledAt) {
@@ -285,6 +290,13 @@ export const prismaSchedulingRepository: SchedulingRepository = {
   async unblockDate(organizationId, barberId, dateStr) {
     await db.scheduleException.deleteMany({
       where: { organizationId, barberId: barberId ?? null, date: dateStr },
+    })
+  },
+
+  async markRedemptionFailed(organizationId, appointmentId) {
+    await db.appointment.update({
+      where: { id: appointmentId, organizationId },
+      data:  { redemptionFailed: true },
     })
   },
 }

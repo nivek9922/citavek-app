@@ -44,6 +44,7 @@ export async function getDashboardKPIs(organizationId: string, timezone: string)
 const agendaSelect = {
   id: true, startAt: true, endAt: true, status: true,
   customerName: true, customerPhone: true, priceCop: true, notes: true,
+  redemptionFailed: true,
   appointmentServices: { select: { durationMin: true, service: { select: { name: true } } } },
   barber: { select: { id: true, displayName: true, nickname: true } },
 } satisfies Prisma.AppointmentSelect
@@ -253,6 +254,10 @@ export interface OrgStats {
 
   // Top del mes
   topServiceThisMonth: { name: string; appointmentCount: number } | null
+
+  // Lealtad (adopción de feature)
+  loyaltyActive: boolean
+  loyaltyCards:  number
 }
 
 /**
@@ -298,6 +303,7 @@ export const getOrgStats = cache(async function getOrgStats(organizationId: stri
     uniqueClientsThisMonth, newClients, returningClientsThisMonth,
     created7, cancelled7, created30, created90,
     lastApt, activeBarbers, onlineApt, topServiceThisMonth,
+    loyaltyProgram, loyaltyCards,
   ] = await Promise.all([
     db.appointment.count({ where: { organizationId, startAt: { gte: todayStart, lt: todayEnd }, status: notCancelled } }),
     db.appointment.count({ where: { organizationId, startAt: { gte: weekStart,  lt: weekEnd  }, status: notCancelled } }),
@@ -350,6 +356,8 @@ export const getOrgStats = cache(async function getOrgStats(organizationId: stri
       ORDER BY appointment_count DESC
       LIMIT 1
     `.then(([r]) => r ? { name: r.name, appointmentCount: Number(r.appointment_count) } : null),
+    db.loyaltyProgram.findUnique({ where: { organizationId }, select: { isActive: true } }),
+    db.loyaltyCard.count({ where: { organizationId } }),
   ])
 
   const statusBy   = new Map(byStatus.map((r) => [r.status, r._count._all]))
@@ -384,5 +392,8 @@ export const getOrgStats = cache(async function getOrgStats(organizationId: stri
     },
 
     topServiceThisMonth,
+
+    loyaltyActive: loyaltyProgram?.isActive ?? false,
+    loyaltyCards,
   }
 })

@@ -19,6 +19,13 @@ import { getAvailableSlots }         from './application/get-available-slots'
 import { getAnyBarberSlots, pickBarberForSlot } from './application/get-any-barber-slots'
 import { blockBarberDate }           from './application/block-barber-date'
 import { unblockBarberDate }         from './application/unblock-barber-date'
+// Orquestación de lealtad (delivery layer): sumar visita al completar y canjear
+// recompensa al reservar. computeRewardDiscount es dominio puro inyectado al use case.
+import { prismaLoyaltyRepository as loyaltyRepo } from '@/modules/loyalty/infrastructure/prisma-loyalty-repository'
+import { getLoyaltyProgram }     from '@/modules/loyalty/queries'
+import { recordCompletedVisit }  from '@/modules/loyalty/application/record-completed-visit'
+import { getRedeemableReward, redeemReward } from '@/modules/loyalty/application/redeem-reward'
+import { computeRewardDiscount } from '@/modules/loyalty/domain/loyalty'
 
 // ── Slots disponibles (lectura pública / read side) ─────────────────────────
 // serviceIds vienen del cliente (el usuario eligió los servicios), pero la
@@ -76,15 +83,18 @@ export type BookInput = z.infer<typeof bookSchema>
 export async function bookAppointmentAction(
   slug: string,
   input: BookInput,
-): Promise<{ ok: true; appointmentId: string } | { ok: false; error: string }> {
-  try {
-    // Endpoint público: límite por IP para frenar spam de reservas.
-    const ip = clientIpFrom(await headers())
-    if (!await rateLimit(`book:${ip}`, 8, 60_000)) {
-      return { ok: false, error: 'Demasiados intentos. Espera un momento e inténtalo de nuevo.' }
-    }
+): Promise<{ ok: true; appointmentId: string; priceCop: number; rewardApplied: boolean } | { ok: false; error: string }> {
+  // Endpoint público: límite por IP para frenar spam de reservas.
+  const ip = clientIpFrom(await headers())
+  if (!await rateLimit(`book:${ip}`, 8, 60_000)) {
+    return { ok: false, error: 'Demasiados intentos. Espera un momento e inténtalo de nuevo.' }
+  }
 
-    const ctx    = await getTenantContext(slug)
+  // Guards fuera del try: notFound() lanza un error de control de flujo de Next.js
+  // que un catch silenciaría (tenant inexistente → "No se pudo crear" en vez de 404).
+  const ctx = await getTenantContext(slug)
+
+  try {
     await requireActiveSubscription(ctx.id)
     const parsed = bookSchema.parse(input)
 
@@ -99,6 +109,12 @@ export async function bookAppointmentAction(
       barberId = assigned
     }
 
+    // Recompensa pendiente (server-side): el descuento se deriva del desglose real.
+    const redeemable = await getRedeemableReward(loyaltyRepo, {
+      organizationId: ctx.id,
+      customerPhone:  parsed.customerPhone,
+    })
+
     const result = await bookAppointment(repo, {
       organizationId: ctx.id,
       serviceIds:     parsed.serviceIds,
@@ -106,9 +122,37 @@ export async function bookAppointmentAction(
       startAt:        new Date(parsed.startAtISO),
       customerName:   parsed.customerName,
       customerPhone:  parsed.customerPhone,
+      computeRewardDiscount: redeemable
+        ? (lines) => computeRewardDiscount(redeemable.program, lines)
+        : undefined,
     })
 
-    return result
+    if (result.ok && result.rewardApplied && redeemable) {
+      try {
+        await redeemReward(loyaltyRepo, {
+          organizationId: ctx.id,
+          customerPhone:  parsed.customerPhone,
+          rewardType:     redeemable.program.rewardType,
+          discountCop:    result.discountCop,
+          appointmentId:  result.appointmentId,
+        })
+        updateTag(`loyalty-stats:${ctx.id}`)
+        updateTag(`org-stats:${ctx.id}`)
+      } catch (e) {
+        log.error('loyalty.redeem.book', {
+          err:            String(e),
+          organizationId: ctx.id,
+          appointmentId:  result.appointmentId,
+          customerPhone:  parsed.customerPhone,
+        })
+        try { await repo.markRedemptionFailed(ctx.id, result.appointmentId) }
+        catch (e2) { log.error('loyalty.markFailed.book', { err: String(e2), appointmentId: result.appointmentId }) }
+      }
+    }
+
+    return result.ok
+      ? { ok: true, appointmentId: result.appointmentId, priceCop: result.priceCop, rewardApplied: result.rewardApplied }
+      : result
   } catch (err) {
     if (err instanceof SubscriptionInactiveError) {
       return { ok: false, error: err.message }
@@ -175,6 +219,13 @@ export async function createManualAppointmentAction(
       return { ok: false, error: 'Ese horario ya no está disponible.' }
     }
 
+    // Recompensa pendiente (server-side): el owner/barbero también puede canjearla
+    // al agendar manualmente.
+    const redeemable = await getRedeemableReward(loyaltyRepo, {
+      organizationId: ctx.id,
+      customerPhone:  parsed.customerPhone,
+    })
+
     const result = await createManualAppointment(repo, {
       organizationId:  ctx.id,
       serviceIds:      parsed.serviceIds,
@@ -184,9 +235,36 @@ export async function createManualAppointmentAction(
       customerPhone:   parsed.customerPhone,
       createdByUserId: session.user.id,
       notes:           parsed.notes ?? null,
+      computeRewardDiscount: redeemable
+        ? (lines) => computeRewardDiscount(redeemable.program, lines)
+        : undefined,
     })
 
-    if (result.ok) revalidatePath(`/${slug}/panel`)
+    if (result.ok) {
+      revalidatePath(`/${slug}/panel`)
+      if (result.rewardApplied && redeemable) {
+        try {
+          await redeemReward(loyaltyRepo, {
+            organizationId: ctx.id,
+            customerPhone:  parsed.customerPhone,
+            rewardType:     redeemable.program.rewardType,
+            discountCop:    result.discountCop,
+            appointmentId:  result.appointmentId,
+          })
+          updateTag(`loyalty-stats:${ctx.id}`)
+          updateTag(`org-stats:${ctx.id}`)
+        } catch (e) {
+          log.error('loyalty.redeem.manual', {
+            err:            String(e),
+            organizationId: ctx.id,
+            appointmentId:  result.appointmentId,
+            customerPhone:  parsed.customerPhone,
+          })
+          try { await repo.markRedemptionFailed(ctx.id, result.appointmentId) }
+          catch (e2) { log.error('loyalty.markFailed.manual', { err: String(e2), appointmentId: result.appointmentId }) }
+        }
+      }
+    }
     return result.ok ? { ok: true } : result
   } catch (err) {
     if (err instanceof SubscriptionInactiveError) {
@@ -303,11 +381,32 @@ export async function updateAppointmentStatusAction(
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'appointment:update')
   try {
-    await changeAppointmentStatus(repo, {
+    const parsedStatus = statusSchema.parse(newStatus)
+    const { customerPhone, customerName } = await changeAppointmentStatus(repo, {
       organizationId: ctx.id,
       appointmentId,
-      newStatus: statusSchema.parse(newStatus),
+      newStatus: parsedStatus,
     })
+
+    // Lealtad: cada cita completada suma una visita. Aislado en su propio try para
+    // que un fallo del programa nunca tumbe el cambio de estado (la cita ya se completó).
+    if (parsedStatus === 'completed') {
+      try {
+        const program = await getLoyaltyProgram(ctx.id)
+        if (program?.isActive) {
+          await recordCompletedVisit(loyaltyRepo, {
+            organizationId: ctx.id,
+            customerPhone,
+            customerName,
+            program,
+          })
+          updateTag(`loyalty-stats:${ctx.id}`)
+          updateTag(`org-stats:${ctx.id}`)
+        }
+      } catch (e) {
+        log.error('loyalty.recordVisit', { err: String(e) })
+      }
+    }
 
     revalidatePath(`/${slug}/panel`)
     return { ok: true }

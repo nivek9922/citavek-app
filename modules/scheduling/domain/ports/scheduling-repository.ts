@@ -106,11 +106,11 @@ export interface SchedulingRepository {
 
   createAppointment(data: NewAppointment): Promise<{ id: string }>
 
-  /** Datos mínimos de una cita para validar un cambio de estado. */
+  /** Datos mínimos de una cita para validar un cambio de estado + orquestar lealtad. */
   getAppointmentForStatusChange(
     organizationId: string,
     appointmentId: string,
-  ): Promise<{ status: AppointmentStatusValue; startAt: Date } | null>
+  ): Promise<{ status: AppointmentStatusValue; startAt: Date; customerPhone: string; customerName: string } | null>
 
   updateAppointmentStatus(
     organizationId: string,
@@ -176,4 +176,11 @@ export interface SchedulingRepository {
     appointmentId: string,
     customerPhone: string,
   ): Promise<CustomerAppointment | null>
+
+  /**
+   * Marca una cita como con canje fallido: el descuento de lealtad se aplicó al
+   * precio pero redeemReward no pudo registrar el LoyaltyRedemption. El owner verá
+   * un indicador en la agenda para revisar la discrepancia manualmente.
+   */
+  markRedemptionFailed(organizationId: string, appointmentId: string): Promise<void>
 }

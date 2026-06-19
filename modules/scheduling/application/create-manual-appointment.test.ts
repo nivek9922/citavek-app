@@ -40,6 +40,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
     blockDate:                   vi.fn(async () => undefined),
     unblockDate:                 vi.fn(async () => undefined),
     getAppointmentForCustomer:   vi.fn(async () => null),
+    markRedemptionFailed:        vi.fn(async () => undefined),
   }
   return { repo, created }
 }
@@ -61,7 +62,7 @@ describe('createManualAppointment', () => {
 
     const res = await createManualAppointment(repo, baseInput)
 
-    expect(res).toEqual({ ok: true, appointmentId: 'apt-1', offHours: true })
+    expect(res).toEqual({ ok: true, appointmentId: 'apt-1', offHours: true, priceCop: 25000, discountCop: 0, rewardApplied: false })
     const apt = created[0]!
     expect(apt.source).toBe('manual')
     expect(apt.createdByUserId).toBe('user-1')
@@ -121,7 +122,7 @@ describe('createManualAppointment', () => {
 
     const res = await createManualAppointment(repo, baseInput)
 
-    expect(res).toEqual({ ok: true, appointmentId: 'apt-1', offHours: false })
+    expect(res).toEqual({ ok: true, appointmentId: 'apt-1', offHours: false, priceCop: 25000, discountCop: 0, rewardApplied: false })
     expect(created[0]!.isOffHours).toBe(false)
   })
 

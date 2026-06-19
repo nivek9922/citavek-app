@@ -7,11 +7,17 @@ export interface ChangeAppointmentStatusInput {
   newStatus:      AppointmentStatusValue
 }
 
-/** Use case: cambiar el estado de una cita validando la transición. */
+export interface ChangeAppointmentStatusResult {
+  customerPhone: string
+  customerName:  string
+}
+
+/** Use case: cambiar el estado de una cita validando la transición. Devuelve el
+ *  snapshot del cliente para que el delivery layer pueda orquestar lealtad. */
 export async function changeAppointmentStatus(
   repo: SchedulingRepository,
   input: ChangeAppointmentStatusInput,
-): Promise<void> {
+): Promise<ChangeAppointmentStatusResult> {
   const apt = await repo.getAppointmentForStatusChange(input.organizationId, input.appointmentId)
   if (!apt) throw new Error('Cita no encontrada')
 
@@ -26,4 +32,6 @@ export async function changeAppointmentStatus(
 
   const cancelledAt = input.newStatus === 'cancelled' ? new Date() : null
   await repo.updateAppointmentStatus(input.organizationId, input.appointmentId, input.newStatus, cancelledAt)
+
+  return { customerPhone: apt.customerPhone, customerName: apt.customerName }
 }

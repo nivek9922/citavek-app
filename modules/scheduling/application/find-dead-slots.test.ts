@@ -56,6 +56,7 @@ function createFakeRepo(opts: FakeOptions = {}): SchedulingRepository {
     blockDate:                     vi.fn(async () => undefined),
     unblockDate:                   vi.fn(async () => undefined),
     getAppointmentForCustomer:     vi.fn(async () => null),
+    markRedemptionFailed:          vi.fn(async () => undefined),
   }
 }
 

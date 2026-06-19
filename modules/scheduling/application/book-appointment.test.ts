@@ -41,6 +41,7 @@ function createFakeRepo(opts: FakeOptions = {}) {
     blockDate:                     vi.fn(async () => undefined),
     unblockDate:                   vi.fn(async () => undefined),
     getAppointmentForCustomer:     vi.fn(async () => null),
+    markRedemptionFailed:          vi.fn(async () => undefined),
   }
   return { repo, created }
 }
@@ -62,8 +63,33 @@ describe('bookAppointment', () => {
 
     const res = await bookAppointment(repo, { ...baseInput, startAt: inFuture() })
 
-    expect(res).toEqual({ ok: true, appointmentId: 'apt-1' })
+    expect(res).toEqual({ ok: true, appointmentId: 'apt-1', priceCop: 25000, discountCop: 0, rewardApplied: false })
     expect(created).toHaveLength(1)
+  })
+
+  it('aplica el descuento de lealtad inyectado sobre el precio derivado', async () => {
+    const { repo, created } = createFakeRepo()
+
+    const res = await bookAppointment(repo, {
+      ...baseInput,
+      startAt: inFuture(),
+      computeRewardDiscount: (lines) => lines.reduce((s, l) => s + l.priceCop, 0), // próxima cita gratis
+    })
+
+    expect(res).toEqual({ ok: true, appointmentId: 'apt-1', priceCop: 0, discountCop: 25000, rewardApplied: true })
+    expect(created[0]!.priceCop).toBe(0)
+  })
+
+  it('no canjea cuando el descuento es 0 (rewardApplied false)', async () => {
+    const { repo } = createFakeRepo()
+
+    const res = await bookAppointment(repo, {
+      ...baseInput,
+      startAt: inFuture(),
+      computeRewardDiscount: () => 0, // p.ej. FREE_SERVICE sin el servicio en el carrito
+    })
+
+    expect(res).toMatchObject({ ok: true, rewardApplied: false, discountCop: 0, priceCop: 25000 })
   })
 
   it('deriva precio y duración del SERVICIO, nunca del input (seguridad)', async () => {

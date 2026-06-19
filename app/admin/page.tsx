@@ -13,6 +13,7 @@ import {
   getOnboardingFunnel,
 } from '@/modules/tenancy/queries'
 import { getBarberLoginAdoptionStats } from '@/modules/analytics/queries'
+import { getLoyaltyAdoptionStats } from '@/modules/loyalty/queries'
 import { getSubscriptionMetrics } from '@/modules/subscriptions/queries'
 import { FunnelBar, HealthStat } from '@/modules/analytics/ui/admin-widgets'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
@@ -30,13 +31,14 @@ function daysSince(date: Date) {
 export default async function AdminPage() {
   await requireSuperAdmin()
 
-  const [orgs, kpis, branding, monthlyTraffic, funnel, barberLoginStats, subMetrics] = await Promise.all([
+  const [orgs, kpis, branding, monthlyTraffic, funnel, barberLoginStats, loyaltyAdoption, subMetrics] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
     getBrandingAdoptionStats(),
     getMonthlyTrafficByOrg(),
     getOnboardingFunnel(),
     getBarberLoginAdoptionStats(),
+    getLoyaltyAdoptionStats(),
     getSubscriptionMetrics(),
   ])
 
@@ -106,14 +108,15 @@ export default async function AdminPage() {
       {/* ── Torre de Control — 3 columnas ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
-        {/* Adopción de Marca */}
+        {/* Adopción de Features */}
         <section className="rounded-2xl border border-border bg-card/40 p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Adopción de Marca</h2>
+            <h2 className="text-sm font-semibold">Adopción de Features</h2>
           </div>
           <FunnelBar label="Logo subido"          count={branding.withLogo}        total={branding.totalActive} color="bg-violet-500" />
           <FunnelBar label="Color personalizado"  count={branding.withCustomColor} total={branding.totalActive} color="bg-indigo-500" />
+          <FunnelBar label="Programa de fidelidad" count={loyaltyAdoption.withLoyaltyActive} total={loyaltyAdoption.totalActive} color="bg-amber-500" />
           {branding.totalActive > 0 && (
             <p className="text-xs text-muted-foreground pt-1">
               {branding.totalActive - branding.withLogo}{' '}

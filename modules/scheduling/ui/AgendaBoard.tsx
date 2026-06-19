@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { formatInTimeZone } from 'date-fns-tz'
-import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone, Star, BellRing, CheckCheck } from 'lucide-react'
+import { CheckCircle2, XCircle, UserX, Clock, MessageSquare, Phone, Star, BellRing, CheckCheck, AlertTriangle } from 'lucide-react'
 import { buildReminderMessage, sanitizePhoneForWa } from '@/shared/format'
 import { cn } from '@/shared/ui/utils'
 import { formatCop } from '@/shared/format'
@@ -154,7 +154,14 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
 
         {/* Precio */}
         <div className="shrink-0 text-right">
-          <p className="text-sm font-bold text-primary">{formatCop(apt.priceCop)}</p>
+          <p className="text-sm font-bold text-primary flex items-center gap-1 justify-end">
+            {apt.redemptionFailed && (
+              <span title="Descuento aplicado sin canje registrado — revisar manualmente">
+                <AlertTriangle className="h-3.5 w-3.5 text-orange-400" aria-hidden />
+              </span>
+            )}
+            {formatCop(apt.priceCop)}
+          </p>
         </div>
       </div>
 

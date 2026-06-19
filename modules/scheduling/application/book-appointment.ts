@@ -8,10 +8,13 @@ export interface BookAppointmentInput {
   startAt:        Date
   customerName:   string
   customerPhone:  string
+  // Hook de lealtad inyectado por el delivery layer: dado el desglose de líneas
+  // devuelve el descuento en COP. Mantiene scheduling desacoplado de loyalty.
+  computeRewardDiscount?: (lines: { serviceId: string; priceCop: number }[]) => number
 }
 
 export type BookAppointmentResult =
-  | { ok: true; appointmentId: string }
+  | { ok: true; appointmentId: string; priceCop: number; discountCop: number; rewardApplied: boolean }
   | { ok: false; error: string }
 
 /** Use case: reservar una cita desde la página pública. */
@@ -37,6 +40,12 @@ export async function bookAppointment(
     return { ok: false, error: 'Este horario ya no está disponible.' }
   }
 
+  // Recompensa de lealtad (server-side): el descuento se deriva del desglose real,
+  // nunca de lo que diga el cliente.
+  const discountCop   = input.computeRewardDiscount ? input.computeRewardDiscount(resolved.lines) : 0
+  const priceCop      = Math.max(0, resolved.totalPriceCop - discountCop)
+  const rewardApplied = discountCop > 0
+
   const customer = await repo.upsertCustomer(input.organizationId, input.customerName, input.customerPhone)
 
   const appointment = await repo.createAppointment({
@@ -49,10 +58,10 @@ export async function bookAppointment(
     startAt:        input.startAt,
     endAt,
     durationMin:    resolved.totalDurationMin,
-    priceCop:       resolved.totalPriceCop,
+    priceCop,
     status:         'confirmed',
     source:         'online',
   })
 
-  return { ok: true, appointmentId: appointment.id }
+  return { ok: true, appointmentId: appointment.id, priceCop, discountCop, rewardApplied }
 }
