@@ -51,6 +51,12 @@ enum RewardType {
   FREE_SERVICE    // un servicio específico gratis
 }
 
+// Tipo de comisión del barbero (configurable por el owner, 1:1 con Barber).
+enum CommissionType {
+  PERCENTAGE        // % del precio total de cada cita completada
+  FIXED_PER_SERVICE // monto fijo en COP por cada servicio individual completado
+}
+
 // Plan de suscripción. `basic` es el plan actual; `pro` (WhatsApp automatizado) llega después.
 enum PlanType {
   basic
@@ -105,6 +111,9 @@ model Organization {
   loyaltyProgram     LoyaltyProgram?
   loyaltyCards       LoyaltyCard[]
   loyaltyRedemptions LoyaltyRedemption[]
+
+  barberCommissions     BarberCommission[]
+  commissionSettlements CommissionSettlement[]
 
   @@index([status])
   @@map("organization")
@@ -260,6 +269,9 @@ model Barber {
   scheduleExceptions ScheduleException[]
   reviews            Review[]
   barberInvitations  BarberInvitation[]
+
+  commission  BarberCommission?
+  settlements CommissionSettlement[]
 
   @@index([organizationId, active, sortOrder])
   @@index([branchId])
@@ -614,4 +626,55 @@ model LoyaltyRedemption {
 
   @@index([organizationId, createdAt])
   @@map("loyalty_redemption")
+}
+
+// ──────────────────── Comisiones por barbero ────────────────────
+// Configuración 1:1 con Barber (barberId @unique). El owner define el % o el
+// monto fijo por servicio. Sin registro → la comisión del barbero es 0.
+
+model BarberCommission {
+  id             String @id @default(cuid())
+  barberId       String @unique
+  organizationId String
+
+  commissionType CommissionType
+  percentage     Int? // 1-100 si commissionType = PERCENTAGE
+  fixedAmount    Int? // COP fijo por servicio si commissionType = FIXED_PER_SERVICE
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  barber       Barber       @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("barber_commission")
+}
+
+// Histórico de liquidaciones (pagos al barbero). La comisión se calcula on-demand
+// desde Appointment + BarberCommission; aquí solo se "congela" lo pagado en un período.
+model CommissionSettlement {
+  id             String @id @default(cuid())
+  barberId       String
+  organizationId String
+
+  periodStart DateTime @db.Timestamptz(6)
+  periodEnd   DateTime @db.Timestamptz(6)
+
+  grossRevenueCop  Int // total facturado por el barbero en el período
+  commissionCop    Int // lo que le corresponde al barbero
+  appointmentCount Int // citas completadas en el período
+
+  paid   Boolean   @default(false)
+  paidAt DateTime? @db.Timestamptz(6)
+  notes  String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  barber       Barber       @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, barberId])
+  @@index([organizationId, periodStart])
+  @@map("commission_settlement")
 }

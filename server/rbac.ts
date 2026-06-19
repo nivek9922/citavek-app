@@ -18,6 +18,10 @@ export const permissions = {
   'analytics:revenue':    ['owner'],
   'analytics:agenda':     ['owner', 'barber'],
   'customer:update':      ['owner'],
+  'commission:configure': ['owner'],
+  'commission:read:all':  ['owner'],
+  'commission:settle':    ['owner'],
+  'commission:read:own':  ['barber'],
 } as const satisfies Record<string, string[]>
 
 export type Permission = keyof typeof permissions
