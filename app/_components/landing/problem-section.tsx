@@ -1,4 +1,4 @@
-import { MessageSquare, UserX, BarChart2 } from 'lucide-react'
+import { MessageSquare, UserX, BarChart2, ArrowDown } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
 
 const problems = [
@@ -13,6 +13,7 @@ const problems = [
     title: 'No-shows sin aviso',
     description:
       'Clientes que no llegan y no avisan. Tiempo perdido, sillas vacías y un día que pudo rendir mucho más.',
+    solutionAnchor: '#no-shows',
   },
   {
     icon: BarChart2,
@@ -41,12 +42,21 @@ export function ProblemSection() {
         <div className="grid gap-6 sm:grid-cols-3">
           {problems.map((problem, i) => (
             <ScrollReveal key={problem.title} delay={i * 100}>
-              <div className="sf-hover-lift rounded-2xl border border-border bg-card p-6 shadow-sf-card transition-smooth">
-                <div className="mb-4 inline-flex rounded-xl bg-destructive/10 p-3">
+              <div className="sf-hover-lift flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-sf-card transition-smooth">
+                <div className="mb-4 inline-flex w-fit rounded-xl bg-destructive/10 p-3">
                   <problem.icon className="h-6 w-6 text-destructive" />
                 </div>
                 <h3 className="mb-2 font-semibold text-foreground">{problem.title}</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">{problem.description}</p>
+                {'solutionAnchor' in problem && (
+                  <a
+                    href={problem.solutionAnchor}
+                    className="group/sol mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary/80"
+                  >
+                    Esto tiene solución
+                    <ArrowDown className="h-3.5 w-3.5 transition-transform group-hover/sol:translate-y-0.5" />
+                  </a>
+                )}
               </div>
             </ScrollReveal>
           ))}

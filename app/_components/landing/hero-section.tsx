@@ -67,7 +67,7 @@ export function HeroSection() {
         )}
         style={{ transitionDelay: '350ms' }}
       >
-        Citavek es la plataforma de reservas online diseñada para barberías modernas en Colombia. Tu agenda, tu equipo y tus clientes — todo en un solo lugar.
+        La plataforma de reservas para barberías modernas en Colombia. Agenda, fidelidad de clientes y control de caja — todo en un solo lugar.
       </p>
 
       {/* CTAs */}

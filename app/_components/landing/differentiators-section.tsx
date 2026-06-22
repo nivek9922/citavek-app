@@ -1,4 +1,4 @@
-import { MapPin, Gift, Link2, Sparkles } from 'lucide-react'
+import { MapPin, Gift, Link2, Sparkles, HandCoins } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
 
 const items = [
@@ -26,6 +26,13 @@ const items = [
     description:
       'Una experiencia de reserva que proyecta la misma calidad que tu trabajo. No una app genérica.',
   },
+  {
+    icon: HandCoins,
+    title: 'Hecho para que retengas clientes y le pagues bien a tu equipo',
+    description:
+      'Fidelidad, comisiones automáticas y control de no-shows. Citavek cuida tu relación con el cliente y tus números, no solo tu calendario.',
+    wide: true,
+  },
 ] as const
 
 export function DifferentiatorsSection() {
@@ -46,8 +53,12 @@ export function DifferentiatorsSection() {
 
         <div className="grid gap-6 sm:grid-cols-2">
           {items.map((item, i) => (
-            <ScrollReveal key={item.title} delay={i * 100}>
-              <div className="sf-hover-lift flex gap-4 rounded-2xl border border-border bg-card p-6 shadow-sf-card transition-smooth hover:border-primary/30">
+            <ScrollReveal
+              key={item.title}
+              delay={i * 100}
+              className={'wide' in item ? 'sm:col-span-2' : undefined}
+            >
+              <div className="sf-hover-lift flex h-full gap-4 rounded-2xl border border-border bg-card p-6 shadow-sf-card transition-smooth hover:border-primary/30">
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
                   <item.icon className="h-5 w-5 text-primary" />
                 </div>

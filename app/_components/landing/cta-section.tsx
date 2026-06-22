@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { ArrowRight, MessageCircle } from 'lucide-react'
 import { ScrollReveal } from './scroll-reveal'
-import { SUPPORT_WHATSAPP as WA_NUMBER } from '@/shared/constants/billing'
+import { supportWhatsAppLink } from '@/shared/constants/billing'
+
+const WHATSAPP_HREF = supportWhatsAppLink(
+  'Hola, quiero solicitar el código de acceso para registrar mi barbería en Citavek 💈',
+)
 
 export function CtaSection() {
   return (
@@ -26,27 +30,27 @@ export function CtaSection() {
             <span className="text-primary">tu barbería?</span>
           </h2>
           <p className="mt-6 text-base text-muted-foreground sm:text-lg">
-            Únete a las barberías que ya están usando Citavek. Acceso por código durante el período de lanzamiento — escríbenos para solicitar el tuyo.
+            Únete a las barberías que ya están usando Citavek. El acceso es por código durante el lanzamiento — escríbenos por WhatsApp y te lo damos.
           </p>
         </ScrollReveal>
 
         <ScrollReveal delay={200} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Link
-            href="/registro"
-            className="sf-hover-lift group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-sm font-semibold text-primary-foreground shadow-sf-selected transition-all hover:brightness-105 sm:w-auto"
-          >
-            Registra tu barbería
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
           <a
-            href={`https://wa.me/${WA_NUMBER}?text=Hola%2C%20quiero%20solicitar%20mi%20c%C3%B3digo%20de%20acceso%20a%20Citavek`}
+            href={WHATSAPP_HREF}
             target="_blank"
             rel="noopener noreferrer"
-            className="sf-hover-lift inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-4 text-sm font-medium text-foreground shadow-sf-card transition-all hover:border-primary/40 sm:w-auto"
+            className="sf-hover-lift group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-sm font-semibold text-primary-foreground shadow-sf-selected transition-all hover:brightness-105 sm:w-auto"
           >
-            <MessageCircle className="h-4 w-4 text-green-600" />
-            Solicitar código de acceso
+            <MessageCircle className="h-4 w-4" />
+            Solicitar código por WhatsApp
           </a>
+          <Link
+            href="/registro"
+            className="sf-hover-lift group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-4 text-sm font-medium text-foreground shadow-sf-card transition-all hover:border-primary/40 sm:w-auto"
+          >
+            Ya tengo código — Registrarme
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
         </ScrollReveal>
 
         <ScrollReveal delay={400}>

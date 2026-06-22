@@ -5,6 +5,7 @@ import { HeroSection } from './_components/landing/hero-section'
 import { ProblemSection } from './_components/landing/problem-section'
 import { HowItWorksSection } from './_components/landing/how-it-works-section'
 import { FeaturesSection } from './_components/landing/features-section'
+import { FinancialFeaturesSection } from './_components/landing/financial-features-section'
 import { DifferentiatorsSection } from './_components/landing/differentiators-section'
 import { CtaSection } from './_components/landing/cta-section'
 import { FooterYear } from './_components/landing/footer-year'
@@ -14,7 +15,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://citavek.app'
 export const metadata: Metadata = {
   title: 'Citavek — Reservas online y gestión para barberías',
   description:
-    'Citavek es la plataforma de reservas online diseñada para barberías modernas en Colombia. Agenda digital, motor de reservas, gestión de equipo y métricas del negocio — todo en un solo lugar.',
+    'Citavek es la plataforma de reservas online diseñada para barberías modernas en Colombia. Agenda digital, motor de reservas, programa de fidelidad, comisiones y cierre de caja — retén clientes y controla tus números en un solo lugar.',
   openGraph: {
     type: 'website',
     url: APP_URL,
@@ -50,6 +51,7 @@ export default function HomePage() {
         <ProblemSection />
         <HowItWorksSection />
         <FeaturesSection />
+        <FinancialFeaturesSection />
         <DifferentiatorsSection />
         <CtaSection />
 
