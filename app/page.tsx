@@ -10,7 +10,7 @@ import { DifferentiatorsSection } from './_components/landing/differentiators-se
 import { CtaSection } from './_components/landing/cta-section'
 import { FooterYear } from './_components/landing/footer-year'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://citavek.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://citavek.com'
 
 export const metadata: Metadata = {
   title: 'Citavek — Reservas online y gestión para barberías',
@@ -26,10 +26,10 @@ export const metadata: Metadata = {
     locale: 'es_CO',
     images: [
       {
-        url: `${APP_URL}/opengraph-image`,
+        url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Citavek — Software para barberías',
+        alt: 'Citavek — Reservas online para barberías',
       },
     ],
   },
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title: 'Citavek — Reservas online para barberías',
     description:
       'Tu agenda, tus clientes y tu equipo — todo en un solo panel. Reservas online para barberías modernas en Colombia.',
-    images: [`${APP_URL}/opengraph-image`],
+    images: ['/opengraph-image'],
   },
 }
 

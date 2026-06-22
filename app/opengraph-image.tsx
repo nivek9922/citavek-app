@@ -1,19 +1,32 @@
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import { ImageResponse } from 'next/og'
 
 // OG image global de Citavek para las rutas no-tenant (/, /login, /registro …).
 // El OG por tenant vive en app/[tenant]/opengraph-image.tsx; este cubre la marca
-// global y evita que al compartir el link salga el preview por defecto de Vercel.
-// Se genera al vuelo con ImageResponse (sin binarios), misma estética que el OG
-// por tenant: fondo oscuro + accent bar con el color de marca.
+// global y evita que al compartir el link (sobre todo por WhatsApp) salga un
+// preview genérico. Se genera al vuelo con ImageResponse a partir del logo real
+// de marca (app/_brand/citavek-logo.png, ya recortado a icono + wordmark y con el
+// fondo en transparente para que asiente sin costura sobre el warm-black).
 
-export const alt = 'Citavek — Reservas y gestión para barberías'
+export const alt = 'Citavek — Reservas online para barberías'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-// Color primario de marca (equivalente al --primary del tema, en hex para OG).
-const BRAND = '#E0A300'
+// Colores de marca (en hex para el renderer de OG).
+const BRAND = '#E0A300' // --primary (ámbar)
+const BG = '#161412' // warm-black del storefront/landing
+const FG = '#F3EFE9' // warm off-white
 
-export default function OgImage() {
+export default async function OgImage() {
+  // El logo se embebe como data-URI. El literal `new URL(..., import.meta.url)` hace
+  // que el file-tracer de Next incluya el binario en el bundle de producción; se lee
+  // con fs (fetch de file:// no está soportado en el runtime Node de Next).
+  const logoData = await readFile(
+    fileURLToPath(new URL('./_brand/citavek-logo.png', import.meta.url)),
+  )
+  const logoSrc = `data:image/png;base64,${logoData.toString('base64')}`
+
   return new ImageResponse(
     (
       <div
@@ -22,14 +35,14 @@ export default function OgImage() {
           height: 630,
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0f0f0f 0%, #1c1c1c 100%)',
-          padding: '64px 72px',
+          gap: 28,
+          background: BG,
           position: 'relative',
-          fontFamily: 'sans-serif',
         }}
       >
-        {/* Accent bar superior con color de marca */}
+        {/* Accent bar superior con el color de marca */}
         <div
           style={{
             position: 'absolute',
@@ -41,55 +54,21 @@ export default function OgImage() {
           }}
         />
 
-        {/* Wordmark */}
-        <div
-          style={{
-            color: '#ffffff',
-            fontSize: 132,
-            fontWeight: 800,
-            letterSpacing: '-2px',
-            lineHeight: 1,
-          }}
-        >
-          Citavek
-        </div>
+        {/* Logo real de marca (icono + wordmark CITAVEK) */}
+        <img src={logoSrc} width={474} height={320} alt="Citavek" />
 
-        {/* Tagline */}
+        {/* Tagline de producto */}
         <div
           style={{
-            marginTop: 20,
-            color: '#a3a3a3',
-            fontSize: 36,
-            fontWeight: 400,
+            color: FG,
+            fontSize: 46,
+            fontWeight: 500,
+            letterSpacing: '-0.5px',
+            textAlign: 'center',
+            maxWidth: 900,
           }}
         >
-          Reservas y gestión para barberías
-        </div>
-
-        {/* CTA */}
-        <div
-          style={{
-            marginTop: 40,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 24,
-          }}
-        >
-          <div
-            style={{
-              background: BRAND,
-              color: '#000000',
-              fontSize: 24,
-              fontWeight: 700,
-              padding: '14px 34px',
-              borderRadius: 12,
-            }}
-          >
-            Reserva en línea
-          </div>
-          <div style={{ color: '#666666', fontSize: 22 }}>
-            Sin filas · Sin llamadas
-          </div>
+          Reservas online para barberías
         </div>
       </div>
     ),

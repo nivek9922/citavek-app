@@ -24,7 +24,7 @@ const title = 'Citavek — Software para barberías'
 const description = 'Reservas online y gestión para barberías en Colombia.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://citavek.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://citavek.com'),
   title,
   description,
   // openGraph/twitter globales para las rutas no-tenant: sin esto, al compartir
