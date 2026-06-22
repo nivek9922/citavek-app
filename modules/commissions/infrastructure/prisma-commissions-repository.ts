@@ -152,4 +152,37 @@ export const prismaCommissionsRepository: CommissionsRepository = {
       createdAt:        r.createdAt,
     }))
   },
+
+  async findOverlappingSettlement(organizationId, barberId, periodStart, periodEnd): Promise<SettlementRecord | null> {
+    const row = await db.commissionSettlement.findFirst({
+      where: {
+        organizationId,
+        barberId,
+        periodStart: { lt: periodEnd },
+        periodEnd:   { gt: periodStart },
+      },
+      orderBy: { createdAt: 'desc' },
+      select:  {
+        id: true, barberId: true, periodStart: true, periodEnd: true,
+        grossRevenueCop: true, commissionCop: true, appointmentCount: true,
+        paid: true, paidAt: true, notes: true, createdAt: true,
+        barber: { select: { displayName: true, nickname: true } },
+      },
+    })
+    if (!row) return null
+    return {
+      id:               row.id,
+      barberId:         row.barberId,
+      barberName:       row.barber.nickname ?? row.barber.displayName,
+      periodStart:      row.periodStart,
+      periodEnd:        row.periodEnd,
+      grossRevenueCop:  row.grossRevenueCop,
+      commissionCop:    row.commissionCop,
+      appointmentCount: row.appointmentCount,
+      paid:             row.paid,
+      paidAt:           row.paidAt,
+      notes:            row.notes,
+      createdAt:        row.createdAt,
+    }
+  },
 }

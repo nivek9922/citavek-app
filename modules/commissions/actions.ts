@@ -50,11 +50,16 @@ const periodSchema = z.object({
 
 export type PreviewSettlementInput = z.infer<typeof periodSchema>
 
+export type PreviewSettlementData = BarberEarnings & {
+  periodStart: Date
+  periodEnd:   Date
+}
+
 /** Calcula (sin persistir) el facturado/comisión de un barbero en un período. Owner-only. */
 export async function previewSettlementAction(
   slug: string,
   input: PreviewSettlementInput,
-): Promise<{ ok: true; data: BarberEarnings } | { ok: false; error: string }> {
+): Promise<{ ok: true; data: PreviewSettlementData } | { ok: false; error: string }> {
   const ctx = await getTenantContext(slug)
   await requirePermission(ctx.id, 'commission:read:all')
 
@@ -62,7 +67,7 @@ export async function previewSettlementAction(
     const parsed         = periodSchema.parse(input)
     const { start, end } = computeSettlementPeriod(parsed.kind, ctx.timezone, parsed.startStr, parsed.endStr)
     const data           = await getBarberEarnings(repo, { organizationId: ctx.id, barberId: parsed.barberId, start, end })
-    return { ok: true, data }
+    return { ok: true, data: { ...data, periodStart: start, periodEnd: end } }
   } catch (err) {
     log.error('previewSettlementAction', { err: String(err) })
     return { ok: false, error: 'No se pudo calcular la liquidación.' }

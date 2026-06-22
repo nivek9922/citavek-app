@@ -84,4 +84,13 @@ export interface CommissionsRepository {
 
   /** Historial de liquidaciones (desc por createdAt, limitado). Si `barberId`, filtra. */
   listSettlements(organizationId: string, barberId?: string): Promise<SettlementRecord[]>
+
+  /** Primera liquidación cuyo período [periodStart, periodEnd) se solape con el rango dado.
+   *  Condición: existente.start < newEnd AND existente.end > newStart. */
+  findOverlappingSettlement(
+    organizationId: string,
+    barberId:       string,
+    periodStart:    Date,
+    periodEnd:      Date,
+  ): Promise<SettlementRecord | null>
 }

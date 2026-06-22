@@ -17,8 +17,8 @@ import {
 } from '@/shared/ui/alert-dialog'
 import { formatCop } from '@/shared/format'
 import { previewSettlementAction, createSettlementAction } from '../actions'
+import type { PreviewSettlementData } from '../actions'
 import type { BarberCommissionRecord, SettlementRecord } from '../domain/ports/commissions-repository'
-import type { BarberEarnings } from '../application/get-barber-earnings'
 
 type Kind = 'week' | 'month' | 'custom'
 
@@ -42,7 +42,7 @@ export function SettlementsManager({
   const [kind, setKind]         = useState<Kind>('week')
   const [start, setStart]       = useState<Date | undefined>()
   const [end, setEnd]           = useState<Date | undefined>()
-  const [preview, setPreview]   = useState<BarberEarnings | null>(null)
+  const [preview, setPreview]   = useState<PreviewSettlementData | null>(null)
   const [notes, setNotes]       = useState('')
   const [isPending, startTransition] = useTransition()
 
@@ -88,6 +88,15 @@ export function SettlementsManager({
   }
 
   const barberName = barbers.find((b) => b.barberId === barberId)?.displayName ?? 'el barbero'
+
+  const conflictSettlement = preview
+    ? settlements.find((s) =>
+        s.barberId === barberId &&
+        s.paid &&
+        new Date(s.periodStart) < preview.periodEnd &&
+        new Date(s.periodEnd)   > preview.periodStart
+      ) ?? null
+    : null
 
   return (
     <div className="space-y-6">
@@ -167,9 +176,19 @@ export function SettlementsManager({
                 />
               </div>
 
+              {conflictSettlement && (
+                <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+                  <span className="font-medium">Este período ya fue liquidado</span> el{' '}
+                  {(conflictSettlement.paidAt ?? conflictSettlement.createdAt).toLocaleDateString('es-CO', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                  })}{' '}
+                  — comisión {formatCop(conflictSettlement.commissionCop)} pagada. Revisa el historial.
+                </div>
+              )}
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button disabled={isPending || preview.appointmentCount === 0} size="sm" className="w-full">
+                  <Button disabled={isPending || preview.appointmentCount === 0 || !!conflictSettlement} size="sm" className="w-full">
                     <CheckCircle2 className="h-4 w-4" /> Marcar como pagado
                   </Button>
                 </AlertDialogTrigger>

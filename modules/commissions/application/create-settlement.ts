@@ -26,6 +26,24 @@ export async function createSettlement(
     return { ok: false, error: 'El rango de fechas de la liquidación es inválido.' }
   }
 
+  const existing = await repo.findOverlappingSettlement(
+    input.organizationId, input.barberId, input.start, input.end,
+  )
+  if (existing) {
+    if (existing.paid) {
+      const d = (existing.paidAt ?? existing.createdAt)
+        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+      return {
+        ok: false,
+        error: `Ya se liquidó este período el ${d}. No es posible registrar dos pagos para el mismo período.`,
+      }
+    }
+    return {
+      ok: false,
+      error: 'Ya existe una liquidación pendiente para este período. Elimínala desde el historial antes de crear una nueva.',
+    }
+  }
+
   const earnings = await getBarberEarnings(repo, {
     organizationId: input.organizationId,
     barberId:       input.barberId,
