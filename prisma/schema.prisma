@@ -115,6 +115,9 @@ model Organization {
   barberCommissions     BarberCommission[]
   commissionSettlements CommissionSettlement[]
 
+  noShowPolicy  NoShowPolicy?
+  noShowStrikes NoShowStrike[]
+
   @@index([status])
   @@map("organization")
 }
@@ -380,7 +383,8 @@ model Appointment {
   updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
   cancelledAt DateTime? @db.Timestamptz(6)
 
-  review Review?
+  review       Review?
+  noShowStrike NoShowStrike?
 
   @@index([organizationId, startAt])
   @@index([organizationId, barberId, startAt])
@@ -677,4 +681,45 @@ model CommissionSettlement {
   @@index([organizationId, barberId])
   @@index([organizationId, periodStart])
   @@map("commission_settlement")
+}
+
+// ──────────────────── Sistema anti no-show ────────────────────
+// Configuración 1:1 con Organization (patrón upsert). El owner define el umbral
+// de strikes en los últimos 90 días que activa la alerta visual en la agenda.
+// v1: solo alerta — no bloquea al cliente automáticamente.
+
+model NoShowPolicy {
+  id              String   @id @default(cuid())
+  organizationId  String   @unique
+  isActive        Boolean  @default(true)
+  strikeThreshold Int      @default(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt      @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("no_show_policy")
+}
+
+// Un strike por cita marcada como no_show. appointmentId @unique previene
+// duplicados a nivel de DB aunque el trigger se ejecute dos veces.
+model NoShowStrike {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerPhone  String
+  customerName   String
+  appointmentId  String    @unique
+
+  forgiven     Boolean   @default(false)
+  forgivenAt   DateTime? @db.Timestamptz(6)
+  forgivenNote String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  appointment  Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, customerPhone, createdAt])
+  @@map("no_show_strike")
 }

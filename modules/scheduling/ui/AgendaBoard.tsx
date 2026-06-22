@@ -9,6 +9,7 @@ import { formatCop } from '@/shared/format'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { updateAppointmentStatusAction } from '@/modules/scheduling/actions'
 import { generateReviewLinkAction } from '@/modules/reviews/actions'
+import { RiskBadge } from '@/modules/no-show-tracking/ui/RiskBadge'
 import type { AppointmentRow } from '@/modules/analytics/queries'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -33,9 +34,10 @@ interface Props {
   timezone:         string
   now:              number
   organizationName: string
+  atRiskPhones?:    Set<string>
 }
 
-export function AgendaBoard({ appointments, tenantSlug, timezone, now, organizationName }: Props) {
+export function AgendaBoard({ appointments, tenantSlug, timezone, now, organizationName, atRiskPhones }: Props) {
   if (appointments.length === 0) {
     return (
       <EmptyState
@@ -49,13 +51,13 @@ export function AgendaBoard({ appointments, tenantSlug, timezone, now, organizat
   return (
     <div className="space-y-2">
       {appointments.map((apt) => (
-        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} now={now} organizationName={organizationName} />
+        <AppointmentCard key={apt.id} apt={apt} tenantSlug={tenantSlug} timezone={timezone} now={now} organizationName={organizationName} isAtRisk={atRiskPhones?.has(apt.customerPhone) ?? false} />
       ))}
     </div>
   )
 }
 
-function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: { apt: AppointmentRow; tenantSlug: string; timezone: string; now: number; organizationName: string }) {
+function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName, isAtRisk }: { apt: AppointmentRow; tenantSlug: string; timezone: string; now: number; organizationName: string; isAtRisk: boolean }) {
   const [isPending, setIsPending] = useState(false)
   const [reminded, setReminded]   = useState(false)
   const isFuture = new Date(apt.startAt).getTime() > now
@@ -122,6 +124,9 @@ function AppointmentCard({ apt, tenantSlug, timezone, now, organizationName }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold truncate">{apt.customerName}</p>
+            {isAtRisk && (
+              <RiskBadge customerPhone={apt.customerPhone} customerName={apt.customerName} tenantSlug={tenantSlug} />
+            )}
             <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium', STATUS_COLOR[apt.status])}>
               {STATUS_LABELS[apt.status]}
             </span>

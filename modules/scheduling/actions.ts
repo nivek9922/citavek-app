@@ -26,6 +26,9 @@ import { getLoyaltyProgram }     from '@/modules/loyalty/queries'
 import { recordCompletedVisit }  from '@/modules/loyalty/application/record-completed-visit'
 import { getRedeemableReward, redeemReward } from '@/modules/loyalty/application/redeem-reward'
 import { computeRewardDiscount } from '@/modules/loyalty/domain/loyalty'
+// Orquestación de seguimiento de no-shows (delivery layer): registrar strike al marcar no_show.
+import { prismaNoShowRepository as noShowRepo } from '@/modules/no-show-tracking/infrastructure/prisma-no-show-repository'
+import { recordStrike as recordNoShowStrike } from '@/modules/no-show-tracking/application/record-strike'
 
 // ── Slots disponibles (lectura pública / read side) ─────────────────────────
 // serviceIds vienen del cliente (el usuario eligió los servicios), pero la
@@ -405,6 +408,20 @@ export async function updateAppointmentStatusAction(
         }
       } catch (e) {
         log.error('loyalty.recordVisit', { err: String(e) })
+      }
+    }
+
+    if (parsedStatus === 'no_show') {
+      try {
+        await recordNoShowStrike(noShowRepo, {
+          organizationId: ctx.id,
+          customerPhone,
+          customerName,
+          appointmentId,
+        })
+        updateTag(`no-show-risk:${ctx.id}`)
+      } catch (e) {
+        log.error('noshow.recordStrike', { err: String(e) })
       }
     }
 

@@ -23,6 +23,7 @@ import { AgendaWeekView } from '@/modules/scheduling/ui/AgendaWeekView'
 import { ManualAppointmentModal } from '@/modules/scheduling/ui/ManualAppointmentModal'
 import { OnboardingWidget, OnboardingSuccessStrip } from '@/modules/onboarding/ui/OnboardingWidget'
 import { OnboardingWizard } from '@/modules/onboarding/ui/OnboardingWizardClient'
+import { getAtRiskPhones } from '@/modules/no-show-tracking/queries'
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -82,13 +83,14 @@ export default async function PanelPage({
     + ' – '
     + format(parseISO(weekEndStr), "d MMM yyyy", { locale: es })
 
-  const [kpis, appointments, weekDays, services, barbers, teamStats] = await Promise.all([
+  const [kpis, appointments, weekDays, services, barbers, teamStats, atRiskPhones] = await Promise.all([
     getDashboardKPIs(ctx.id, ctx.timezone),
     isWeekView ? Promise.resolve([]) : getAppointmentsForDate(ctx.id, ctx.timezone, selectedDate, currentBarberId),
     isWeekView ? getAppointmentsForWeek(ctx.id, ctx.timezone, weekStartStr, currentBarberId) : Promise.resolve([]),
     listActiveServices(ctx.id),
     listActiveBarbers(ctx.id),
     !isBarber ? getTeamStats(ctx.id) : Promise.resolve(null),
+    getAtRiskPhones(ctx.id),
   ])
 
   // Instante de render del servidor: la agenda necesita "ahora" para marcar la
@@ -278,7 +280,7 @@ export default async function PanelPage({
               isToday={selectedDate === today}
               count={appointments.length}
             />
-            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} now={renderedAt} organizationName={ctx.name} />
+            <AgendaBoard appointments={appointments} tenantSlug={slug} timezone={ctx.timezone} now={renderedAt} organizationName={ctx.name} atRiskPhones={atRiskPhones} />
           </>
         )}
       </section>
