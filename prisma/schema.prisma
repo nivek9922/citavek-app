@@ -201,15 +201,22 @@ model Branch {
 
 // ──────────────────── Marca blanca (1:1) ────────────────────
 
+enum StorefrontThemeMode {
+  DARK
+  LIGHT
+  AUTO
+}
+
 model Branding {
   id             String       @id @default(cuid())
   organizationId String       @unique
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  primaryColor String  @default("#E0A300") // hex; se deriva a OKLCH en runtime
-  logoUrl      String?
-  tagline      String?
-  coverUrl     String?
+  primaryColor    String             @default("#E0A300") // hex; se deriva a OKLCH en runtime
+  logoUrl         String?
+  tagline         String?
+  coverUrl        String?
+  storefrontTheme StorefrontThemeMode @default(DARK)
 
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 

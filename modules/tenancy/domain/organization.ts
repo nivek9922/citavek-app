@@ -9,11 +9,14 @@ export interface Organization {
   status: OrgStatus
 }
 
+export type StorefrontThemeMode = 'DARK' | 'LIGHT' | 'AUTO'
+
 export interface BrandingData {
-  primaryColor: string
-  tagline?:     string
-  logoUrl?:     string | null
-  coverUrl?:    string | null
+  primaryColor:    string
+  tagline?:        string
+  logoUrl?:        string | null
+  coverUrl?:       string | null
+  storefrontTheme?: StorefrontThemeMode
 }
 
 export interface OrgInfoData {

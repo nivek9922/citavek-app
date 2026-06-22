@@ -23,7 +23,7 @@ const PALETTE = [
 interface Props {
   tenantSlug: string
   org:        { name: string; city: string | null; address: string | null; phone: string | null }
-  branding:   { primaryColor: string; logoUrl: string | null; tagline: string | null; coverUrl: string | null } | null
+  branding:   { primaryColor: string; logoUrl: string | null; tagline: string | null; coverUrl: string | null; storefrontTheme: 'DARK' | 'LIGHT' | 'AUTO' | null } | null
 }
 
 export function BrandingSettings({ tenantSlug, org, branding }: Props) {
@@ -179,6 +179,31 @@ function BrandForm({ tenantSlug, branding }: { tenantSlug: string; branding: Pro
 
       <Field label="Eslogan" name="tagline" defaultValue={branding?.tagline ?? ''}
         placeholder="El estilo del Valle, en tus manos." />
+
+      <div className="space-y-2">
+        <Label>Apariencia de tu página de reservas</Label>
+        <div className="space-y-2">
+          {([
+            { value: 'DARK',  label: 'Oscuro (recomendado)' },
+            { value: 'LIGHT', label: 'Claro' },
+            { value: 'AUTO',  label: 'Según el dispositivo del cliente' },
+          ] as const).map(({ value, label }) => (
+            <label key={value} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 has-checked:border-primary has-checked:bg-primary/5 transition-smooth">
+              <input
+                type="radio"
+                name="storefrontTheme"
+                value={value}
+                defaultChecked={(branding?.storefrontTheme ?? 'DARK') === value}
+                className="accent-primary"
+              />
+              <span className="text-sm">{label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Tus clientes verán tu página en este modo al entrar.
+        </p>
+      </div>
 
       <SaveBtn isPending={isPending} saved={saved} />
     </form>

@@ -18,8 +18,9 @@ import { prismaTenancyRepository as repo } from './infrastructure/prisma-tenancy
 import { cloudinaryAdapter } from '@/server/cloudinary'
 
 const brandingSchema = z.object({
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  tagline:      z.string().max(120).optional(),
+  primaryColor:    z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  tagline:         z.string().max(120).optional(),
+  storefrontTheme: z.enum(['DARK', 'LIGHT', 'AUTO']).default('DARK'),
 })
 
 const infoSchema = z.object({
@@ -34,8 +35,9 @@ export async function updateBrandingAction(slug: string, formData: FormData) {
   await requirePermission(ctx.id, 'branding:update')
 
   const input = brandingSchema.parse({
-    primaryColor: formData.get('primaryColor'),
-    tagline:      formData.get('tagline') || undefined,
+    primaryColor:    formData.get('primaryColor'),
+    tagline:         formData.get('tagline') || undefined,
+    storefrontTheme: formData.get('storefrontTheme'),
   })
 
   await updateBranding(repo, ctx.id, input)

@@ -15,7 +15,7 @@ export async function getOrgSettings(organizationId: string) {
     }),
     db.branding.findUnique({
       where:  { organizationId },
-      select: { primaryColor: true, logoUrl: true, tagline: true, coverUrl: true },
+      select: { primaryColor: true, logoUrl: true, tagline: true, coverUrl: true, storefrontTheme: true },
     }),
   ])
   return { org, branding }

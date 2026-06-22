@@ -28,35 +28,45 @@ export default async function TenantPage({
   const ctx = await getTenantContextPermissive(slug)
   if (!ctx) notFound()
 
+  const themeMode = ctx.branding.storefrontTheme ?? 'DARK'
+  // Valor de un enum DB — nunca texto libre del usuario.
+  const themeScript = `(function(){var m=${JSON.stringify(themeMode)};if(m==='LIGHT'){document.documentElement.classList.remove('dark');}else if(m==='AUTO'){if(!window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.classList.remove('dark');}}})();`
+
   if (ctx.status === 'suspended') {
     return (
-      <div className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <Scissors className="h-8 w-8 text-ink-faint" />
+      <>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <div className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Scissors className="h-8 w-8 text-ink-faint" />
+          </div>
+          <h1 className="font-display text-3xl">{ctx.name}</h1>
+          <p className="text-lg font-semibold">Temporalmente Inactivo</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Este negocio no está disponible por el momento. Si eres el dueño,
+            contacta a soporte para reactivar tu cuenta.
+          </p>
         </div>
-        <h1 className="font-display text-3xl">{ctx.name}</h1>
-        <p className="text-lg font-semibold">Temporalmente Inactivo</p>
-        <p className="max-w-xs text-sm text-muted-foreground">
-          Este negocio no está disponible por el momento. Si eres el dueño,
-          contacta a soporte para reactivar tu cuenta.
-        </p>
-      </div>
+      </>
     )
   }
 
   // La suscripción (pago/trial) es una compuerta independiente del status manual.
   if (!canOperate(ctx.subscription, new Date())) {
     return (
-      <div className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <Scissors className="h-8 w-8 text-ink-faint" />
+      <>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <div className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Scissors className="h-8 w-8 text-ink-faint" />
+          </div>
+          <h1 className="font-display text-3xl">{ctx.name}</h1>
+          <p className="text-lg font-semibold">No disponible temporalmente</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Este negocio no está disponible temporalmente. Vuelve a intentarlo más tarde.
+          </p>
         </div>
-        <h1 className="font-display text-3xl">{ctx.name}</h1>
-        <p className="text-lg font-semibold">No disponible temporalmente</p>
-        <p className="max-w-xs text-sm text-muted-foreground">
-          Este negocio no está disponible temporalmente. Vuelve a intentarlo más tarde.
-        </p>
-      </div>
+      </>
     )
   }
 
@@ -91,6 +101,8 @@ export default async function TenantPage({
   }
 
   return (
+    <>
+    <script dangerouslySetInnerHTML={{ __html: themeScript }} />
     <div className="storefront min-h-screen bg-background">
 
       {/* ─── PERFIL DEL NEGOCIO ───────────────────────────────── */}
@@ -321,6 +333,7 @@ export default async function TenantPage({
       </div>
 
     </div>
+    </>
   )
 }
 

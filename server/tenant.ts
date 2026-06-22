@@ -19,6 +19,7 @@ export interface TenantContext {
     logoUrl: string | null
     tagline: string | null
     coverUrl: string | null
+    storefrontTheme: 'DARK' | 'LIGHT' | 'AUTO'
   }
 }
 
@@ -45,6 +46,7 @@ async function fetchTenantData(slug: string) {
           logoUrl: true,
           tagline: true,
           coverUrl: true,
+          storefrontTheme: true,
         },
       },
     },
@@ -65,6 +67,7 @@ export const getTenantContext = cache(async (slug: string): Promise<TenantContex
       logoUrl: null,
       tagline: null,
       coverUrl: null,
+      storefrontTheme: 'DARK' as const,
     },
   }
 })
@@ -98,6 +101,7 @@ async function fetchTenantDataPermissive(slug: string) {
           logoUrl: true,
           tagline: true,
           coverUrl: true,
+          storefrontTheme: true,
         },
       },
       subscription: {
@@ -128,6 +132,7 @@ export const getTenantContextPermissive = cache(
         logoUrl: null,
         tagline: null,
         coverUrl: null,
+        storefrontTheme: 'DARK' as const,
       },
     }
   },
