@@ -1,3 +1,4 @@
+import type { Viewport } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Star, Clock, Scissors, Users } from 'lucide-react'
@@ -26,6 +27,20 @@ export async function generateStaticParams() {
   })
   if (orgs.length === 0) return [{ tenant: 'citavek-init' }]
   return orgs.map((o) => ({ tenant: o.slug }))
+}
+
+// theme-color (chrome del navegador) per-tenant. Vive en la hoja —no en el layout—
+// porque solo aquí `params` es estático (vía generateStaticParams). En las rutas
+// dinámicas del panel un generateViewport que lee `params` rompería el build:
+// `params` es runtime data y el viewport no puede streamear.
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ tenant: string }>
+}): Promise<Viewport> {
+  const { tenant: slug } = await params
+  const ctx = await getTenantContextPermissive(slug)
+  return { themeColor: ctx?.branding.primaryColor ?? '#E0A300' }
 }
 
 export default async function TenantPage({

@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { getTenantContextPermissive } from '@/server/tenant'
 import { hexToOklch } from '@/shared/color-utils'
@@ -45,19 +45,6 @@ export async function generateMetadata({
       description: `Agenda tu cita en ${ctx.name} fácil y rápido. Sin llamadas, sin filas.`,
     },
   }
-}
-
-// theme-color va en el viewport (no en metadata) desde Next 14; generateViewport
-// también recibe params, así que se lee el tenant igual que en generateMetadata.
-// Comparten la query gracias al cache() de React en getTenantContext.
-export async function generateViewport({
-  params,
-}: {
-  params: Promise<{ tenant: string }>
-}): Promise<Viewport> {
-  const { tenant: slug } = await params
-  const ctx = await getTenantContextPermissive(slug)
-  return { themeColor: ctx?.branding.primaryColor ?? '#E0A300' }
 }
 
 // El layout NO es async: el shell (children) es estático y se renderiza de
