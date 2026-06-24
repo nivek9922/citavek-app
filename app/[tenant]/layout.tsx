@@ -3,19 +3,6 @@ import { Suspense } from 'react'
 import { getTenantContextPermissive } from '@/server/tenant'
 import { hexToOklch } from '@/shared/color-utils'
 import { buildCloudinaryIconUrl } from '@/shared/cloudinary-url'
-import { db } from '@/server/db'
-
-// Pre-genera el shell PPR para todos los tenants activos conocidos en build time.
-// Los tenants nuevos también funcionan (dynamicParams = true por defecto).
-// A ~100 tenants el overhead de build es <10s; revisar si supera 500.
-export async function generateStaticParams() {
-  const orgs = await db.organization.findMany({
-    where:   { status: 'active' },
-    select:  { slug: true },
-  })
-  if (orgs.length === 0) return [{ tenant: 'citavek-init' }]
-  return orgs.map((o) => ({ tenant: o.slug }))
-}
 
 export async function generateMetadata({
   params,

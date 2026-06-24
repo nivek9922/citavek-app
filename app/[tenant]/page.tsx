@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Star, Clock, Scissors, Users } from 'lucide-react'
 import { getTenantContextPermissive } from '@/server/tenant'
+import { db } from '@/server/db'
 import { canOperate } from '@/modules/subscriptions/domain/subscription'
 import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers }  from '@/modules/staff/queries'
@@ -15,6 +16,17 @@ import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
 import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
 import { EmptyState }        from '@/shared/ui/empty-state'
+
+// Pre-generates the static shell for known active tenants at build time.
+// New tenants still work (dynamicParams = true by default).
+export async function generateStaticParams() {
+  const orgs = await db.organization.findMany({
+    where:  { status: 'active' },
+    select: { slug: true },
+  })
+  if (orgs.length === 0) return [{ tenant: 'citavek-init' }]
+  return orgs.map((o) => ({ tenant: o.slug }))
+}
 
 export default async function TenantPage({
   params,
