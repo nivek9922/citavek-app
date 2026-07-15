@@ -56,9 +56,10 @@ export async function listOrganizationsForAdmin() {
   const since30 = new Date(Date.now() -  30 * 86_400_000)
   const since90 = new Date(Date.now() -  90 * 86_400_000)
 
-  // 5 queries en paralelo para N tenants (sin N+1): lista + 4 agregados de ventanas temporales.
-  const [orgs, created7, cancelled7, created30, created90] = await Promise.all([
+  // 6 queries en paralelo para N tenants (sin N+1): lista + total real + 4 agregados de ventanas temporales.
+  const [orgs, total, created7, cancelled7, created30, created90] = await Promise.all([
     db.organization.findMany({
+      take:    1000,
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], // activas primero
       select: {
         id: true, name: true, slug: true, city: true, status: true, createdAt: true,
@@ -72,6 +73,7 @@ export async function listOrganizationsForAdmin() {
         },
       },
     }),
+    db.organization.count(),
     db.appointment.groupBy({
       by:     ['organizationId'],
       where:  { createdAt: { gte: since7 } },
@@ -99,22 +101,25 @@ export async function listOrganizationsForAdmin() {
   const createdBy30  = new Map(created30.map((r)   => [r.organizationId, r._count._all]))
   const createdBy90  = new Map(created90.map((r)   => [r.organizationId, r._count._all]))
 
-  return orgs.map((org) => ({
-    ...org,
-    health: computeHealthScore(
-      createdBy7.get(org.id)   ?? 0,
-      cancelledBy7.get(org.id) ?? 0,
-      Math.floor((Date.now() - org.createdAt.getTime()) / 86_400_000),
-    ),
-    churn: computeChurnScore(
-      createdBy7.get(org.id)  ?? 0,
-      createdBy30.get(org.id) ?? 0,
-      createdBy90.get(org.id) ?? 0,
-    ),
-  }))
+  return {
+    orgs: orgs.map((org) => ({
+      ...org,
+      health: computeHealthScore(
+        createdBy7.get(org.id)   ?? 0,
+        cancelledBy7.get(org.id) ?? 0,
+        Math.floor((Date.now() - org.createdAt.getTime()) / 86_400_000),
+      ),
+      churn: computeChurnScore(
+        createdBy7.get(org.id)  ?? 0,
+        createdBy30.get(org.id) ?? 0,
+        createdBy90.get(org.id) ?? 0,
+      ),
+    })),
+    total,
+  }
 }
 
-export type AdminOrgRow = Awaited<ReturnType<typeof listOrganizationsForAdmin>>[number]
+export type AdminOrgRow = Awaited<ReturnType<typeof listOrganizationsForAdmin>>['orgs'][number]
 
 /** Super-admin: KPIs de toda la plataforma (UTC, cross-tenant). */
 export async function getPlatformKPIs() {

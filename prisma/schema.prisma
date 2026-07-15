@@ -319,6 +319,7 @@ model ScheduleException {
   // Un barbero (o la org) solo puede tener una excepción por día
   @@unique([organizationId, barberId, date])
   @@index([organizationId, date])
+  @@index([barberId])
   @@map("schedule_exception")
 }
 
@@ -499,6 +500,7 @@ model Member {
   role           String       @default("member")
   createdAt      DateTime
 
+  @@unique([organizationId, userId])
   @@index([organizationId])
   @@index([userId])
   @@map("member")
@@ -518,6 +520,7 @@ model Invitation {
 
   @@index([organizationId])
   @@index([email])
+  @@index([inviterId])
   @@map("invitation")
 }
 
@@ -537,6 +540,7 @@ model Review {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([organizationId, barberId, createdAt])
+  @@index([barberId])
   @@map("review")
 }
 
@@ -555,6 +559,7 @@ model BarberInvitation {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([barberId])
+  @@index([organizationId])
   @@map("barber_invitation")
 }
 
@@ -596,6 +601,7 @@ model LoyaltyProgram {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   freeService  Service?     @relation(fields: [freeServiceId], references: [id], onDelete: SetNull)
 
+  @@index([freeServiceId])
   @@map("loyalty_program")
 }
 

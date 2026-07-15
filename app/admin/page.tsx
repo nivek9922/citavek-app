@@ -31,7 +31,10 @@ function daysSince(date: Date) {
 export default async function AdminPage() {
   await requireSuperAdmin()
 
-  const [orgs, kpis, branding, monthlyTraffic, funnel, barberLoginStats, loyaltyAdoption, subMetrics] = await Promise.all([
+  // NOTA: listOrganizationsForAdmin() trunca a 1000 orgs (take:1000). Este dashboard
+  // no muestra el banner de truncamiento (ver /admin/negocios) — aceptado porque es
+  // agregación de alertas, no un listado completo.
+  const [{ orgs }, kpis, branding, monthlyTraffic, funnel, barberLoginStats, loyaltyAdoption, subMetrics] = await Promise.all([
     listOrganizationsForAdmin(),
     getPlatformKPIs(),
     getBrandingAdoptionStats(),

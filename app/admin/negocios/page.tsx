@@ -1,5 +1,6 @@
 import Link                          from 'next/link'
 import { Suspense }                  from 'react'
+import { AlertTriangle }             from 'lucide-react'
 import { requireSuperAdmin }          from '@/server/super-admin'
 import { listOrganizationsForAdmin }  from '@/modules/tenancy/queries'
 import { getTenantsPerformance }      from '@/modules/analytics/queries'
@@ -14,11 +15,16 @@ export default async function NegociosPage({
 }) {
   await requireSuperAdmin()
 
-  const [orgs, performance, { q, status, city, sort }] = await Promise.all([
+  const [{ orgs, total: totalOrgs }, { rows: performance, total: totalPerformance }, { q, status, city, sort }] = await Promise.all([
     listOrganizationsForAdmin(),
     getTenantsPerformance(),
     searchParams,
   ])
+
+  // El banner solo se muestra si el take:1000 realmente truncó algo — no es
+  // paginación real, solo una alerta de que el listado in-memory (filtros
+  // q/status/city) ya no representa el 100% de las orgs.
+  const truncated = totalOrgs > 1000 || totalPerformance > 1000
 
   // Churn por org (de listOrganizationsForAdmin) para la columna + orden de la tabla.
   const churnByOrg = new Map(orgs.map((o) => [o.id, o.churn]))
@@ -71,6 +77,15 @@ export default async function NegociosPage({
       </section>
 
       <div className="space-y-4">
+        {truncated && (
+          <div className="flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/5 px-4 py-3 text-sm text-orange-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>
+              Mostrando los primeros 1000 de {Math.max(totalOrgs, totalPerformance)} negocios registrados.
+              Usa la búsqueda para acotar resultados.
+            </span>
+          </div>
+        )}
         <Suspense fallback={<div className="h-10 animate-pulse rounded-xl bg-muted/40" />}>
           <AdminFilters total={orgs.length} filtered={filtered.length} />
         </Suspense>

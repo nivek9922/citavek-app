@@ -18,6 +18,14 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // ImageResponse (next/og) renderiza el JSX con Satori, no con React DOM —
+    // next/image no funciona ahí, así que <img> es la única opción válida.
+    files: ["**/opengraph-image.tsx", "**/twitter-image.tsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
   globalIgnores([
     ".next/**",
     "out/**",

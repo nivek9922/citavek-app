@@ -178,11 +178,12 @@ export async function getTenantsPerformance() {
   cacheLife('hours')       // frescura adecuada para analítica de admin
   const since30 = new Date(Date.now() - 30 * 86_400_000)
 
-  const [orgs, volume, revenue, barbers] = await Promise.all([
+  const [orgs, total, volume, revenue, barbers] = await Promise.all([
     db.organization.findMany({
       select: { id: true, name: true, slug: true, status: true, createdAt: true },
       take:   1000,
     }),
+    db.organization.count(),
     db.appointment.groupBy({                       // Citas (30d): no canceladas
       by:     ['organizationId'],
       where:  { startAt: { gte: since30 }, status: { not: 'cancelled' } },
@@ -204,21 +205,24 @@ export async function getTenantsPerformance() {
   const revenueBy = new Map(revenue.map((r) => [r.organizationId, r._sum.priceCop ?? 0]))
   const barbersBy = new Map(barbers.map((r) => [r.organizationId, r._count._all]))
 
-  return orgs
-    .map((org) => ({
-      id:              org.id,
-      name:            org.name,
-      slug:            org.slug,
-      status:          org.status,
-      createdAt:       org.createdAt,
-      appointments30d: volumeBy.get(org.id)  ?? 0,
-      revenue30dCop:   revenueBy.get(org.id) ?? 0,
-      barberCount:     barbersBy.get(org.id) ?? 0,
-    }))
-    .sort((a, b) => b.appointments30d - a.appointments30d) // heavy users arriba
+  return {
+    rows: orgs
+      .map((org) => ({
+        id:              org.id,
+        name:            org.name,
+        slug:            org.slug,
+        status:          org.status,
+        createdAt:       org.createdAt,
+        appointments30d: volumeBy.get(org.id)  ?? 0,
+        revenue30dCop:   revenueBy.get(org.id) ?? 0,
+        barberCount:     barbersBy.get(org.id) ?? 0,
+      }))
+      .sort((a, b) => b.appointments30d - a.appointments30d), // heavy users arriba
+    total,
+  }
 }
 
-export type TenantPerformanceRow = Awaited<ReturnType<typeof getTenantsPerformance>>[number]
+export type TenantPerformanceRow = Awaited<ReturnType<typeof getTenantsPerformance>>['rows'][number]
 
 // ── Stats operativas de UNA barbería (Super Admin — drill-down) ──────────────
 

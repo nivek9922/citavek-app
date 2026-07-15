@@ -33,6 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env
 
+# claude code — settings.json acumula comandos aprobados (pueden incluir
+# credenciales pegadas en el comando, ej. connection strings). settings.local.json
+# es explícitamente local. .claude/agents, .claude/skills, etc. SÍ se commitean.
+.claude/settings.json
+.claude/settings.local.json
+
 # vercel
 .vercel
 
