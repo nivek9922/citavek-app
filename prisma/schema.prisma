@@ -22,6 +22,13 @@ enum OrganizationStatus {
   suspended
 }
 
+// Vertical del negocio. Solo determina la terminología visible para el usuario
+// (ver shared/vocabulary.ts) — la lógica de negocio es idéntica para ambos.
+enum BusinessType {
+  BARBERSHOP
+  BEAUTY_SALON
+}
+
 enum ServiceCategory {
   corte
   barba
@@ -92,6 +99,9 @@ model Organization {
   timezone String             @default("America/Bogota")
   currency String             @default("COP")
   status   OrganizationStatus @default(active)
+
+  // @default(BARBERSHOP) preserva el texto actual de todos los tenants existentes.
+  businessType BusinessType @default(BARBERSHOP)
 
   branding           Branding?
   branches           Branch[]

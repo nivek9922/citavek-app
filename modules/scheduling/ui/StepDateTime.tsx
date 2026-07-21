@@ -6,6 +6,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import { cn } from '@/shared/ui/utils'
 import { formatCop, formatDuration } from '@/shared/format'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { getAvailableSlotsAction } from '../actions'
 import type { BarberDTO } from '@/modules/staff/queries'
 import type { ServiceDTO } from '@/modules/catalog/queries'
@@ -32,6 +33,7 @@ export function StepDateTime({
   const [slots,        setSlots]        = useState<Date[]>([])
   const [busyCount,    setBusyCount]    = useState(0)
   const [isPending,    startTransition] = useTransition()
+  const v = useVocabulary()
 
   // Días de la página actual: empezamos en mañana (+1 día desde hoy)
   const days = Array.from({ length: PAGE_SIZE }, (_, i) => addDays(new Date(), offset + i))
@@ -149,7 +151,7 @@ export function StepDateTime({
               <span className="text-2xl">📅</span>
               <p className="text-sm font-medium">Sin disponibilidad</p>
               <p className="text-xs text-muted-foreground">
-                Prueba con otro día o barbero.
+                Prueba con otro día o {v.professionalSingularLower}.
               </p>
             </div>
           ) : (

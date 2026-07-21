@@ -21,7 +21,7 @@ export default function TenantNotFound() {
           Negocio no encontrado
         </h1>
         <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-          El enlace parece ser incorrecto o la barbería ya no está disponible.
+          El enlace parece ser incorrecto o el negocio ya no está disponible.
         </p>
       </div>
 

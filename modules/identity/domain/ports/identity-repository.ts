@@ -1,12 +1,15 @@
 // Port del dominio de identidad. No conoce Prisma ni Next.js.
 
+import type { BusinessType } from '@/shared/vocabulary'
+
 export interface NewOrganizationData {
-  name:     string
-  slug:     string
-  city:     string
-  phone:    string
-  timezone: string
-  currency: string
+  name:         string
+  slug:         string
+  city:         string
+  phone:        string
+  timezone:     string
+  currency:     string
+  businessType: BusinessType
 }
 
 export interface AccessCodeRecord {

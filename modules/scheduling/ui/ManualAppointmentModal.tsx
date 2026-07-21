@@ -7,6 +7,7 @@ import {
 } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/ui/utils'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { createManualAppointmentAction } from '../actions'
 import { ManualAppointmentProgress } from './ManualAppointmentProgress'
 import { ServiceStep } from './steps/ServiceStep'
@@ -41,6 +42,7 @@ interface Props {
 export function ManualAppointmentModal({
   tenantSlug, services, barbers, todayStr, timezone, currentBarberId,
 }: Props) {
+  const v = useVocabulary()
   const [open,      setOpen]      = useState(false)
   const [step,      setStep]      = useState<Step>(1)
   const [selection, setSelection] = useState<Selection>({ services: [] })
@@ -127,7 +129,7 @@ export function ManualAppointmentModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" disabled={disabled}
-          title={disabled ? 'Necesitas al menos un servicio y un barbero' : undefined}>
+          title={disabled ? `Necesitas al menos un servicio y un ${v.professionalSingularLower}` : undefined}>
           <Plus className="h-4 w-4" /> Nueva cita
         </Button>
       </DialogTrigger>

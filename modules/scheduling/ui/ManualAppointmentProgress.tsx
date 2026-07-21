@@ -1,15 +1,18 @@
 'use client'
 import { cn } from '@/shared/ui/utils'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 
-const OWNER_STEPS  = ['Servicio', 'Barbero', 'Fecha y hora', 'Confirmar']
 const BARBER_STEPS = ['Servicio', 'Fecha y hora', 'Confirmar']
 
 /**
- * Indicador de progreso del wizard. El barbero salta el paso "Barbero"
+ * Indicador de progreso del wizard. El profesional salta el paso de selección
  * (se auto-asigna), así que ve 3 hitos en vez de 4.
  */
 export function ManualAppointmentProgress({ step, isBarber }: { step: number; isBarber: boolean }) {
-  const labels = isBarber ? BARBER_STEPS : OWNER_STEPS
+  const v = useVocabulary()
+  const labels = isBarber
+    ? BARBER_STEPS
+    : ['Servicio', v.professionalSingular, 'Fecha y hora', 'Confirmar']
   // Mapea el step real (1..4) a la posición del indicador.
   const activeIndex = isBarber
     ? (step === 1 ? 0 : step === 3 ? 1 : 2)

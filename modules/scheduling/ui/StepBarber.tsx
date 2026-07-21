@@ -2,6 +2,7 @@
 import Image from 'next/image'
 import { Star, User, Shuffle, Check } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { ANY_BARBER_ID } from '@/modules/scheduling/domain/any-barber'
 import type { BarberDTO } from '@/modules/staff/queries'
 
@@ -41,11 +42,13 @@ const cardClass = (selected: boolean) => cn(
 )
 
 export function StepBarber({ barbers, selectedId, onSelect }: Props) {
+  const v = useVocabulary()
+
   return (
     <div className="space-y-3.5">
       <div className="flex items-center gap-2">
         <User className="h-4 w-4 text-primary" />
-        <h3 className="font-semibold">Elige tu barbero</h3>
+        <h3 className="font-semibold">Elige {v.professionalPossessive}</h3>
       </div>
 
       <div className="grid gap-2.5 sm:grid-cols-2">
@@ -61,7 +64,7 @@ export function StepBarber({ barbers, selectedId, onSelect }: Props) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold leading-tight">El primero disponible</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Asignamos al barbero con más disponibilidad</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Asignamos al {v.professionalSingularLower} con más disponibilidad</p>
           </div>
           <Selector selected={selectedId === ANY_BARBER_ID} />
         </button>

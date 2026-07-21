@@ -16,6 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/shared/ui/alert-dialog'
 import { formatCop } from '@/shared/format'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { previewSettlementAction, createSettlementAction } from '../actions'
 import type { PreviewSettlementData } from '../actions'
 import type { BarberCommissionRecord, SettlementRecord } from '../domain/ports/commissions-repository'
@@ -38,6 +39,7 @@ export function SettlementsManager({
   settlements: SettlementRecord[]
 }) {
   const router = useRouter()
+  const v = useVocabulary()
   const [barberId, setBarberId] = useState(barbers[0]?.barberId ?? '')
   const [kind, setKind]         = useState<Kind>('week')
   const [start, setStart]       = useState<Date | undefined>()
@@ -60,7 +62,7 @@ export function SettlementsManager({
   }
 
   function handlePreview() {
-    if (!barberId) { toast.error('Selecciona un barbero.'); return }
+    if (!barberId) { toast.error(`Selecciona un ${v.professionalSingularLower}.`); return }
     if (kind === 'custom' && (!start || !end)) { toast.error('Selecciona la fecha inicial y final.'); return }
     startTransition(async () => {
       const res = await previewSettlementAction(tenantSlug, buildInput())
@@ -87,7 +89,7 @@ export function SettlementsManager({
     })
   }
 
-  const barberName = barbers.find((b) => b.barberId === barberId)?.displayName ?? 'el barbero'
+  const barberName = barbers.find((b) => b.barberId === barberId)?.displayName ?? `el ${v.professionalSingularLower}`
 
   const conflictSettlement = preview
     ? settlements.find((s) =>
@@ -101,15 +103,15 @@ export function SettlementsManager({
   return (
     <div className="space-y-6">
       {barbers.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No tienes barberos activos.</p>
+        <p className="text-sm text-muted-foreground">No tienes {v.professionalPluralLower} activos.</p>
       ) : (
         <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Calcular liquidación</h3>
 
           <div className="space-y-1.5">
-            <Label>Barbero</Label>
-            <Select value={barberId} onValueChange={(v) => { setBarberId(v); resetPreview() }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="Seleccionar barbero" /></SelectTrigger>
+            <Label>{v.professionalSingular}</Label>
+            <Select value={barberId} onValueChange={(next) => { setBarberId(next); resetPreview() }}>
+              <SelectTrigger className="w-full"><SelectValue placeholder={`Seleccionar ${v.professionalSingularLower}`} /></SelectTrigger>
               <SelectContent>
                 {barbers.map((b) => (
                   <SelectItem key={b.barberId} value={b.barberId}>

@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { getTenantContextPermissive } from '@/server/tenant'
 import { hexToOklch } from '@/shared/color-utils'
 import { buildCloudinaryIconUrl } from '@/shared/cloudinary-url'
+import { getVocabulary } from '@/shared/vocabulary'
 
 export async function generateMetadata({
   params,
@@ -21,8 +22,9 @@ export async function generateMetadata({
   const appleIcon = (ctx.branding.logoUrl && buildCloudinaryIconUrl(ctx.branding.logoUrl, 180, color))
     ?? `/${slug}/icon?size=180`
 
+  const v = getVocabulary(ctx.businessType)
   const ogTitle = `${ctx.name} — Reserva tu cita en línea`
-  const ogDescription = `Agenda tu cita en ${ctx.name} fácil y rápido. Elige servicio, barbero y horario en segundos. Sin llamadas, sin filas.`
+  const ogDescription = `Agenda tu cita en ${ctx.name} fácil y rápido. Elige servicio, ${v.professionalSingularLower} y horario en segundos. Sin llamadas, sin filas.`
 
   return {
     title: `${ctx.name} — Reserva tu cita`,

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { cacheTag, cacheLife } from 'next/cache'
 import { db } from '@/server/db'
 import type { SubscriptionSnapshot } from '@/modules/subscriptions/domain/subscription'
+import type { BusinessType } from '@/shared/vocabulary'
 
 export interface TenantContext {
   id: string
@@ -14,6 +15,8 @@ export interface TenantContext {
   phone: string | null
   timezone: string
   currency: string
+  /** Vertical del negocio — determina la terminología visible (shared/vocabulary.ts). */
+  businessType: BusinessType
   branding: {
     primaryColor: string
     logoUrl: string | null
@@ -40,6 +43,7 @@ async function fetchTenantData(slug: string) {
       phone: true,
       timezone: true,
       currency: true,
+      businessType: true,
       branding: {
         select: {
           primaryColor: true,
@@ -95,6 +99,7 @@ async function fetchTenantDataPermissive(slug: string) {
       timezone: true,
       currency: true,
       status: true,
+      businessType: true,
       branding: {
         select: {
           primaryColor: true,

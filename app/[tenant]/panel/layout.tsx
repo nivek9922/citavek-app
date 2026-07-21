@@ -8,6 +8,8 @@ import { PanelNav }          from '@/modules/identity/ui/PanelNav'
 import { PanelSubscriptionBanner } from '@/modules/subscriptions/ui/PanelSubscriptionBanner'
 import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
 import { ThemeToggle }       from '@/shared/ui/theme-toggle'
+import { VocabularyProvider } from '@/shared/ui/vocabulary-provider'
+import { getVocabulary }      from '@/shared/vocabulary'
 
 export default async function PanelLayout({
   children,
@@ -20,8 +22,10 @@ export default async function PanelLayout({
   const ctx = await getTenantContextPermissive(slug)
   if (!ctx) notFound()
   const { member, session } = await requireMembership(ctx.id)
+  const v = getVocabulary(ctx.businessType)
 
   return (
+    <VocabularyProvider businessType={ctx.businessType}>
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[256px_1fr]">
 
       {/* ── Sidebar (desktop) ── */}
@@ -93,7 +97,7 @@ export default async function PanelLayout({
               <span className="truncate font-semibold">{ctx.name}</span>
               {member.role === 'barber' && (
                 <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                  Barbero
+                  {v.professionalSingular}
                 </span>
               )}
             </div>
@@ -116,5 +120,6 @@ export default async function PanelLayout({
         </main>
       </div>
     </div>
+    </VocabularyProvider>
   )
 }

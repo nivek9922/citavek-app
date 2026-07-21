@@ -17,7 +17,7 @@ export default function TenantError({
       <span className="text-5xl">⚠️</span>
       <h2 className="text-xl font-semibold">Algo salió mal</h2>
       <p className="max-w-sm text-sm text-muted-foreground">
-        No pudimos cargar la página de esta barbería. Por favor intenta de nuevo.
+        No pudimos cargar la página de este negocio. Por favor intenta de nuevo.
       </p>
       <button
         onClick={reset}

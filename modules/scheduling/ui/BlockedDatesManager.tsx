@@ -9,6 +9,7 @@ import { Input }      from '@/shared/ui/input'
 import { Label }      from '@/shared/ui/label'
 import { DatePicker } from '@/shared/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { blockBarberDateAction, unblockBarberDateAction } from '../actions'
 import type { ScheduleExceptionDTO } from '../queries'
 
@@ -32,6 +33,7 @@ function formatDate(dateStr: string) {
 }
 
 export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr }: Props) {
+  const v = useVocabulary()
   const [list, setList]           = useState<ScheduleExceptionDTO[]>(exceptions)
   const [date, setDate]           = useState<Date | undefined>(undefined)
   const [scope, setScope]         = useState<string>('org')
@@ -125,7 +127,7 @@ export function BlockedDatesManager({ tenantSlug, exceptions, barbers, todayStr 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="org">Toda la barbería</SelectItem>
+                <SelectItem value="org">{v.businessScopeAll}</SelectItem>
                 {barbers.map((b) => (
                   <SelectItem key={b.id} value={b.id}>{b.displayName}</SelectItem>
                 ))}
@@ -192,6 +194,8 @@ function Section({
   isPending: boolean
   empty?:    string
 }) {
+  const v = useVocabulary()
+
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{title}</h2>
@@ -211,7 +215,7 @@ function Section({
               <div className="min-w-0">
                 <p className="font-medium capitalize">{formatDate(ex.date)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {ex.barber ? ex.barber.displayName : 'Toda la barbería'}
+                  {ex.barber ? ex.barber.displayName : v.businessScopeAll}
                   {ex.reason ? ` · ${ex.reason}` : ''}
                 </p>
               </div>

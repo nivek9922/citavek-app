@@ -1,11 +1,13 @@
 'use client'
 import { Check } from 'lucide-react'
 import { cn } from '@/shared/ui/utils'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import type { BookingStep } from './useBookingFlow'
 
-const STEPS = ['Servicio', 'Barbero', 'Fecha', 'Confirmar']
-
 export function BookingProgress({ step }: { step: BookingStep }) {
+  const v = useVocabulary()
+  const STEPS = ['Servicio', v.professionalSingular, 'Fecha', 'Confirmar']
+
   return (
     <div className="flex items-start gap-0">
       {STEPS.map((label, i) => {

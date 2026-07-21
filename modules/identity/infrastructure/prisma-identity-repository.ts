@@ -14,13 +14,14 @@ export const prismaIdentityRepository: IdentityRepository = {
   async createOrganization(data: NewOrganizationData) {
     return db.organization.create({
       data: {
-        name:     data.name,
-        slug:     data.slug,
-        city:     data.city,
-        phone:    data.phone,
-        timezone: data.timezone,
-        currency: data.currency,
-        status:   'active',
+        name:         data.name,
+        slug:         data.slug,
+        city:         data.city,
+        phone:        data.phone,
+        timezone:     data.timezone,
+        currency:     data.currency,
+        businessType: data.businessType,
+        status:       'active',
       },
       select: { id: true, slug: true },
     })

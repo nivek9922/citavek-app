@@ -11,6 +11,7 @@ import { Label }       from '@/shared/ui/label'
 import { Badge }       from '@/shared/ui/badge'
 import { cn }          from '@/shared/ui/utils'
 import { EmptyState }  from '@/shared/ui/empty-state'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/shared/ui/dialog'
@@ -45,6 +46,7 @@ interface Props {
 }
 
 export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {}, isOwner = true }: Props) {
+  const v = useVocabulary()
   const [showForm, setShowForm] = useState(false)
   const [editing,  setEditing]  = useState<BarberWithHours | null>(null)
 
@@ -58,7 +60,7 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {}, isOw
         <h2 className="font-display text-2xl tracking-wide">Equipo</h2>
         {isOwner && (
           <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Añadir barbero
+            <Plus className="h-4 w-4" /> Añadir {v.professionalSingularLower}
           </Button>
         )}
       </div>
@@ -70,9 +72,9 @@ export function BarbersManager({ barbers, tenantSlug, reviewsByBarber = {}, isOw
       {barbers.length === 0 ? (
         <EmptyState
           icon="✂️"
-          title="Aún no tienes barberos registrados"
-          description="Tus clientes podrán elegir con quién cortarse. Añade a tu equipo con sus horarios y especialidades para que aparezcan en la página de reservas."
-          action={isOwner ? <Button size="sm" onClick={openCreate}>Añadir primer barbero</Button> : undefined}
+          title={`Aún no tienes ${v.professionalPluralLower} registrados`}
+          description={`Tus clientes podrán elegir ${v.bookingChoiceHint}. Añade a tu equipo con sus horarios y especialidades para que aparezcan en la página de reservas.`}
+          action={isOwner ? <Button size="sm" onClick={openCreate}>Añadir primer {v.professionalSingularLower}</Button> : undefined}
         />
       ) : (
       <div className="divide-y divide-border rounded-2xl border border-border overflow-hidden">
@@ -246,6 +248,7 @@ function buildInitialHours(wh: BarberWithHours['workingHours']): HoursState {
 function BarberForm({
   tenantSlug, barber, onDone,
 }: { tenantSlug: string; barber: BarberWithHours | null; onDone: () => void }) {
+  const v = useVocabulary()
   const [isPending, startTransition] = useTransition()
   const [error, setError]            = useState('')
   const [hours, setHours]            = useState<HoursState>(() =>
@@ -286,14 +289,18 @@ function BarberForm({
         setError(result.error)
         return
       }
-      toast.success(barber ? 'Barbero actualizado correctamente.' : 'Barbero creado correctamente.')
+      toast.success(barber
+        ? `${v.professionalSingular} actualizado correctamente.`
+        : `${v.professionalSingular} creado correctamente.`)
       onDone()
     })
   }
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
-      <h3 className="mb-4 font-semibold">{barber ? 'Editar barbero' : 'Nuevo barbero'}</h3>
+      <h3 className="mb-4 font-semibold">
+        {barber ? `Editar ${v.professionalSingularLower}` : `Nuevo ${v.professionalSingularLower}`}
+      </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* Datos básicos */}
@@ -393,6 +400,7 @@ function BarberForm({
 function AvatarUploader({
   tenantSlug, barberId, currentUrl,
 }: { tenantSlug: string; barberId: string; currentUrl: string | null }) {
+  const v = useVocabulary()
   const [preview,   setPreview] = useState<string | null>(currentUrl)
   const [hasFile,   setHasFile] = useState(false)
   const [isPending, start]      = useTransition()
@@ -435,7 +443,7 @@ function AvatarUploader({
 
   return (
     <div className="space-y-2 rounded-xl border border-border p-3">
-      <p className="text-xs font-medium text-muted-foreground">Foto del barbero</p>
+      <p className="text-xs font-medium text-muted-foreground">Foto del {v.professionalSingularLower}</p>
       <div className="flex items-center gap-3">
         {preview ? (
             <Image

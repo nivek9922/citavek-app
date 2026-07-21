@@ -14,6 +14,7 @@ import {
 import { listActiveServices } from '@/modules/catalog/queries'
 import { listActiveBarbers, getBarberByUserId, getTeamStats } from '@/modules/staff/queries'
 import { formatCop } from '@/shared/format'
+import { getVocabulary } from '@/shared/vocabulary'
 import { cn } from '@/shared/ui/utils'
 import { PageHeader } from '@/shared/ui/page-header'
 import { StatCard }   from '@/modules/analytics/ui/StatCard'
@@ -97,6 +98,7 @@ export default async function PanelPage({
   // hora actual. Página dinámica por request — la impureza es intencional.
   // eslint-disable-next-line react-hooks/purity
   const renderedAt = Date.now()
+  const v = getVocabulary(ctx.businessType)
 
   const onboardingSteps = [
     {
@@ -106,8 +108,8 @@ export default async function PanelPage({
       href: 'marca', linkText: 'Ir a Marca',
     },
     {
-      label: 'Registra tu primer barbero',
-      description: 'Tus clientes eligen con quién se van a cortar. Sin barberos, no hay a quién asignar.',
+      label: `Registra tu primer ${v.professionalSingularLower}`,
+      description: `Tus clientes eligen ${v.bookingChoiceHint}. Sin ${v.professionalPluralLower}, no hay a quién asignar.`,
       completed: barbers.length > 0,
       href: 'equipo', linkText: 'Ir a Equipo',
     },
@@ -174,7 +176,7 @@ export default async function PanelPage({
           <StatCard icon={CalendarDays} label="Pendientes" value={String(kpis.pendingToday)} hint="Citas confirmadas" />
           <StatCard
             icon={Scissors}
-            label="Top barbero"
+            label={`Top ${v.professionalSingularLower}`}
             value={kpis.topBarber?.nickname ?? kpis.topBarber?.displayName.split(' ')[0] ?? '—'}
             hint="Más citas hoy"
           />

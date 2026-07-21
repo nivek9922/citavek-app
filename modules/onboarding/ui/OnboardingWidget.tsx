@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { CheckCircle2, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { dismissOnboardingAction } from '@/modules/onboarding/actions'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 
 export interface OnboardingStep {
   label: string
@@ -14,16 +15,17 @@ export interface OnboardingStep {
   linkText: string
 }
 
-const HEADLINES: Record<number, string> = {
-  0: 'Tu barbería está a 3 pasos de su primera reserva',
-  1: '¡Buen inicio! Sigamos — quedan 2 pasos',
-  2: 'Casi listo — un último paso y tu agenda se abre',
-}
-
 export function OnboardingWidget({ steps, slug }: { steps: OnboardingStep[]; slug: string }) {
+  const v = useVocabulary()
   const [isPending, startTransition] = useTransition()
   const completedCount = steps.filter((s) => s.completed).length
   const nextStepIdx    = steps.findIndex((s) => !s.completed)
+
+  const HEADLINES: Record<number, string> = {
+    0: `Tu ${v.businessNoun} está a 3 pasos de su primera reserva`,
+    1: '¡Buen inicio! Sigamos — quedan 2 pasos',
+    2: 'Casi listo — un último paso y tu agenda se abre',
+  }
 
   function handleDismiss() {
     startTransition(async () => {
@@ -35,7 +37,7 @@ export function OnboardingWidget({ steps, slug }: { steps: OnboardingStep[]; slu
     <div className="rounded-2xl border border-border bg-card/50 p-5 space-y-4">
       {/* Headline */}
       <p className="text-sm font-medium">
-        {HEADLINES[completedCount] ?? 'Configura tu barbería'}
+        {HEADLINES[completedCount] ?? `Configura tu ${v.businessNoun}`}
       </p>
 
       {/* Steps */}
@@ -107,6 +109,8 @@ export function OnboardingWidget({ steps, slug }: { steps: OnboardingStep[]; slu
 }
 
 export function OnboardingSuccessStrip({ slug }: { slug: string }) {
+  const v = useVocabulary()
+
   function handleCopy() {
     navigator.clipboard.writeText(`${window.location.origin}/${slug}`)
     toast.success('Link copiado al portapapeles')
@@ -116,7 +120,7 @@ export function OnboardingSuccessStrip({ slug }: { slug: string }) {
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/50 px-5 py-3">
       <div className="flex items-center gap-2">
         <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-        <span className="text-sm">Tu barbería está lista para recibir citas.</span>
+        <span className="text-sm">{v.businessReadyPhrase} para recibir citas.</span>
       </div>
       <button
         onClick={handleCopy}

@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/shared/ui/dialog'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { generateBarberInviteAction } from '../actions'
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function InviteBarberButton({ tenantSlug, barberId, barberName }: Props) {
+  const v = useVocabulary()
   const [open,      setOpen]      = useState(false)
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [copied,    setCopied]    = useState(false)
@@ -49,7 +51,7 @@ export function InviteBarberButton({ tenantSlug, barberId, barberName }: Props) 
       <button
         onClick={handleGenerate}
         disabled={isPending}
-        title="Invitar barbero"
+        title={`Invitar ${v.professionalSingularLower}`}
         className="rounded-lg p-2.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-smooth sm:p-1.5"
       >
         {isPending

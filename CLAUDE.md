@@ -119,6 +119,18 @@ try {
 
 ---
 
+## Multi-vertical (Barbería / Salón de Belleza)
+
+`Organization.businessType` (`BARBERSHOP` | `BEAUTY_SALON`, default `BARBERSHOP`) determines the terminology shown to the user. The `Barber` model and its fields are **NOT** renamed — it is an internal technical name meaning "any professional who takes appointments", regardless of vertical. Only visible text changes, and it lives in `shared/vocabulary.ts`.
+
+- **Never hardcode** "Barbero"/"Barbería" as a string literal in new components.
+- **Server components**: `getVocabulary(ctx.businessType)` — `businessType` is part of `TenantContext`.
+- **Client components**: `useVocabulary()` from `shared/ui/vocabulary-provider.tsx`. The provider is mounted in `app/[tenant]/panel/layout.tsx` (whole panel) and `app/[tenant]/page.tsx` (storefront booking flow). Mounting it elsewhere is only needed for a new client subtree outside those two trees.
+- **Routes without a tenant** (landing `/`, `/admin`, `/invite`, `/r`) use neutral copy ("negocio", "profesionales") — there is no `businessType` to read there.
+- Add a new entry to `Vocabulary` only when a real usage requires it.
+
+---
+
 ## Business Modules
 
 | Module | Status | Responsibility |
@@ -159,6 +171,7 @@ These are explicitly forbidden. If you find existing code that violates these ru
 - **Never use `useState` as the primary feedback mechanism after a Server Action** — always use `toast.success()` / `toast.error()` from `sonner`.
 - **Never use `<input type="date">` or any native date input** — always use `<DatePicker>` from `shared/ui/date-picker.tsx`.
 - **Never execute a destructive action (delete, suspend, reset, revoke) without an `<AlertDialog>` confirmation step.**
+- **Never hardcode "Barbero"/"Barbería" in user-visible text** — use the vocabulary layer (`getVocabulary` on the server, `useVocabulary()` on the client).
 
 ### Guards
 - **Never place `getTenantContext` or `requirePermission` inside a try/catch block** — they must be outside so `redirect()` and `notFound()` can throw correctly.

@@ -17,6 +17,7 @@ import { TenantAvatar }      from '@/shared/ui/TenantAvatar'
 import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
 import { EmptyState }        from '@/shared/ui/empty-state'
+import { VocabularyProvider } from '@/shared/ui/vocabulary-provider'
 
 // Pre-generates the static shell for known active tenants at build time.
 // New tenants still work (dynamicParams = true by default).
@@ -112,15 +113,17 @@ export default async function TenantPage({
               <p className="font-display text-xl tracking-wide">{ctx.name}</p>
               <p className="text-xs text-muted-foreground">Reserva tu cita</p>
             </div>
-            <BookingFlow
-              tenantSlug={slug}
-              services={services}
-              barbers={barbers}
-              shopName={ctx.name}
-              shopPhone={ctx.phone}
-              shopAddress={ctx.address}
-              timezone={ctx.timezone}
-            />
+            <VocabularyProvider businessType={ctx.businessType}>
+              <BookingFlow
+                tenantSlug={slug}
+                services={services}
+                barbers={barbers}
+                shopName={ctx.name}
+                shopPhone={ctx.phone}
+                shopAddress={ctx.address}
+                timezone={ctx.timezone}
+              />
+            </VocabularyProvider>
           </div>
         </div>
       </div>
@@ -209,15 +212,17 @@ export default async function TenantPage({
                 </span>
               )}
             </div>
-            <BookingFlow
-              tenantSlug={slug}
-              services={services}
-              barbers={barbers}
-              shopName={ctx.name}
-              shopPhone={ctx.phone}
-              shopAddress={ctx.address}
-              timezone={ctx.timezone}
-            />
+            <VocabularyProvider businessType={ctx.businessType}>
+              <BookingFlow
+                tenantSlug={slug}
+                services={services}
+                barbers={barbers}
+                shopName={ctx.name}
+                shopPhone={ctx.phone}
+                shopAddress={ctx.address}
+                timezone={ctx.timezone}
+              />
+            </VocabularyProvider>
           </div>
         </div>
       </section>

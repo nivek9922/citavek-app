@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/shared/ui/dialog'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { updateBrandingAction, uploadTenantLogoAction, uploadTenantCoverAction } from '@/modules/tenancy/actions'
 import { upsertBarberAction } from '@/modules/staff/actions'
 import { upsertServiceAction } from '@/modules/catalog/actions'
@@ -60,6 +61,7 @@ export function OnboardingWizard({ slug, initialColor, initialLogoUrl, initialCo
   const [brandSaved,    setBrandSaved]    = useState(false)
 
   // ── Paso 1: Equipo ──────────────────────────────────────────────────────────
+  const v = useVocabulary()
   const [displayName,  setDisplayName]  = useState('')
   const [specialties,  setSpecialties]  = useState('')
   const [activeDays,   setActiveDays]   = useState<Set<number>>(() => new Set([1, 2, 3, 4, 5, 6]))
@@ -120,7 +122,7 @@ export function OnboardingWizard({ slug, initialColor, initialLogoUrl, initialCo
   }
 
   function saveBarber() {
-    if (!displayName.trim()) { toast.error('El nombre del barbero es requerido.'); return }
+    if (!displayName.trim()) { toast.error(`El nombre del ${v.professionalSingularLower} es requerido.`); return }
     const fd = new FormData()
     fd.set('displayName', displayName.trim())
     if (specialties.trim()) fd.set('specialties', specialties.trim())
@@ -136,7 +138,7 @@ export function OnboardingWizard({ slug, initialColor, initialLogoUrl, initialCo
         setBarberSaved(true)
         setStep(2)
       } catch {
-        toast.error('No se pudo guardar el barbero. Intenta de nuevo.')
+        toast.error(`No se pudo guardar el ${v.professionalSingularLower}. Intenta de nuevo.`)
       }
     })
   }
@@ -284,13 +286,13 @@ export function OnboardingWizard({ slug, initialColor, initialLogoUrl, initialCo
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Paso 2 de 3</p>
               <DialogTitle className="font-display text-xl tracking-wide">Presenta a tu equipo</DialogTitle>
               <DialogDescription>
-                Tus clientes eligen con quién se van a cortar. Sin barberos, nadie puede reservar.
+                Tus clientes eligen {v.bookingChoiceHint}. Sin {v.professionalPluralLower}, nadie puede reservar.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Nombre del barbero</Label>
+                <Label>Nombre del {v.professionalSingularLower}</Label>
                 <Input
                   placeholder="Ej: Carlos Mendoza"
                   value={displayName}
@@ -449,7 +451,7 @@ export function OnboardingWizard({ slug, initialColor, initialLogoUrl, initialCo
                 <CheckCircle2 className="h-7 w-7 text-emerald-500" />
               </div>
               <div>
-                <h2 className="font-display text-xl tracking-wide">¡Tu barbería está lista para despegar!</h2>
+                <h2 className="font-display text-xl tracking-wide">¡{v.businessReadyPhrase} para despegar!</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Ya tienes lo esencial configurado. Puedes completar cualquier detalle desde tu panel.
                 </p>
@@ -460,7 +462,7 @@ export function OnboardingWizard({ slug, initialColor, initialLogoUrl, initialCo
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Lo que configuraste</p>
               <div className="space-y-2 text-sm">
                 <SummaryRow label="Marca personalizada" done={brandSaved} />
-                <SummaryRow label="Primer barbero registrado" done={barberSaved} />
+                <SummaryRow label={`Primer ${v.professionalSingularLower} registrado`} done={barberSaved} />
                 <SummaryRow label="Primer servicio creado" done={serviceSaved} />
               </div>
             </div>

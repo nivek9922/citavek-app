@@ -1,14 +1,16 @@
 import type { IdentityRepository } from '../domain/ports/identity-repository'
+import { DEFAULT_BUSINESS_TYPE, type BusinessType } from '@/shared/vocabulary'
 
 export interface CreateOrganizationInput {
-  userId:       string
-  name:         string
-  slug:         string
-  city:         string
-  phone:        string
-  primaryColor: string
-  timezone?:    string   // default: 'America/Bogota'
-  currency?:    string   // default: 'COP'
+  userId:        string
+  name:          string
+  slug:          string
+  city:          string
+  phone:         string
+  primaryColor:  string
+  timezone?:     string        // default: 'America/Bogota'
+  currency?:     string        // default: 'COP'
+  businessType?: BusinessType  // default: 'BARBERSHOP'
 }
 
 export type CreateOrganizationResult =
@@ -16,8 +18,8 @@ export type CreateOrganizationResult =
   | { ok: false; error: string }
 
 /**
- * Use case: crear una organización (barbería) con su branding inicial
- * y vincular al usuario como owner.
+ * Use case: crear una organización (barbería o salón de belleza) con su branding
+ * inicial y vincular al usuario como owner.
  *
  * Invariante de dominio: el slug debe ser único en la plataforma.
  * La restricción "un owner solo puede tener una org" es un límite de producto
@@ -32,12 +34,13 @@ export async function createOrganization(
   }
 
   const org = await repo.createOrganization({
-    name:     input.name,
-    slug:     input.slug,
-    city:     input.city,
-    phone:    input.phone,
-    timezone: input.timezone ?? 'America/Bogota',
-    currency: input.currency ?? 'COP',
+    name:         input.name,
+    slug:         input.slug,
+    city:         input.city,
+    phone:        input.phone,
+    timezone:     input.timezone ?? 'America/Bogota',
+    currency:     input.currency ?? 'COP',
+    businessType: input.businessType ?? DEFAULT_BUSINESS_TYPE,
   })
 
   await repo.createBranding(org.id, input.primaryColor)

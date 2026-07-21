@@ -1,5 +1,6 @@
 'use client'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { DailyClosing } from './DailyClosing'
 import { SettlementsManager } from './SettlementsManager'
 import { CommissionConfig } from './CommissionConfig'
@@ -20,12 +21,14 @@ export function CommissionsPanel({
   configs: BarberCommissionRecord[]
   settlements: SettlementRecord[]
 }) {
+  const v = useVocabulary()
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl tracking-wide">Comisiones</h2>
         <p className="text-sm text-muted-foreground">
-          Cierre de caja diario, liquidaciones y comisión por barbero.
+          Cierre de caja diario, liquidaciones y comisión por {v.professionalSingularLower}.
         </p>
       </div>
 

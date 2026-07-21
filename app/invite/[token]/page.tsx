@@ -6,7 +6,8 @@ import { rateLimit, clientIpFrom } from '@/server/rate-limit'
 import { RegisterBarberForm } from './RegisterBarberForm'
 import { BrandLogo } from '@/shared/ui/BrandLogo'
 
-export const metadata = { title: 'Registro de barbero — Citavek' }
+// Ruta sin tenant resuelto (solo el token) → copy neutral, sin capa de vocabulario.
+export const metadata = { title: 'Únete al equipo — Citavek' }
 
 export default async function InvitePage({
   params,
@@ -71,7 +72,7 @@ export default async function InvitePage({
           <div>
             <h2 className="text-lg font-semibold">Crea tu cuenta</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Completa el formulario para acceder al panel de tu barbería.
+              Completa el formulario para acceder al panel de tu negocio.
             </p>
           </div>
 

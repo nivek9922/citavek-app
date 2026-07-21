@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { cn } from '@/shared/ui/utils'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { upsertBarberCommissionAction } from '../actions'
 import type { CommissionTypeValue } from '../domain/commission'
 import type { BarberCommissionRecord } from '../domain/ports/commissions-repository'
@@ -17,10 +18,12 @@ export function CommissionConfig({
   tenantSlug: string
   configs: BarberCommissionRecord[]
 }) {
+  const v = useVocabulary()
+
   if (configs.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No tienes barberos activos. Añade tu equipo en la sección Equipo para configurar comisiones.
+        No tienes {v.professionalPluralLower} activos. Añade tu equipo en la sección Equipo para configurar comisiones.
       </p>
     )
   }
@@ -28,7 +31,7 @@ export function CommissionConfig({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Define cómo se calcula la comisión de cada barbero. Se aplica a las citas completadas.
+        Define cómo se calcula la comisión de cada {v.professionalSingularLower}. Se aplica a las citas completadas.
       </p>
       {configs.map((c) => (
         <BarberRow key={c.barberId} tenantSlug={tenantSlug} record={c} />
@@ -43,6 +46,7 @@ function BarberRow({ tenantSlug, record }: { tenantSlug: string; record: BarberC
   const [fixedAmount, setFixedAmount] = useState(record.config?.fixedAmount ?? 10_000)
   const [configured, setConfigured]   = useState(record.config !== null)
   const [isPending, startTransition]  = useTransition()
+  const v = useVocabulary()
 
   function handleSave() {
     startTransition(async () => {
@@ -77,7 +81,7 @@ function BarberRow({ tenantSlug, record }: { tenantSlug: string; record: BarberC
 
       {!configured && (
         <p className="text-xs text-muted-foreground">
-          Sin comisión configurada — las ganancias de este barbero no se calcularán hasta que la configures.
+          Sin comisión configurada — las ganancias de este {v.professionalSingularLower} no se calcularán hasta que la configures.
         </p>
       )}
 

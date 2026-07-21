@@ -6,6 +6,7 @@ import { CalendarPlus, CheckCircle2, Copy, Link, MessageCircle } from 'lucide-re
 import { Button } from '@/shared/ui/button'
 import { formatCop } from '@/shared/format'
 import { buildWhatsAppLink, buildIcsDataUri } from '@/shared/booking-links'
+import { useVocabulary } from '@/shared/ui/vocabulary-provider'
 import { isAnyBarber } from '@/modules/scheduling/domain/any-barber'
 import type { ServiceDTO } from '@/modules/catalog/queries'
 import type { BarberDTO }  from '@/modules/staff/queries'
@@ -28,6 +29,7 @@ export function BookingSuccess({
   services, totalDurationMin, barber, startAt, priceCop, appointmentId, shopName, shopPhone, shopAddress, timezone, onNew,
 }: Props) {
   const [copied, setCopied] = useState(false)
+  const v = useVocabulary()
   const citaUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/cita/${appointmentId}`
 
   function handleCopy() {
@@ -40,8 +42,8 @@ export function BookingSuccess({
   const endAt     = new Date(startAt.getTime() + totalDurationMin * 60_000)
   const whenLabel = formatInTimeZone(startAt, timezone, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })
 
-  const barberLabel = isAnyBarber(barber.id) ? 'el primer barbero disponible' : barber.displayName
-  const barberFirst = isAnyBarber(barber.id) ? 'tu barbero asignado' : barber.displayName.split(' ')[0]
+  const barberLabel = isAnyBarber(barber.id) ? `el primer ${v.professionalSingularLower} disponible` : barber.displayName
+  const barberFirst = isAnyBarber(barber.id) ? `${v.professionalPossessive} asignado` : barber.displayName.split(' ')[0]
 
   const waLink = shopPhone
     ? buildWhatsAppLink(
