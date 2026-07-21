@@ -109,6 +109,16 @@ describe('createOrganization', () => {
     )
   })
 
+  it('respeta businessType cuando se pasa explícitamente', async () => {
+    const { repo } = createFakeRepo()
+
+    await createOrganization(repo, { ...baseInput, businessType: 'BEAUTY_SALON' })
+
+    expect(repo.createOrganization).toHaveBeenCalledWith(
+      expect.objectContaining({ businessType: 'BEAUTY_SALON' }),
+    )
+  })
+
   it('vincula la membresía al org recién creado (no a un id hardcoded)', async () => {
     const { repo } = createFakeRepo()
     // simulamos que el adapter devuelve un id diferente

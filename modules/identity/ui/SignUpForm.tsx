@@ -12,6 +12,8 @@ import {
 import { cn }           from '@/shared/ui/utils'
 import { COLOMBIA_CITIES, type ColombiaCity } from '@/shared/constants/colombia-cities'
 import { checkAccessCodeAction, createBarberiaForSelfAction } from '@/modules/identity/actions'
+import { BusinessTypeSelect } from '@/modules/identity/ui/BusinessTypeSelect'
+import type { BusinessType } from '@/shared/vocabulary'
 
 const PALETTE = ['#E0A300', '#22C55E', '#F43F5E', '#3B82F6', '#A855F7', '#06B6D4', '#F97316', '#1A1A1A']
 
@@ -30,6 +32,7 @@ export function SignUpForm() {
   const [showPass,  setShowPass]  = useState(false)
   const [color,     setColor]     = useState('#E0A300')
   const [city,      setCity]      = useState<ColombiaCity | ''>('')
+  const [businessType, setBusinessType] = useState<BusinessType | ''>('')
   const [error,     setError]     = useState('')
   const [step,      setStep]      = useState<'form' | 'creating'>('form')
 
@@ -46,6 +49,7 @@ export function SignUpForm() {
     const phone       = fd.get('phone')       as string
     const accessCode  = fd.get('accessCode')  as string
 
+    if (!businessType) { setError('Selecciona el tipo de tu negocio.'); return }
     if (!city) { setError('Selecciona tu ciudad.'); return }
 
     startTransition(async () => {
@@ -86,6 +90,7 @@ export function SignUpForm() {
           phone,
           primaryColor: color,
           accessCode,
+          businessType,
           _userId:      authData?.user.id,
         })
 
@@ -106,6 +111,16 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
+      {/* ── Tipo de negocio ──────────────────────────────────── */}
+      <fieldset className="space-y-4">
+        <legend className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Tipo de negocio
+        </legend>
+        <BusinessTypeSelect value={businessType} onChange={setBusinessType} disabled={isPending} />
+      </fieldset>
+
+      <div className="border-t border-border" />
 
       {/* ── Cuenta ───────────────────────────────────────────── */}
       <fieldset className="space-y-4">

@@ -42,6 +42,9 @@ const selfRegisterSchema = z.object({
   phone:        z.string().regex(/^\d{10}$/, 'Ingresa 10 dígitos sin +57 (ej. 3187654321)'),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#E0A300'),
   accessCode:   z.string().min(1, 'El código de acceso es obligatorio'),
+  // Campo opcional en el sentido de "puede llegar vacío o inválido": ante
+  // cualquier problema, cae al default seguro en vez de romper el registro.
+  businessType: z.enum(['BARBERSHOP', 'BEAUTY_SALON']).catch('BARBERSHOP'),
   // userId enviado por el cliente como fallback si la cookie aún no propagó al SA.
   _userId:      z.string().optional(),
 })
@@ -88,6 +91,7 @@ export async function createBarberiaForSelfAction(
       city:         data.city,
       phone:        data.phone,
       primaryColor: data.primaryColor,
+      businessType: data.businessType,
     })
 
     // Consumir el código solo si la org se creó con éxito.
