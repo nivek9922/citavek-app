@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Bebas_Neue, Inter } from 'next/font/google'
+import { Bebas_Neue, Bodoni_Moda, Inter } from 'next/font/google'
 import { Analytics }     from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Toaster }       from 'sonner'
@@ -18,6 +18,17 @@ const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
+})
+// Display serif del vertical beauty-salon (globals.css la aplica solo dentro de
+// .storefront[data-vertical="beauty-salon"]). preload:false → el @font-face se
+// registra pero el woff2 solo se descarga cuando algún texto renderiza con esta
+// familia; los storefronts de barbería nunca la usan y nunca la descargan.
+const bodoni = Bodoni_Moda({
+  subsets: ['latin'],
+  variable: '--font-bodoni',
+  display: 'swap',
+  preload: false,
+  axes: ['opsz'],
 })
 
 const title = 'Citavek — Software para barberías'
@@ -56,7 +67,7 @@ const themeScript = `(function(){try{var t=localStorage.getItem('citavek-theme')
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning className={`${bebas.variable} ${inter.variable}`}>
+    <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning className={`${bebas.variable} ${inter.variable} ${bodoni.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

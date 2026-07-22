@@ -1,7 +1,7 @@
 import type { Viewport } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Star, Clock, Scissors, Users } from 'lucide-react'
+import { MapPin, Phone, Star, Clock, Scissors, Sparkles, Users } from 'lucide-react'
 import { getTenantContextPermissive } from '@/server/tenant'
 import { db } from '@/server/db'
 import { canOperate } from '@/modules/subscriptions/domain/subscription'
@@ -18,6 +18,7 @@ import { ThemeToggle }       from '@/shared/ui/theme-toggle'
 import { BookingFlow }       from '@/modules/scheduling/ui/BookingFlow'
 import { EmptyState }        from '@/shared/ui/empty-state'
 import { VocabularyProvider } from '@/shared/ui/vocabulary-provider'
+import { getStorefrontVertical } from '@/shared/vocabulary'
 
 // Pre-generates the static shell for known active tenants at build time.
 // New tenants still work (dynamicParams = true by default).
@@ -56,6 +57,12 @@ export default async function TenantPage({
   const ctx = await getTenantContextPermissive(slug)
   if (!ctx) notFound()
 
+  // Eje visual por vertical: globals.css solo tiene overrides para
+  // "beauty-salon"; en barbería el atributo es inerte (render idéntico).
+  const vertical = getStorefrontVertical(ctx.businessType)
+  // Icono identitario del vertical: tijeras (barbería) / destellos (salón).
+  const VerticalIcon = vertical === 'beauty-salon' ? Sparkles : Scissors
+
   const themeMode = ctx.branding.storefrontTheme ?? 'DARK'
   // Valor de un enum DB — nunca texto libre del usuario.
   const themeScript = `(function(){var m=${JSON.stringify(themeMode)};if(m==='LIGHT'){document.documentElement.classList.remove('dark');}else if(m==='AUTO'){if(!window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.classList.remove('dark');}}})();`
@@ -64,9 +71,9 @@ export default async function TenantPage({
     return (
       <>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <div className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <div data-vertical={vertical} className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <Scissors className="h-8 w-8 text-ink-faint" />
+            <VerticalIcon className="h-8 w-8 text-ink-faint" />
           </div>
           <h1 className="font-display text-3xl">{ctx.name}</h1>
           <p className="text-lg font-semibold">Temporalmente Inactivo</p>
@@ -84,9 +91,9 @@ export default async function TenantPage({
     return (
       <>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <div className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <div data-vertical={vertical} className="storefront flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <Scissors className="h-8 w-8 text-ink-faint" />
+            <VerticalIcon className="h-8 w-8 text-ink-faint" />
           </div>
           <h1 className="font-display text-3xl">{ctx.name}</h1>
           <p className="text-lg font-semibold">No disponible temporalmente</p>
@@ -106,7 +113,7 @@ export default async function TenantPage({
 
   if (embed === '1') {
     return (
-      <div className="storefront flex min-h-screen items-start justify-center bg-background p-0 sm:p-4 sm:pt-6">
+      <div data-vertical={vertical} className="storefront flex min-h-screen items-start justify-center bg-background p-0 sm:p-4 sm:pt-6">
         <div className="w-full max-w-lg bg-card sm:overflow-hidden sm:rounded-2xl sm:border sm:border-border sm:shadow-sf-card">
           <div className="p-4 sm:p-7">
             <div className="mb-5">
@@ -133,7 +140,7 @@ export default async function TenantPage({
   return (
     <>
     <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-    <div className="storefront min-h-screen bg-background">
+    <div data-vertical={vertical} className="storefront min-h-screen bg-background">
 
       {/* ─── PERFIL DEL NEGOCIO ───────────────────────────────── */}
       <div className="mx-auto max-w-2xl">
@@ -152,8 +159,10 @@ export default async function TenantPage({
           <ThemeToggle className="absolute right-3 top-3 z-10 border-transparent bg-card/70 text-foreground backdrop-blur-sm hover:bg-card/90" />
         </div>
 
-        {/* Identidad — avatar superpuesto + info */}
-        <div className="px-5 pb-6">
+        {/* Identidad — avatar superpuesto + info. sf-hero: hook del halo
+            "iluminador" del vertical beauty-salon (globals.css); en barbería
+            la clase no matchea ningún selector y es inerte. */}
+        <div className="sf-hero px-5 pb-6">
           {/* Avatar con overlap sobre el borde inferior del cover */}
           <div className="-mt-11 mb-3">
             <TenantAvatar
@@ -229,11 +238,11 @@ export default async function TenantPage({
 
       {/* ─── SERVICIOS ────────────────────────────────────────── */}
       <section className="mx-auto max-w-2xl px-4 py-10">
-        <SectionHeader icon={<Scissors className="h-5 w-5 text-primary" />} title="Servicios" />
+        <SectionHeader icon={<VerticalIcon className="h-5 w-5 text-primary" />} title="Servicios" />
 
         {services.length === 0 ? (
           <EmptyState
-            icon={<Scissors className="h-8 w-8 text-ink-faint" />}
+            icon={<VerticalIcon className="h-8 w-8 text-ink-faint" />}
             title="Catálogo en actualización"
             description="Pronto verás nuestros servicios aquí."
           />

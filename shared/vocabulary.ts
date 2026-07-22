@@ -72,3 +72,14 @@ export const DEFAULT_BUSINESS_TYPE: BusinessType = 'BARBERSHOP'
 export function getVocabulary(businessType: BusinessType): Vocabulary {
   return VOCABULARY[businessType] ?? VOCABULARY[DEFAULT_BUSINESS_TYPE]
 }
+
+/**
+ * Eje VISUAL por vertical del storefront: valor del atributo `data-vertical`
+ * en el div raíz `.storefront`. globals.css solo define overrides para
+ * "beauty-salon"; "barbershop" no tiene selectores → render idéntico al actual.
+ */
+export type StorefrontVertical = 'barbershop' | 'beauty-salon'
+
+export function getStorefrontVertical(businessType: BusinessType): StorefrontVertical {
+  return businessType === 'BEAUTY_SALON' ? 'beauty-salon' : 'barbershop'
+}

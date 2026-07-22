@@ -173,6 +173,59 @@
   --shadow-sf-selected:   0 4px 20px color-mix(in oklab, var(--primary) 12%, transparent);
 }
 
+/* ── Vertical beauty-salon — "salón editorial cálido" (modo claro) ──────────
+ * Champán/marfil con matiz rosado apenas perceptible. El acento ESTRUCTURAL
+ * (--sf-mauve, malva empolvado) tiñe bordes, inputs y el halo del hero; es
+ * independiente de --primary, que sigue siendo la marca del tenant (selección,
+ * CTAs, color-mix) y NUNCA se redefine aquí.
+ *
+ * ORDEN CRÍTICO: este selector (0,2,0) empata en especificidad con
+ * `.dark .storefront` (0,2,0) → DEBE ir ANTES en el archivo para que en modo
+ * oscuro gane el bloque dark por orden de fuente, y el bloque
+ * `.dark .storefront[data-vertical="beauty-salon"]` de abajo debe replicar
+ * TODOS los tokens declarados aquí.
+ *
+ * --bg-selected y --shadow-sf-selected NO se redefinen: se declaran en
+ * .storefront sobre el MISMO elemento y recomputan solos con la --card ganadora. */
+.storefront[data-vertical="beauty-salon"] {
+  --radius: 1rem;                             /* +2px vs barbería: más suave, no infantil */
+
+  /* Acento estructural del vertical (NO es la marca del tenant) */
+  --sf-mauve:             #A8848D;            /* malva empolvado */
+
+  /* Superficies — champán editorial */
+  --background:           #F9F4F1;            /* champán */
+  --foreground:           #201A1B;            /* tinta cálida, lean ciruela */
+  --card:                 #FFFDFC;            /* porcelana */
+  --card-foreground:      #201A1B;
+  --card-soft:            #FCF8F6;            /* seda */
+  --popover:              #FFFDFC;
+  --popover-foreground:   #201A1B;
+  --surface:              #FCF8F6;
+  --surface-elevated:     #FFFDFC;
+  --secondary:            #FCF8F6;
+  --secondary-foreground: #201A1B;
+  --muted:                #F3ECE9;            /* velo */
+  --muted-foreground:     #8E7C7B;            /* topo rosado, nunca gris puro */
+  --accent:               #F3ECE9;
+  --accent-foreground:    #201A1B;
+  --ink-faint:            #BCA9A6;            /* visón */
+  --border:               color-mix(in srgb, var(--sf-mauve) 18%, transparent);
+  --input:                color-mix(in srgb, var(--sf-mauve) 28%, transparent);
+
+  /* Sombra con tinte ciruela cálido (no negro neutro); alfa un punto mayor
+   * que barbería porque las sombras tintadas se perciben más claras. */
+  --shadow-sf-card: 0 1px 3px rgba(91, 58, 68, 0.04), 0 8px 40px rgba(91, 58, 68, 0.06);
+
+  /* Halo "iluminador" del hero — tenant-aware (--primary) suavizado y fundido
+   * con el malva estructural. Solo lo consume .sf-hero::before (más abajo). */
+  --gradient-hero:
+    radial-gradient(75% 55% at 50% 0%,
+      color-mix(in oklab, var(--primary) 8%, transparent), transparent 62%),
+    radial-gradient(110% 75% at 50% 8%,
+      color-mix(in oklab, var(--sf-mauve) 12%, transparent), transparent 72%);
+}
+
 /* Storefront — modo oscuro cálido (lo que ve el cliente por defecto) */
 .dark .storefront {
   --background:           #161412;           /* near-black cálido, no negro frío */
@@ -197,6 +250,57 @@
   --bg-selected:          color-mix(in oklab, var(--primary) 14%, var(--card));
   --shadow-sf-card:       0 1px 3px rgba(0, 0, 0, 0.25), 0 12px 40px rgba(0, 0, 0, 0.35);
   --shadow-sf-selected:   0 4px 24px color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+/* ── Vertical beauty-salon — modo oscuro: "ciruela negra" ───────────────────
+ * Near-black entintado de ciruela (no el ámbar-marrón de barbería). Espejo
+ * COMPLETO del bloque claro del salón (ver nota de orden crítico arriba);
+ * --radius no se repite porque hereda del bloque claro (mismo elemento,
+ * independiente del tema). */
+.dark .storefront[data-vertical="beauty-salon"] {
+  --sf-mauve:             #C4A2AD;            /* malva claro para fondos oscuros */
+
+  --background:           #1A1417;            /* ciruela negra */
+  --foreground:           #F6EFF0;            /* blanco rosado cálido */
+  --card:                 #211A1E;            /* terciopelo */
+  --card-foreground:      #F6EFF0;
+  --card-soft:            #1D171A;
+  --popover:              #211A1E;
+  --popover-foreground:   #F6EFF0;
+  --surface:              #1D171A;
+  --surface-elevated:     #261F23;
+  --secondary:            #261F23;
+  --secondary-foreground: #F6EFF0;
+  --muted:                #261F23;
+  --muted-foreground:     #AD9CA2;
+  --accent:               #2C242A;
+  --accent-foreground:    #F6EFF0;
+  --ink-faint:            #77666E;
+  --border:               color-mix(in srgb, var(--sf-mauve) 12%, transparent);
+  --input:                color-mix(in srgb, var(--sf-mauve) 18%, transparent);
+
+  --shadow-sf-card: 0 1px 3px rgba(12, 6, 10, 0.30), 0 12px 40px rgba(12, 6, 10, 0.40);
+
+  --gradient-hero:
+    radial-gradient(75% 55% at 50% 0%,
+      color-mix(in oklab, var(--primary) 13%, transparent), transparent 62%),
+    radial-gradient(110% 75% at 50% 8%,
+      color-mix(in oklab, var(--sf-mauve) 9%, transparent), transparent 72%);
+}
+
+/* Display serif del salón (Bodoni Moda). Regla SIN capa a propósito: Tailwind
+ * genera una utility `font-display` que INLINA el stack de Bebas (por @theme
+ * inline) en @layer utilities, así que overridear solo la variable
+ * --font-display NO cambia la fuente. El CSS sin capa gana a cualquier @layer:
+ * a esa utility y también al `tracking-wide` hardcodeado en los h1/h2.
+ * NO "simplificar" esto a un var override — revertiría el salón a Bebas.
+ * Bodoni es una didone: tracking casi cero (la Bebas condensada pedía +0.02em)
+ * y un punto más de peso para que los tamaños chicos (precios) no se afilen. */
+.storefront[data-vertical="beauty-salon"] .font-display {
+  font-family: var(--font-bodoni), "Bodoni Moda", "Didot", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  font-optical-sizing: auto;
 }
 
 @layer base {
@@ -236,6 +340,50 @@
  * en mobile (el caso principal) evita estados de hover "pegados" tras el tap. */
 @media (hover: hover) {
   .sf-hover-lift:hover { transform: translateY(-2px); }
+}
+
+/* Transición de entrada de paso del BookingFlow, semántica y por vertical.
+ * Barbería replica EXACTO el comportamiento previo de tw-animate-css
+ * (motion-safe:animate-in fade-in slide-in-from-bottom-1 duration-200):
+ * fade + translateY(0.25rem→0), 200ms, easing `ease`.
+ * Salón: fade + escala mínima (0.985→1), más lento y editorial, sin slide.
+ * El wrapper de no-preference replica `motion-safe:`; además el kill-switch
+ * de reduced-motion de abajo anula la duración por si acaso. */
+@keyframes sf-step-enter {
+  from { opacity: 0; transform: translateY(0.25rem); }
+}
+@keyframes sf-step-enter-salon {
+  from { opacity: 0; transform: scale(0.985); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sf-step-enter { animation: sf-step-enter 0.2s ease; }
+  .storefront[data-vertical="beauty-salon"] .sf-step-enter {
+    animation: sf-step-enter-salon 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* Halo "iluminador" del hero — elemento firma SOLO del beauty-salon (metáfora
+ * de luz de tocador). El hero de barbería queda plano a propósito ("sin
+ * gradientes"). Gradiente estático puro CSS (sin blur/filter, sin JS, sin
+ * animación → nada que respetar en prefers-reduced-motion, paint trivial).
+ * `isolation` crea stacking context propio: el ::before con z-index:-1 pinta
+ * SOBRE el fondo del .storefront pero BAJO el avatar/título; sin isolate, un
+ * z-index negativo se escondería detrás del bg-background del contenedor raíz. */
+.storefront[data-vertical="beauty-salon"] .sf-hero {
+  position: relative;
+  isolation: isolate;
+}
+.storefront[data-vertical="beauty-salon"] .sf-hero::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2.5rem;              /* asoma sutilmente sobre el borde inferior del cover */
+  width: min(48rem, 130vw);
+  height: 22rem;
+  transform: translateX(-50%);
+  z-index: -1;
+  pointer-events: none;
+  background: var(--gradient-hero);
 }
 
 /* Accesibilidad: respetar prefers-reduced-motion en todo el storefront.

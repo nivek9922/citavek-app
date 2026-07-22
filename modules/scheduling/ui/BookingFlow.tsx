@@ -80,10 +80,11 @@ export function BookingFlow({ tenantSlug, services, barbers, shopName, shopPhone
       )}
 
       {/* key={flow.step} → la transición suave se reproduce al cambiar de paso.
-          motion-safe respeta prefers-reduced-motion. */}
+          .sf-step-enter (globals.css) varía por vertical y respeta
+          prefers-reduced-motion. */}
       <div
         key={flow.step}
-        className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-200"
+        className="sf-step-enter"
       >
         {flow.step === 1 && (
           <StepService
